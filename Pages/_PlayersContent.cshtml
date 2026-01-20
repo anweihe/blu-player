@@ -267,6 +267,13 @@
                                     <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
                                 </svg>
                             </button>
+                            <button type="button" id="btn-volume" class="np-volume-trigger" title="Lautstärke">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                                </svg>
+                            </button>
                         </div>
                         <div id="np-service" class="np-service"></div>
                     </div>
@@ -1326,6 +1333,39 @@
         margin-bottom: 12px;
     }
 
+    /* Volume Trigger Button */
+    .np-volume-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-accent);
+        border-radius: 50%;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        margin-left: auto;
+    }
+
+    .np-volume-trigger:hover {
+        background: var(--bg-card-hover);
+        color: var(--text-primary);
+        border-color: var(--accent-group);
+    }
+
+    .np-volume-trigger.active {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: var(--accent-group);
+        color: var(--accent-group);
+    }
+
+    .np-volume-trigger svg {
+        width: 20px;
+        height: 20px;
+    }
+
     .np-control-btn {
         display: flex;
         align-items: center;
@@ -1868,6 +1908,7 @@
     let selectedPlayerIp = null;
     let selectedPlayerPort = null;
     let selectedPlayerName = null;
+    let selectedGroupData = null;
     let playbackRefreshInterval = null;
 
     function selectPlayer(cardElement) {
@@ -1887,6 +1928,21 @@
         selectedPlayerIp = ip;
         selectedPlayerPort = port;
         selectedPlayerName = name;
+
+        // Find and store the group data for this player (for volume panel)
+        if (cachedGroups) {
+            selectedGroupData = cachedGroups.find(g =>
+                g.master && g.master.ipAddress === ip && g.master.port == port
+            );
+
+            // Update volume trigger indicator with master volume
+            if (selectedGroupData && selectedGroupData.master && !selectedGroupData.master.isFixedVolume) {
+                const trigger = document.querySelector('.np-volume-trigger');
+                if (trigger) {
+                    trigger.style.setProperty('--volume-level', selectedGroupData.master.volume || 0);
+                }
+            }
+        }
 
         document.getElementById('now-playing').style.display = 'block';
         document.getElementById('np-player-name').textContent = name;
@@ -2006,5 +2062,15 @@
 
     document.getElementById('btn-next')?.addEventListener('click', function() {
         controlPlayback('NextTrack');
+    });
+
+    // Volume button click handler
+    document.getElementById('btn-volume')?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!selectedPlayerIp || !selectedPlayerPort) return;
+
+        // Initialize volume panel if not already done
+        const panel = initVolumePanel();
+        panel.toggle(selectedPlayerIp, selectedPlayerPort, selectedGroupData);
     });
 </script>

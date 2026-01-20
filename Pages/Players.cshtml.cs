@@ -401,7 +401,7 @@ public class PlayersModel : PageModel
             var group = new PlayerGroup
             {
                 Id = player.Id,
-                Name = player.GroupName ?? player.Name,
+                Name = player.Name,
                 Type = GroupType.MultiRoom,
                 Master = player
             };

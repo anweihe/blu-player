@@ -241,6 +241,39 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Volume Button */
+.global-np-volume-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--np-bg-secondary);
+  border: 1px solid var(--np-border);
+  border-radius: 50%;
+  color: var(--np-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.global-np-volume-btn:hover {
+  background: #1c1c1f;
+  color: var(--np-text);
+  border-color: var(--np-accent);
+}
+
+.global-np-volume-btn.active {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--np-accent);
+  color: var(--np-accent);
+}
+
+.global-np-volume-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* Mobile adjustments for Now Playing bar */
 @media (max-width: 600px) {
   .global-np-progress {

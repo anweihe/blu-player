@@ -528,38 +528,72 @@ public class QobuzModel : PageModel
 
             memberCount = Math.Max(memberCount, additionalSlaves);
 
-            result.Add(new
-            {
-                id = player.Id,
-                name = player.GroupName ?? player.Name,
-                ip = player.IpAddress,
-                port = player.Port,
-                model = player.IsStereoPaired ? "Stereo Pair" : player.ModelName,
-                brand = player.Brand,
-                isGroup = true,
-                memberCount = memberCount + 1 // +1 for the master itself
-            });
+            // Collect group members for volume control
+            var groupMembers = new List<object>();
 
-            processedIds.Add(player.Id);
-
-            // Mark all slaves of this group as processed
+            // Add slaves from SlaveIps
             foreach (var slaveAddress in player.SlaveIps)
             {
                 var slaveIp = slaveAddress.Split(':')[0];
                 var slave = visiblePlayers.FirstOrDefault(p => p.IpAddress == slaveIp);
                 if (slave != null)
                 {
+                    groupMembers.Add(new
+                    {
+                        ipAddress = slave.IpAddress,
+                        port = slave.Port,
+                        name = slave.Name,
+                        brand = slave.Brand,
+                        modelName = slave.ModelName,
+                        volume = slave.Volume,
+                        isFixedVolume = slave.IsFixedVolume,
+                        isStereoPaired = slave.IsStereoPaired,
+                        channelMode = slave.ChannelMode
+                    });
                     processedIds.Add(slave.Id);
                 }
             }
 
-            // Mark slaves that reference this master
+            // Add slaves that reference this master
             foreach (var slave in visiblePlayers.Where(p =>
+                !processedIds.Contains(p.Id) &&
+                p.Id != player.Id &&
                 p.IsGrouped && !p.IsMaster && p.MasterIp != null &&
                 p.MasterIp.Split(':')[0] == masterIp))
             {
+                groupMembers.Add(new
+                {
+                    ipAddress = slave.IpAddress,
+                    port = slave.Port,
+                    name = slave.Name,
+                    brand = slave.Brand,
+                    modelName = slave.ModelName,
+                    volume = slave.Volume,
+                    isFixedVolume = slave.IsFixedVolume,
+                    isStereoPaired = slave.IsStereoPaired,
+                    channelMode = slave.ChannelMode
+                });
                 processedIds.Add(slave.Id);
             }
+
+            result.Add(new
+            {
+                id = player.Id,
+                name = player.Name, // Use player name, not group name
+                ipAddress = player.IpAddress,
+                port = player.Port,
+                model = player.IsStereoPaired ? "Stereo Pair" : player.ModelName,
+                brand = player.Brand,
+                isGroup = true,
+                memberCount = groupMembers.Count + 1, // +1 for the master itself
+                volume = player.Volume,
+                isFixedVolume = player.IsFixedVolume,
+                isStereoPaired = player.IsStereoPaired,
+                channelMode = player.ChannelMode,
+                members = groupMembers
+            });
+
+            processedIds.Add(player.Id);
         }
 
         // Add ungrouped players (singles and stereo pairs)
@@ -569,12 +603,17 @@ public class QobuzModel : PageModel
             {
                 id = player.Id,
                 name = player.Name,
-                ip = player.IpAddress,
+                ipAddress = player.IpAddress,
                 port = player.Port,
                 model = player.IsStereoPaired ? "Stereo Pair" : player.ModelName,
                 brand = player.Brand,
                 isGroup = false,
-                memberCount = 1
+                memberCount = 1,
+                volume = player.Volume,
+                isFixedVolume = player.IsFixedVolume,
+                isStereoPaired = player.IsStereoPaired,
+                channelMode = player.ChannelMode,
+                members = new List<object>()
             });
             processedIds.Add(player.Id);
         }
@@ -586,12 +625,17 @@ public class QobuzModel : PageModel
             {
                 id = player.Id,
                 name = player.Name,
-                ip = player.IpAddress,
+                ipAddress = player.IpAddress,
                 port = player.Port,
                 model = player.ModelName,
                 brand = player.Brand,
                 isGroup = false,
-                memberCount = 1
+                memberCount = 1,
+                volume = player.Volume,
+                isFixedVolume = player.IsFixedVolume,
+                isStereoPaired = player.IsStereoPaired,
+                channelMode = player.ChannelMode,
+                members = new List<object>()
             });
         }
 

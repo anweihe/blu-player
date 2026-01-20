@@ -1031,6 +1031,72 @@
         }
     };
 
+    // ==================== Volume Panel ====================
+
+    window.openGlobalVolumePanel = async function() {
+        // Initialize volume panel if needed
+        if (typeof initVolumePanel === 'function') {
+            const panel = initVolumePanel();
+
+            // Build group data from current selected player and available players
+            let groupData = null;
+
+            if (globalSelectedPlayer.type === 'bluesound') {
+                // Find the selected player in available players
+                const selectedPlayer = globalAvailablePlayers.find(p =>
+                    p.id === globalSelectedPlayer.id ||
+                    p.ipAddress === globalSelectedPlayer.ipAddress ||
+                    p.ip === globalSelectedPlayer.ipAddress
+                );
+
+                if (selectedPlayer) {
+                    // Use ipAddress or ip field (backward compatibility)
+                    const playerIp = selectedPlayer.ipAddress || selectedPlayer.ip;
+
+                    groupData = {
+                        master: {
+                            ipAddress: playerIp,
+                            port: selectedPlayer.port || 11000,
+                            name: selectedPlayer.name,
+                            brand: selectedPlayer.brand,
+                            modelName: selectedPlayer.model || selectedPlayer.modelName,
+                            volume: selectedPlayer.volume ?? 50,
+                            isFixedVolume: selectedPlayer.isFixedVolume ?? false,
+                            isStereoPaired: selectedPlayer.isStereoPaired ?? false,
+                            channelMode: selectedPlayer.channelMode
+                        },
+                        // Include group members if available
+                        members: (selectedPlayer.members || []).map(m => ({
+                            ipAddress: m.ipAddress || m.ip,
+                            port: m.port || 11000,
+                            name: m.name,
+                            brand: m.brand,
+                            modelName: m.modelName || m.model,
+                            volume: m.volume ?? 50,
+                            isFixedVolume: m.isFixedVolume ?? false,
+                            isStereoPaired: m.isStereoPaired ?? false,
+                            channelMode: m.channelMode
+                        }))
+                    };
+                }
+            }
+
+            panel.toggle(
+                globalSelectedPlayer.ipAddress || 'browser',
+                globalSelectedPlayer.port || 0,
+                groupData
+            );
+
+            // Update button state
+            const btn = document.getElementById('global-volume-btn');
+            if (btn) {
+                btn.classList.toggle('active', panel.isVisible);
+            }
+        } else {
+            console.warn('Volume panel not initialized');
+        }
+    };
+
     function renderPlayerList() {
         const list = document.getElementById('global-player-list');
         if (!list) return;
@@ -1086,11 +1152,14 @@
             globalSelectedPlayer = { type: 'browser', name: 'Dieses Gerät' };
             stopStatusPolling();
         } else if (type === 'bluesound' && player) {
+            // Support both ip and ipAddress fields
+            const playerIp = player.ipAddress || player.ip;
             globalSelectedPlayer = {
                 type: 'bluesound',
                 id: player.id,
                 name: player.name,
-                ip: player.ip,
+                ip: playerIp,
+                ipAddress: playerIp,
                 port: player.port || 11000,
                 model: player.model
             };
