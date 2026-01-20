@@ -127,8 +127,11 @@
         font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
         background: var(--bg-primary);
         min-height: 100vh;
+        min-height: 100dvh;
         color: var(--text-primary);
         -webkit-font-smoothing: antialiased;
+        display: flex;
+        flex-direction: column;
     }
 
     /* Header */
@@ -172,8 +175,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: calc(100vh - 60px);
+        flex: 1;
         padding: 40px 20px;
+        padding-bottom: calc(40px + env(safe-area-inset-bottom));
     }
 
     .source-container {
