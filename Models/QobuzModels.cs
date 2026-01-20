@@ -262,11 +262,41 @@ public class QobuzAlbum
     [JsonPropertyName("released_at")]
     public long? ReleasedAt { get; set; }
 
+    [JsonPropertyName("product_type")]
+    public string? ProductType { get; set; }
+
+    [JsonPropertyName("maximum_bit_depth")]
+    public int? MaxBitDepth { get; set; }
+
+    [JsonPropertyName("maximum_sampling_rate")]
+    public double? MaxSamplingRate { get; set; }
+
     /// <summary>
     /// Get the best available cover image URL
     /// </summary>
     public string? CoverUrl =>
         Image?.Large ?? Image?.Small ?? Image?.Thumbnail;
+
+    /// <summary>
+    /// Determine if this is a single (1-3 tracks)
+    /// </summary>
+    public bool IsSingle => ProductType?.Equals("single", StringComparison.OrdinalIgnoreCase) == true
+                            || (TracksCount <= 3 && Duration < 1200);
+
+    /// <summary>
+    /// Get localized type label
+    /// </summary>
+    public string TypeLabel
+    {
+        get
+        {
+            if (ProductType?.Equals("single", StringComparison.OrdinalIgnoreCase) == true || TracksCount == 1)
+                return "Single";
+            if (ProductType?.Equals("ep", StringComparison.OrdinalIgnoreCase) == true || (TracksCount >= 2 && TracksCount <= 6 && Duration < 1800))
+                return "EP";
+            return "Album";
+        }
+    }
 }
 
 /// <summary>
@@ -450,4 +480,29 @@ public class QobuzGenre
 
     [JsonPropertyName("slug")]
     public string? Slug { get; set; }
+}
+
+/// <summary>
+/// Search response from Qobuz API
+/// </summary>
+public class QobuzSearchResponse
+{
+    [JsonPropertyName("albums")]
+    public QobuzAlbumsContainer? Albums { get; set; }
+
+    [JsonPropertyName("playlists")]
+    public QobuzPlaylistsContainer? Playlists { get; set; }
+
+    [JsonPropertyName("tracks")]
+    public QobuzTracksContainer? Tracks { get; set; }
+}
+
+/// <summary>
+/// Combined search result
+/// </summary>
+public class QobuzSearchResult
+{
+    public List<QobuzAlbum> Albums { get; set; } = new();
+    public List<QobuzPlaylist> Playlists { get; set; } = new();
+    public List<QobuzTrack> Tracks { get; set; } = new();
 }

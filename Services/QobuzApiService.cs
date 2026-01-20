@@ -58,6 +58,11 @@ public interface IQobuzApiService
     Task<QobuzAlbumWithTracks?> GetAlbumAsync(string albumId, string authToken);
 
     /// <summary>
+    /// Search for albums, tracks, and playlists
+    /// </summary>
+    Task<QobuzSearchResult> SearchAsync(string query, int limit = 20);
+
+    /// <summary>
     /// Check if app credentials are available
     /// </summary>
     bool HasAppCredentials { get; }
@@ -845,6 +850,67 @@ public class QobuzApiService : IQobuzApiService
             _logger.LogError(ex, "Failed to get album {AlbumId}", albumId);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Search for albums, tracks, and playlists
+    /// </summary>
+    public async Task<QobuzSearchResult> SearchAsync(string query, int limit = 20)
+    {
+        var result = new QobuzSearchResult();
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot search: app credentials not available");
+                return result;
+            }
+
+            var encodedQuery = Uri.EscapeDataString(query);
+            var url = $"{QobuzApiBase}/catalog/search" +
+                      $"?query={encodedQuery}" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}";
+
+            _logger.LogDebug("Searching for: {Query}", query);
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Search failed: {Status}", response.StatusCode);
+                return result;
+            }
+
+            var searchResponse = JsonSerializer.Deserialize<QobuzSearchResponse>(responseContent);
+
+            if (searchResponse?.Albums?.Items != null)
+            {
+                result.Albums = searchResponse.Albums.Items;
+            }
+
+            if (searchResponse?.Playlists?.Items != null)
+            {
+                result.Playlists = searchResponse.Playlists.Items;
+            }
+
+            if (searchResponse?.Tracks?.Items != null)
+            {
+                result.Tracks = searchResponse.Tracks.Items;
+            }
+
+            _logger.LogInformation("Search for '{Query}' returned {Albums} albums, {Playlists} playlists, {Tracks} tracks",
+                query, result.Albums.Count, result.Playlists.Count, result.Tracks.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Search failed for query: {Query}", query);
+        }
+
+        return result;
     }
 
     private static string ComputeMd5Hash(string input)

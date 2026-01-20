@@ -228,6 +228,61 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
+    /// Search for albums, playlists, and tracks
+    /// </summary>
+    public async Task<IActionResult> OnGetSearchAsync(string query, int limit = 20)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return new JsonResult(new { success = false, error = "Suchbegriff erforderlich" });
+        }
+
+        _logger.LogInformation("Searching for: {Query}", query);
+
+        var result = await _qobuzService.SearchAsync(query, limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            albums = result.Albums.Select(a => new
+            {
+                id = a.Id,
+                title = a.Title,
+                artistName = a.Artist?.Name,
+                coverUrl = a.CoverUrl,
+                tracksCount = a.TracksCount,
+                duration = a.Duration,
+                typeLabel = a.TypeLabel,
+                isSingle = a.IsSingle,
+                type = "album"
+            }),
+            playlists = result.Playlists.Select(p => new
+            {
+                id = p.Id,
+                name = p.Name,
+                description = p.Description,
+                tracksCount = p.TracksCount,
+                coverUrl = p.CoverUrl,
+                ownerName = p.Owner?.Name,
+                type = "playlist"
+            }),
+            tracks = result.Tracks.Select(t => new
+            {
+                id = t.Id,
+                title = t.Title,
+                artistName = t.Performer?.Name,
+                albumTitle = t.Album?.Title,
+                albumId = t.Album?.Id,
+                coverUrl = t.Album?.CoverUrl,
+                duration = t.Duration,
+                formattedDuration = t.FormattedDuration,
+                isHiRes = t.IsHiRes,
+                type = "track"
+            })
+        });
+    }
+
+    /// <summary>
     /// Get album with tracks
     /// </summary>
     public async Task<IActionResult> OnGetAlbumTracksAsync(string albumId, string authToken)
