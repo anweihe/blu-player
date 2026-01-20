@@ -175,15 +175,6 @@
 
         <!-- Logged In Section -->
         <div id="logged-in-section" class="logged-in-section" style="display: none;">
-            <!-- User Info -->
-            <div class="user-info">
-                <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
-                <div class="user-details">
-                    <span id="user-name" class="user-name"></span>
-                    <span id="user-subscription" class="user-subscription"></span>
-                </div>
-            </div>
-
             <!-- Search Box -->
             <div class="search-container">
                 <div class="search-input-wrapper">
@@ -848,43 +839,6 @@
     @@keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
-    }
-
-    .user-info {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 16px;
-        background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-lg);
-        margin-bottom: 24px;
-    }
-
-    .user-avatar {
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: var(--bg-secondary);
-        object-fit: cover;
-    }
-
-    .user-details {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .user-name {
-        font-size: 1.1rem;
-        font-weight: 600;
-    }
-
-    .user-subscription {
-        font-size: 0.8rem;
-        color: var(--accent-qobuz);
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
     }
 
     /* Search */
@@ -2130,17 +2084,6 @@
         loginSection.style.display = 'none';
         loggedInSection.style.display = 'block';
         userMenu.style.display = 'flex';
-
-        document.getElementById('user-name').textContent = userData.displayName || 'Benutzer';
-        document.getElementById('user-subscription').textContent = userData.subscription || 'Qobuz';
-
-        const avatar = document.getElementById('user-avatar');
-        if (userData.avatar) {
-            avatar.src = userData.avatar;
-            avatar.style.display = 'block';
-        } else {
-            avatar.style.display = 'none';
-        }
     }
 
     // Search functionality
