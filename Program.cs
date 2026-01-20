@@ -7,12 +7,24 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 
-// Register SQLite database
-var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "data");
-Directory.CreateDirectory(dataFolder);
-var dbPath = Path.Combine(dataFolder, "bluesound.db");
-builder.Services.AddDbContext<BluesoundDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath}"));
+// Register database context - PostgreSQL for production, SQLite for development
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (!string.IsNullOrEmpty(connectionString))
+{
+    // PostgreSQL when connection string is provided (Docker/Coolify)
+    builder.Services.AddDbContext<BluesoundDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
+else
+{
+    // SQLite for local development
+    var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "data");
+    Directory.CreateDirectory(dataFolder);
+    var dbPath = Path.Combine(dataFolder, "bluesound.db");
+    builder.Services.AddDbContext<BluesoundDbContext>(options =>
+        options.UseSqlite($"Data Source={dbPath}"));
+}
 
 // Register Settings service
 builder.Services.AddScoped<ISettingsService, SettingsService>();
