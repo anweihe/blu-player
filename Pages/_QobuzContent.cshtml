@@ -3281,17 +3281,83 @@
     }
 
     // Handle player change - called when user switches between browser and Bluesound
-    function handlePlayerChange(previousType, newType, newPlayer) {
-        if (previousType === 'browser' && newType === 'bluesound') {
-            // Switching from browser to Bluesound - pause browser audio
+    // Implements handoff: stops playback on old device and continues on new device
+    async function handlePlayerChange(previousType, newType, newPlayer, previousPlayer) {
+        // Check if something is playing that we can hand off
+        const hasTrackToHandoff = currentTrackIndex >= 0 && currentTracks.length > 0;
+        const wasPlaying = isPlaying;
+        let currentPosition = 0;
+
+        if (previousType === 'browser') {
+            // Get current position from browser
+            currentPosition = audioPlayer.currentTime || 0;
+
+            // Stop browser playback
             if (audioPlayer.src && !audioPlayer.paused) {
                 audioPlayer.pause();
-                isPlaying = false;
-                updateTrackHighlight();
             }
-        } else if (previousType === 'bluesound' && newType === 'browser') {
-            // Switching from Bluesound to browser - stop Bluesound polling
+            isPlaying = false;
+        } else if (previousType === 'bluesound' && previousPlayer?.ip) {
+            // Get current position from Bluesound status (use last known position)
+            currentPosition = window.GlobalPlayer?.getLastKnownPosition?.() || 0;
+
+            // Stop Bluesound playback on the OLD player
+            await stopBluesoundPlayback(previousPlayer.ip, previousPlayer.port || 11000);
             stopBluesoundStatusPolling();
+        }
+
+        // If nothing was playing, just update UI and return
+        if (!hasTrackToHandoff || !wasPlaying) {
+            updateTrackHighlight();
+            return;
+        }
+
+        // Hand off to new device
+        const track = currentTracks[currentTrackIndex];
+        const creds = await getQobuzCredentials();
+        const authToken = creds?.authToken;
+
+        if (!track || !authToken) {
+            updateTrackHighlight();
+            return;
+        }
+
+        console.log(`Handoff: ${previousType} → ${newType} at ${Math.round(currentPosition)}s`);
+
+        if (newType === 'bluesound' && newPlayer?.ip) {
+            // Start playback on Bluesound
+            await playOnBluesound(track, currentTrackIndex, authToken);
+            // Note: BluOS doesn't support seeking to a position easily,
+            // so the track starts from the beginning
+        } else if (newType === 'browser') {
+            // Start playback on browser and seek to position
+            await playOnBrowser(track, currentTrackIndex, authToken);
+            // Seek to the saved position after playback starts
+            if (currentPosition > 0) {
+                audioPlayer.currentTime = currentPosition;
+            }
+        }
+    }
+
+    // Stop playback on a specific Bluesound player
+    async function stopBluesoundPlayback(ip, port) {
+        if (!ip) return;
+
+        try {
+            await fetch('?handler=BluesoundControl', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                    ip: ip,
+                    port: port || 11000,
+                    action: 'stop'
+                })
+            });
+        } catch (error) {
+            console.error('Failed to stop Bluesound:', error);
         }
     }
 

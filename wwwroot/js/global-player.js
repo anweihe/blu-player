@@ -1146,6 +1146,7 @@
     }
 
     window.selectGlobalPlayer = async function(type, player = null) {
+        const previousPlayer = { ...globalSelectedPlayer };
         const previousType = globalSelectedPlayer.type;
 
         if (type === 'browser') {
@@ -1171,9 +1172,9 @@
         updatePlayerDisplay();
         closeGlobalPlayerSelector();
 
-        // Notify page about player change
+        // Notify page about player change (pass old player info for handoff)
         if (onPlayerChange) {
-            onPlayerChange(previousType, globalSelectedPlayer.type, globalSelectedPlayer);
+            onPlayerChange(previousType, globalSelectedPlayer.type, globalSelectedPlayer, previousPlayer);
         }
     };
 
@@ -1205,6 +1206,9 @@
         getSelectedPlayer: () => globalSelectedPlayer,
         getCurrentTrack: () => globalCurrentTrack,
         getStreamQuality: () => globalStreamQuality,
+        getLastKnownPosition: () => lastKnownPosition,
+        getLastKnownTotal: () => lastKnownTotal,
+        isPlaying: () => globalIsPlaying,
         setCurrentTrack: (track) => {
             globalCurrentTrack = track;
             if (track) {
