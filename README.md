@@ -11,20 +11,29 @@ A modern web application for controlling Bluesound/BluOS players on your local n
 - **Automatic Discovery** - Finds all Bluesound players on your network via mDNS/Bonjour
 - **Player Grouping** - View and manage grouped players
 - **Stereo Pair Support** - Properly handles stereo paired speakers
-- **Volume Control** - Adjust volume for individual players or groups
+- **Volume Control** - Adjust volume for individual players or groups with a dedicated volume panel
 - **Playback Control** - Play, pause, skip tracks on any player
-- **Now Playing** - View current track information with album art
+- **Now Playing Bar** - Global persistent playback bar with full-screen popup view
+- **Playback Handoff** - Seamlessly switch playback between browser and Bluesound players
 
 ### Qobuz Integration
-- **Secure Login** - Login with your Qobuz credentials (stored locally in browser)
+- **Secure Login** - Login with your Qobuz credentials
+- **Multi-User Profiles** - Support for multiple user profiles with separate Qobuz accounts
 - **Playlist Browser** - View all your Qobuz playlists with cover art
-- **Track Playback** - Stream tracks directly in the browser
+- **Album Browser** - Browse new releases, top playlists, and personalized recommendations
+- **Search** - Search for albums, playlists, and tracks
+- **Favorites** - Quick access to your favorite albums, playlists, and tracks
+- **Playback Queue** - View and manage the current playback queue with persistence
 - **Hi-Res Support** - Shows quality indicators for high-resolution tracks
-- **Player Selection** - Choose between browser playback or Bluesound players (Bluesound streaming coming soon)
+- **Quality Selection** - Choose streaming quality (MP3, CD, Hi-Res)
+- **Player Selection** - Stream to browser or directly to Bluesound players
 
-## Screenshots
-
-*Coming soon*
+### Technical Features
+- **SPA Navigation** - Fast single-page app navigation between pages
+- **Responsive Design** - Works on desktop, tablet, and mobile
+- **Dark Mode** - Beautiful dark theme (light mode via system preference)
+- **Persistent State** - Queue and settings persist across sessions
+- **Docker Support** - Ready for deployment with Docker/Coolify
 
 ## Getting Started
 
@@ -34,7 +43,7 @@ A modern web application for controlling Bluesound/BluOS players on your local n
 - Bluesound players on the same network (for player control)
 - Qobuz subscription (for streaming features)
 
-### Installation
+### Local Development
 
 1. Clone the repository:
    ```bash
@@ -52,22 +61,51 @@ A modern web application for controlling Bluesound/BluOS players on your local n
    http://localhost:5000
    ```
 
+SQLite is used automatically for local development (database stored in `data/bluesound.db`).
+
+### Docker Deployment
+
+The application supports Docker deployment with PostgreSQL for production use.
+
+1. Build the Docker image:
+   ```bash
+   docker build -t bluesound-web .
+   ```
+
+2. Run with Docker Compose or set the `DefaultConnection` environment variable to your PostgreSQL connection string.
+
+For Coolify deployment, set the following environment variable:
+```
+DefaultConnection=Host=<host>;Database=<db>;Username=<user>;Password=<password>
+```
+
 ## Project Structure
 
 ```
+├── Data/
+│   └── BluesoundDbContext.cs     # Entity Framework database context
 ├── Models/
-│   ├── BluesoundPlayer.cs    # Player model with group/stereo pair info
-│   ├── PlayerGroup.cs        # ViewModel for grouped display
-│   ├── PlaybackStatus.cs     # Current playback state
-│   └── QobuzModels.cs        # Qobuz API models
+│   ├── BluesoundPlayer.cs        # Player model with group/stereo pair info
+│   ├── PlayerGroup.cs            # ViewModel for grouped display
+│   ├── PlaybackStatus.cs         # Current playback state
+│   ├── UserProfile.cs            # Multi-user profile model
+│   ├── PlaybackQueue.cs          # Queue persistence model
+│   └── QobuzModels.cs            # Qobuz API models
 ├── Services/
-│   ├── BluesoundApiService.cs      # BluOS API communication
-│   ├── PlayerDiscoveryService.cs   # mDNS-based player discovery
-│   └── QobuzApiService.cs          # Qobuz API integration
+│   ├── BluesoundApiService.cs    # BluOS API communication
+│   ├── PlayerDiscoveryService.cs # mDNS-based player discovery
+│   ├── QobuzApiService.cs        # Qobuz API integration
+│   ├── SettingsService.cs        # User settings management
+│   └── QueueService.cs           # Playback queue management
 ├── Pages/
-│   ├── Index.cshtml          # Main player control UI
-│   └── Qobuz.cshtml          # Qobuz streaming UI
-└── Program.cs                # Service registration
+│   ├── Index.cshtml              # Home page
+│   ├── Players.cshtml            # Player control UI
+│   ├── Qobuz.cshtml              # Qobuz streaming UI
+│   └── Api/                      # API endpoints
+├── wwwroot/
+│   ├── css/                      # Stylesheets
+│   └── js/                       # JavaScript modules
+└── Program.cs                    # Application setup
 ```
 
 ## BluOS API Reference
@@ -82,12 +120,15 @@ The application communicates with Bluesound players via the BluOS HTTP API on po
 | `/Status` | Playback status (play/pause, track info) |
 | `/Volume?level=<0-100>` | Set volume |
 | `/Play`, `/Pause`, `/Stop` | Playback control |
+| `/Skip`, `/Back` | Track navigation |
 | `/AddSlave?slave=<IP>` | Add player to group |
 | `/RemoveSlave?slave=<IP>` | Remove player from group |
 
 ## Technology Stack
 
 - **Backend:** ASP.NET Core 9.0 with Razor Pages
+- **Database:** SQLite (development) / PostgreSQL (production)
+- **ORM:** Entity Framework Core 9.0
 - **Frontend:** Vanilla JavaScript with CSS custom properties
 - **Player Discovery:** Zeroconf (mDNS/Bonjour)
 - **Qobuz Integration:** Custom implementation based on public API
@@ -104,7 +145,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Bluesound](https://www.bluesound.com/) for their excellent multi-room audio system
 - [Qobuz](https://www.qobuz.com/) for high-resolution music streaming
-- Inspired by various open-source Qobuz clients
 
 ## Disclaimer
 
