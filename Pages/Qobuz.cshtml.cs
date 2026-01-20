@@ -378,11 +378,11 @@ public class QobuzModel : PageModel
         });
     }
 
-    public async Task<IActionResult> OnGetTrackStreamUrlAsync(long trackId, string authToken)
+    public async Task<IActionResult> OnGetTrackStreamUrlAsync(long trackId, string authToken, int formatId = 27)
     {
-        _logger.LogInformation("Getting stream URL for track {TrackId}", trackId);
+        _logger.LogInformation("Getting stream URL for track {TrackId} with format {FormatId}", trackId, formatId);
 
-        var streamUrl = await _qobuzService.GetTrackStreamUrlAsync(trackId, authToken);
+        var streamUrl = await _qobuzService.GetTrackStreamUrlAsync(trackId, authToken, formatId);
 
         if (string.IsNullOrEmpty(streamUrl))
         {
@@ -589,11 +589,11 @@ public class QobuzModel : PageModel
             return new JsonResult(new { success = false, error = "Fehlende Parameter" });
         }
 
-        _logger.LogInformation("Playing track {TrackId} on Bluesound player {Ip}:{Port}",
-            request.TrackId, request.Ip, request.Port);
+        _logger.LogInformation("Playing track {TrackId} on Bluesound player {Ip}:{Port} with format {FormatId}",
+            request.TrackId, request.Ip, request.Port, request.FormatId);
 
-        // Get the stream URL from Qobuz
-        var streamUrl = await _qobuzService.GetTrackStreamUrlAsync(request.TrackId, request.AuthToken);
+        // Get the stream URL from Qobuz with specified quality
+        var streamUrl = await _qobuzService.GetTrackStreamUrlAsync(request.TrackId, request.AuthToken, request.FormatId);
 
         if (string.IsNullOrEmpty(streamUrl))
         {
@@ -688,6 +688,7 @@ public class PlayOnBluesoundRequest
     public int Port { get; set; } = 11000;
     public long TrackId { get; set; }
     public string AuthToken { get; set; } = string.Empty;
+    public int FormatId { get; set; } = 27; // Default: Hi-Res Max
     public string? Title { get; set; }
     public string? Artist { get; set; }
     public string? Album { get; set; }
