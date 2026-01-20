@@ -36,20 +36,38 @@ public class PlayersModel : PageModel
     }
 
     /// <summary>
+    /// Returns only the page content for SPA navigation
+    /// </summary>
+    public IActionResult OnGetFragment()
+    {
+        IsInitialLoad = true;
+        return Partial("_PlayersContent", this);
+    }
+
+    /// <summary>
     /// AJAX endpoint for discovering players
     /// </summary>
-    public async Task<IActionResult> OnGetDiscoverAsync()
+    public async Task<IActionResult> OnGetDiscoverAsync(bool refresh = false)
     {
         try
         {
-            _logger.LogInformation("Starting full mDNS player discovery...");
+            List<BluesoundPlayer> players;
 
-            var players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
+            // Use cache if available and not forcing refresh (cache valid for 30 seconds)
+            if (!refresh && _playerCache.HasRecentCache(TimeSpan.FromSeconds(30)))
+            {
+                players = _playerCache.GetCachedPlayers();
+                _logger.LogInformation("Using {Count} cached players", players.Count);
+            }
+            else
+            {
+                _logger.LogInformation("Starting full mDNS player discovery...");
+                players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
+                _logger.LogInformation("Discovery complete. Found {Count} players.", players.Count);
 
-            _logger.LogInformation("Discovery complete. Found {Count} players.", players.Count);
-
-            // Cache the discovered players
-            _playerCache.SetCachedPlayers(players);
+                // Cache the discovered players
+                _playerCache.SetCachedPlayers(players);
+            }
 
             var groups = OrganizeIntoGroups(players);
 

@@ -57,6 +57,26 @@ public class QobuzModel : PageModel
         }
     }
 
+    /// <summary>
+    /// Returns only the page content for SPA navigation
+    /// </summary>
+    public async Task<IActionResult> OnGetFragmentAsync()
+    {
+        // Initialize app credentials if needed
+        if (!_qobuzService.HasAppCredentials)
+        {
+            IsInitializing = true;
+            var credentials = await _qobuzService.ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                ErrorMessage = "Konnte Qobuz App-Credentials nicht laden. Bitte versuche es später erneut.";
+            }
+            IsInitializing = false;
+        }
+
+        return Partial("_QobuzContent", this);
+    }
+
     public async Task<IActionResult> OnPostLoginAsync()
     {
         if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))

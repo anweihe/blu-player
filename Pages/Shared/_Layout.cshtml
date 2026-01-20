@@ -389,6 +389,13 @@
                 --menu-card-hover: #e4e4e7;
             }
         }
+
+        /* SPA Navigation Loading State */
+        body.spa-navigating main[role="main"] {
+            opacity: 0.6;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+        }
     </style>
 </head>
 <body>
@@ -554,7 +561,11 @@
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/settings-api.js" asp-append-version="true"></script>
+    <script src="~/js/user-profiles.js" asp-append-version="true"></script>
+    <script src="~/js/hamburger-menu.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/spa-router.js" asp-append-version="true"></script>
     <script src="~/js/global-player.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)

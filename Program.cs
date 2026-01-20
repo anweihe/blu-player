@@ -1,9 +1,21 @@
+using Microsoft.EntityFrameworkCore;
+using BluesoundWeb.Data;
 using BluesoundWeb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+
+// Register SQLite database
+var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "data");
+Directory.CreateDirectory(dataFolder);
+var dbPath = Path.Combine(dataFolder, "bluesound.db");
+builder.Services.AddDbContext<BluesoundDbContext>(options =>
+    options.UseSqlite($"Data Source={dbPath}"));
+
+// Register Settings service
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 // Register Bluesound services
 builder.Services.AddHttpClient<IBluesoundApiService, BluesoundApiService>();
@@ -14,6 +26,13 @@ builder.Services.AddSingleton<IPlayerCacheService, PlayerCacheService>();
 builder.Services.AddHttpClient<IQobuzApiService, QobuzApiService>();
 
 var app = builder.Build();
+
+// Ensure database is created
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<BluesoundDbContext>();
+    db.Database.EnsureCreated();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

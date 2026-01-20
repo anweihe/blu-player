@@ -51,12 +51,12 @@ function closeMenu() {
 /**
  * Show the profile switcher modal
  */
-function showProfileSwitcher() {
+async function showProfileSwitcher() {
     closeMenu();
 
     const overlay = document.getElementById('profile-switcher-overlay');
     if (overlay) {
-        renderProfileList();
+        await renderProfileList();
         overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
         profileSwitcherOpen = true;
@@ -81,14 +81,17 @@ function closeProfileSwitcher(event) {
 /**
  * Render the list of profiles in the profile switcher
  */
-function renderProfileList() {
+async function renderProfileList() {
     if (typeof UserProfileManager === 'undefined') return;
 
     const list = document.getElementById('profile-switcher-list');
     if (!list) return;
 
-    const profiles = UserProfileManager.getAllProfiles();
-    const activeProfileId = UserProfileManager.getActiveProfileId();
+    // Show loading state
+    list.innerHTML = '<div class="no-profiles">Laden...</div>';
+
+    const profiles = await UserProfileManager.getAllProfiles();
+    const activeProfileId = await UserProfileManager.getActiveProfileId();
 
     if (profiles.length === 0) {
         list.innerHTML = '<div class="no-profiles">Keine Profile vorhanden</div>';
@@ -123,43 +126,59 @@ function renderProfileList() {
  * Switch to a different profile
  * @param {string} profileId - The profile ID to switch to
  */
-function switchToProfile(profileId) {
+async function switchToProfile(profileId) {
     if (typeof UserProfileManager === 'undefined') return;
 
-    const profile = UserProfileManager.getProfileById(profileId);
+    const profile = await UserProfileManager.getProfileById(profileId);
     if (!profile) return;
 
-    UserProfileManager.setActiveProfileId(profileId);
+    await UserProfileManager.setActiveProfileId(profileId);
 
     // Update UI displays
-    updateProfileDisplay();
+    await updateProfileDisplay();
 
     // Close the profile switcher
     closeProfileSwitcher();
 
-    // Reload the page to apply the new profile context
-    // This ensures Qobuz credentials are properly loaded
-    window.location.reload();
+    // Reload global player settings for the new profile
+    if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.reloadSettings) {
+        await GlobalPlayer.reloadSettings();
+    }
+
+    // Use SPA navigation to reload the current page content
+    // This preserves audio playback while updating the profile context
+    if (typeof navigateTo === 'function') {
+        navigateTo(window.location.pathname, false);
+    } else {
+        // Fallback to full page reload
+        window.location.reload();
+    }
 }
 
 /**
  * Create a new profile
  */
-function createNewProfile() {
+async function createNewProfile() {
     const name = prompt('Name für das neue Profil:');
     if (!name || !name.trim()) return;
 
     if (typeof UserProfileManager === 'undefined') return;
 
-    const newProfile = UserProfileManager.createProfile(name.trim());
+    const newProfile = await UserProfileManager.createProfile(name.trim());
+    if (!newProfile) return;
 
     // Set as active and switch to it
-    UserProfileManager.setActiveProfileId(newProfile.id);
+    await UserProfileManager.setActiveProfileId(newProfile.id);
 
     closeProfileSwitcher();
 
     // Redirect to home to let user configure the profile
-    window.location.href = '/';
+    // Use SPA navigation to preserve audio playback
+    if (typeof navigateTo === 'function') {
+        navigateTo('/');
+    } else {
+        window.location.href = '/';
+    }
 }
 
 /**
@@ -167,36 +186,37 @@ function createNewProfile() {
  * @param {Event} event - Click event
  * @param {string} profileId - Profile ID to delete
  */
-function confirmDeleteProfile(event, profileId) {
+async function confirmDeleteProfile(event, profileId) {
     event.stopPropagation();
 
     if (typeof UserProfileManager === 'undefined') return;
 
-    const profiles = UserProfileManager.getAllProfiles();
+    const profiles = await UserProfileManager.getAllProfiles();
     if (profiles.length <= 1) {
         alert('Du kannst das letzte Profil nicht löschen.');
         return;
     }
 
-    const profile = UserProfileManager.getProfileById(profileId);
+    const profile = await UserProfileManager.getProfileById(profileId);
     if (!profile) return;
 
     if (confirm(`Möchtest du das Profil "${profile.name}" wirklich löschen?`)) {
-        const wasActive = UserProfileManager.getActiveProfileId() === profileId;
+        const currentActiveId = await UserProfileManager.getActiveProfileId();
+        const wasActive = currentActiveId === profileId;
 
-        UserProfileManager.deleteProfile(profileId);
+        await UserProfileManager.deleteProfile(profileId);
 
         if (wasActive) {
             // Switch to the first available profile
-            const remainingProfiles = UserProfileManager.getAllProfiles();
+            const remainingProfiles = await UserProfileManager.getAllProfiles();
             if (remainingProfiles.length > 0) {
-                UserProfileManager.setActiveProfileId(remainingProfiles[0].id);
+                await UserProfileManager.setActiveProfileId(remainingProfiles[0].id);
             }
         }
 
         // Refresh the profile list
-        renderProfileList();
-        updateProfileDisplay();
+        await renderProfileList();
+        await updateProfileDisplay();
 
         if (wasActive) {
             window.location.reload();
@@ -207,10 +227,10 @@ function confirmDeleteProfile(event, profileId) {
 /**
  * Update profile display in header and menu
  */
-function updateProfileDisplay() {
+async function updateProfileDisplay() {
     if (typeof UserProfileManager === 'undefined') return;
 
-    const activeProfile = UserProfileManager.getActiveProfile();
+    const activeProfile = await UserProfileManager.getActiveProfile();
     if (!activeProfile) return;
 
     const initial = UserProfileManager.getProfileInitial(activeProfile.name);
@@ -258,11 +278,21 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Close menu on SPA navigation
+document.addEventListener('spa:pageload', function() {
+    closeMenu();
+    closeProfileSwitcher();
+    // Re-initialize profile display after navigation
+    if (typeof UserProfileManager !== 'undefined') {
+        updateProfileDisplay();
+    }
+});
+
 // Initialize on DOMContentLoaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Initialize UserProfileManager if available
     if (typeof UserProfileManager !== 'undefined') {
-        UserProfileManager.initialize();
-        updateProfileDisplay();
+        await UserProfileManager.initialize();
+        await updateProfileDisplay();
     }
 });

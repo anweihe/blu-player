@@ -5,8 +5,6 @@
     'use strict';
 
     // Constants
-    const STORAGE_SELECTED_PLAYER = 'bluesound_selected_player';
-    const STORAGE_STREAM_QUALITY = 'qobuz_stream_quality';
     const STORAGE_PLAYBACK_STATE = 'global_playback_state';
 
     // State
@@ -16,6 +14,7 @@
     let globalStreamQuality = 27; // Default: Hi-Res Max
     let globalStatusInterval = null;
     let globalAvailablePlayers = [];
+    let settingsInitialized = false;
 
     // Progress animation state
     let progressAnimationFrame = null;
@@ -107,7 +106,7 @@
 
     // ==================== Initialization ====================
 
-    function initGlobalPlayer() {
+    async function initGlobalPlayer() {
         // Get DOM elements
         nowPlayingBar = document.getElementById('global-now-playing-bar');
         popup = document.getElementById('global-np-popup');
@@ -131,17 +130,15 @@
             });
         }
 
-        // Load saved player
-        loadSavedPlayer();
-
-        // Load stream quality
-        loadStreamQuality();
+        // Load saved player and stream quality from server
+        await loadSettingsFromServer();
 
         // Restore playback state from previous page
         restorePlaybackState();
 
         // Check if user is logged in (has profile)
-        if (hasActiveProfile()) {
+        const hasProfile = await hasActiveProfileAsync();
+        if (hasProfile) {
             // Check current playback status
             checkCurrentPlayback();
         }
@@ -160,6 +157,35 @@
 
         // Save playback state before page unload
         window.addEventListener('beforeunload', savePlaybackState);
+
+        settingsInitialized = true;
+    }
+
+    // Load settings from server
+    async function loadSettingsFromServer() {
+        try {
+            const activeProfileId = await SettingsApi.getActiveProfileId();
+            if (!activeProfileId) return;
+
+            // Load player selection
+            const playerSelection = await SettingsApi.getPlayerSelection(activeProfileId);
+            if (playerSelection) {
+                globalSelectedPlayer = {
+                    type: playerSelection.type || 'browser',
+                    name: playerSelection.name || 'Dieses Gerät',
+                    ip: playerSelection.ip,
+                    port: playerSelection.port,
+                    model: playerSelection.model
+                };
+                updatePlayerDisplay();
+            }
+
+            // Load streaming quality
+            const quality = await SettingsApi.getStreamingQuality(activeProfileId);
+            globalStreamQuality = quality || 27;
+        } catch (e) {
+            console.error('Failed to load settings from server:', e);
+        }
     }
 
     // ==================== Global Audio Player Events ====================
@@ -313,51 +339,62 @@
 
     // ==================== Profile Check ====================
 
-    function hasActiveProfile() {
+    async function hasActiveProfileAsync() {
         try {
-            const profilesData = localStorage.getItem('user_profiles');
-            if (!profilesData) return false;
-
-            const data = JSON.parse(profilesData);
-            return data.activeProfileId && data.profiles && data.profiles.length > 0;
+            const activeProfileId = await SettingsApi.getActiveProfileId();
+            return !!activeProfileId;
         } catch (e) {
             return false;
         }
     }
 
-    function getActiveProfileCredentials() {
+    // Synchronous check for backwards compatibility
+    function hasActiveProfile() {
+        // Use cached value from UserProfileManager
+        return !!UserProfileManager.getActiveProfileIdSync();
+    }
+
+    async function getActiveProfileCredentialsAsync() {
         try {
-            const profilesData = localStorage.getItem('user_profiles');
-            if (!profilesData) return null;
+            const activeProfileId = await SettingsApi.getActiveProfileId();
+            if (!activeProfileId) return null;
 
-            const data = JSON.parse(profilesData);
-            if (!data.activeProfileId || !data.profiles) return null;
-
-            const profile = data.profiles.find(p => p.id === data.activeProfileId);
-            if (!profile || !profile.qobuz) return null;
-
-            return profile.qobuz;
+            const credentials = await SettingsApi.getQobuzCredentials(activeProfileId);
+            return credentials;
         } catch (e) {
             return null;
         }
     }
 
-    // ==================== Player Selection ====================
-
-    function loadSavedPlayer() {
-        const saved = localStorage.getItem(STORAGE_SELECTED_PLAYER);
-        if (saved) {
-            try {
-                globalSelectedPlayer = JSON.parse(saved);
-                updatePlayerDisplay();
-            } catch (e) {
-                console.error('Failed to load saved player:', e);
-            }
-        }
+    // Sync version for quick checks (uses cached data)
+    function getActiveProfileCredentials() {
+        const activeProfile = UserProfileManager.getAllProfilesSync()
+            .find(p => p.id === UserProfileManager.getActiveProfileIdSync());
+        return activeProfile?.qobuz || null;
     }
 
-    function saveSelectedPlayer() {
-        localStorage.setItem(STORAGE_SELECTED_PLAYER, JSON.stringify(globalSelectedPlayer));
+    // ==================== Player Selection ====================
+
+    async function loadSavedPlayer() {
+        // Settings are now loaded in loadSettingsFromServer()
+        // This function is kept for backwards compatibility
+    }
+
+    async function saveSelectedPlayer() {
+        try {
+            const activeProfileId = await SettingsApi.getActiveProfileId();
+            if (!activeProfileId) return;
+
+            await SettingsApi.updatePlayerSelection(activeProfileId, {
+                type: globalSelectedPlayer.type,
+                name: globalSelectedPlayer.name,
+                ip: globalSelectedPlayer.ip,
+                port: globalSelectedPlayer.port,
+                model: globalSelectedPlayer.model
+            });
+        } catch (e) {
+            console.error('Failed to save player selection:', e);
+        }
     }
 
     function updatePlayerDisplay() {
@@ -765,20 +802,19 @@
 
     // ==================== Quality Settings ====================
 
-    function loadStreamQuality() {
-        const creds = getActiveProfileCredentials();
-        if (creds?.userId) {
-            const saved = localStorage.getItem(`${STORAGE_STREAM_QUALITY}_${creds.userId}`);
-            if (saved) {
-                globalStreamQuality = parseInt(saved, 10);
-            }
-        }
+    async function loadStreamQuality() {
+        // Quality is now loaded in loadSettingsFromServer()
+        // This function is kept for backwards compatibility
     }
 
-    function saveStreamQuality(formatId) {
-        const creds = getActiveProfileCredentials();
-        if (creds?.userId) {
-            localStorage.setItem(`${STORAGE_STREAM_QUALITY}_${creds.userId}`, formatId.toString());
+    async function saveStreamQuality(formatId) {
+        try {
+            const activeProfileId = await SettingsApi.getActiveProfileId();
+            if (!activeProfileId) return;
+
+            await SettingsApi.updateStreamingQuality(activeProfileId, formatId);
+        } catch (e) {
+            console.error('Failed to save stream quality:', e);
         }
     }
 
@@ -789,11 +825,11 @@
         });
     }
 
-    window.setGlobalStreamQuality = function(formatId) {
+    window.setGlobalStreamQuality = async function(formatId) {
         if (formatId === globalStreamQuality) return;
 
         globalStreamQuality = formatId;
-        saveStreamQuality(formatId);
+        await saveStreamQuality(formatId);
         updateQualityButtons();
 
         // Call Qobuz page callback to restart current track with new quality
@@ -891,7 +927,7 @@
         list.innerHTML = html;
     }
 
-    window.selectGlobalPlayer = function(type, player = null) {
+    window.selectGlobalPlayer = async function(type, player = null) {
         const previousType = globalSelectedPlayer.type;
 
         if (type === 'browser') {
@@ -910,7 +946,7 @@
             checkCurrentPlayback();
         }
 
-        saveSelectedPlayer();
+        await saveSelectedPlayer();
         updatePlayerDisplay();
         closeGlobalPlayerSelector();
 
@@ -1042,7 +1078,9 @@
         // Get audio player reference (for direct access)
         getAudioPlayer: () => globalAudioPlayer,
         // Check if audio is currently playing
-        isPlaying: () => globalIsPlaying
+        isPlaying: () => globalIsPlaying,
+        // Reload settings from server (called when profile changes)
+        reloadSettings: loadSettingsFromServer
     };
 
     // Initialize when DOM is ready
