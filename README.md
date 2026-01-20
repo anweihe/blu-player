@@ -63,20 +63,26 @@ A modern web application for controlling Bluesound/BluOS players on your local n
 
 SQLite is used automatically for local development (database stored in `data/bluesound.db`).
 
-### Docker Deployment
+### Docker/Coolify Deployment
 
 The application supports Docker deployment with PostgreSQL for production use.
 
-1. Build the Docker image:
-   ```bash
-   docker build -t bluesound-web .
+**Coolify:**
+1. Create a new service from this repository
+2. Add a PostgreSQL database and link it to the service
+3. Set the environment variable:
+   ```
+   ConnectionStrings__DefaultConnection=${COOLIFY_POSTGRES_CONNECTION_STRING}
+   ```
+   Or construct it manually:
+   ```
+   ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
    ```
 
-2. Run with Docker Compose or set the `DefaultConnection` environment variable to your PostgreSQL connection string.
-
-For Coolify deployment, set the following environment variable:
-```
-DefaultConnection=Host=<host>;Database=<db>;Username=<user>;Password=<password>
+**Manual Docker:**
+```bash
+docker build -t bluesound-web .
+docker run -e "ConnectionStrings__DefaultConnection=Host=...;Database=...;Username=...;Password=..." -p 8081:8081 bluesound-web
 ```
 
 ## Project Structure
