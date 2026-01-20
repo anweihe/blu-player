@@ -370,6 +370,7 @@ body {
   background: var(--np-bg-secondary);
   border-radius: 2px;
   margin-bottom: 8px;
+  cursor: pointer;
 }
 
 .global-popup-progress-fill {

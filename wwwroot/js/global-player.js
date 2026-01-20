@@ -27,6 +27,7 @@
     let onTogglePlayPause = null;
     let onPlayPrevious = null;
     let onPlayNext = null;
+    let onSeek = null;
 
     // DOM Elements (initialized after DOM ready)
     let nowPlayingBar = null;
@@ -63,6 +64,57 @@
         playerSelector?.addEventListener('click', function(e) {
             if (e.target === playerSelector) closeGlobalPlayerSelector();
         });
+
+        // Setup progress bar click-to-seek
+        setupProgressBarSeek();
+    }
+
+    // ==================== Progress Bar Seek ====================
+
+    function setupProgressBarSeek() {
+        // Main bar progress
+        const progressBar = document.getElementById('global-progress-bar');
+        if (progressBar) {
+            progressBar.addEventListener('click', handleProgressBarClick);
+        }
+
+        // Popup progress bar
+        const popupProgressBar = document.querySelector('.global-popup-progress-bar');
+        if (popupProgressBar) {
+            popupProgressBar.addEventListener('click', handleProgressBarClick);
+        }
+    }
+
+    function handleProgressBarClick(e) {
+        if (lastKnownTotal <= 0) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const percentage = clickX / rect.width;
+        const seekTime = percentage * lastKnownTotal;
+
+        // Use page callback if available
+        if (onSeek) {
+            onSeek(seekTime);
+        }
+
+        // Update UI immediately for responsiveness
+        lastKnownPosition = seekTime;
+        lastStatusTime = Date.now();
+
+        const progress = percentage * 100;
+        const progressFill = document.getElementById('global-progress-fill');
+        const currentTime = document.getElementById('global-current-time');
+        if (progressFill) progressFill.style.width = `${progress}%`;
+        if (currentTime) currentTime.textContent = formatTime(seekTime);
+
+        // Update popup if open
+        if (popup && popup.style.display === 'flex') {
+            const popupProgressFill = document.getElementById('global-popup-progress-fill');
+            const popupCurrentTime = document.getElementById('global-popup-current-time');
+            if (popupProgressFill) popupProgressFill.style.width = `${progress}%`;
+            if (popupCurrentTime) popupCurrentTime.textContent = formatTime(seekTime);
+        }
     }
 
     // ==================== Profile Check ====================
@@ -699,12 +751,14 @@
             if (callbacks.togglePlayPause) onTogglePlayPause = callbacks.togglePlayPause;
             if (callbacks.playPrevious) onPlayPrevious = callbacks.playPrevious;
             if (callbacks.playNext) onPlayNext = callbacks.playNext;
+            if (callbacks.seek) onSeek = callbacks.seek;
         },
         // Unregister callbacks (when leaving page)
         unregisterPlaybackCallbacks: () => {
             onTogglePlayPause = null;
             onPlayPrevious = null;
             onPlayNext = null;
+            onSeek = null;
         },
         // Update progress bar
         updateProgress: (currentSeconds, totalSeconds) => {

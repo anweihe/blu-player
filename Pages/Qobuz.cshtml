@@ -1927,7 +1927,8 @@
             window.GlobalPlayer.registerPlaybackCallbacks({
                 togglePlayPause: togglePlayPause,
                 playPrevious: playPrevious,
-                playNext: playNext
+                playNext: playNext,
+                seek: seekTo
             });
         }
 
@@ -3136,6 +3137,15 @@
             if (window.GlobalPlayer) window.GlobalPlayer.setPlaying(isPlaying);
             updateTrackHighlight();
         }
+    }
+
+    // Seek to position in seconds
+    function seekTo(seconds) {
+        const selectedPlayer = getSelectedPlayer();
+        if (selectedPlayer.type === 'browser' && audioPlayer.src) {
+            audioPlayer.currentTime = seconds;
+        }
+        // TODO: Add Bluesound seek support if needed
     }
 
     // Send control command to Bluesound player
