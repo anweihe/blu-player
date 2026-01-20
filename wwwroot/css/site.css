@@ -264,6 +264,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
 .global-np-popup {
@@ -397,6 +398,7 @@ body {
   width: 48px;
   height: 48px;
   border: none;
+  outline: none;
   background: var(--np-bg-secondary);
   border-radius: 50%;
   color: var(--np-text);
@@ -404,10 +406,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .global-popup-btn:hover {
   background: #1c1c1f;
+}
+
+.global-popup-btn:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .global-popup-btn svg {
@@ -423,6 +433,7 @@ body {
 }
 
 .global-popup-btn-play:hover {
+  background: var(--np-accent);
   filter: brightness(1.1);
 }
 
@@ -464,19 +475,32 @@ body {
   align-items: center;
   padding: 12px 8px;
   background: var(--np-bg);
-  border: 2px solid transparent;
-  border-radius: 6px;
+  border: none;
+  outline: none;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
 }
 
 .global-quality-option:hover {
   background: #1c1c1f;
 }
 
+.global-quality-option:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .global-quality-option.active {
-  border-color: var(--np-accent);
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(29, 185, 84, 0.15);
+  box-shadow: inset 0 0 0 2px var(--np-accent);
+}
+
+.global-quality-option.active:focus {
+  box-shadow: inset 0 0 0 2px var(--np-accent);
 }
 
 .global-quality-name {
@@ -501,6 +525,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
 .global-player-selector-popup {
@@ -573,7 +598,7 @@ body {
 }
 
 .global-player-option.active {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(29, 185, 84, 0.15);
 }
 
 .global-player-icon {
