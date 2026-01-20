@@ -1928,7 +1928,8 @@
                 togglePlayPause: togglePlayPause,
                 playPrevious: playPrevious,
                 playNext: playNext,
-                seek: seekTo
+                seek: seekTo,
+                onPlayerChange: handlePlayerChange
             });
         }
 
@@ -3146,6 +3147,21 @@
             audioPlayer.currentTime = seconds;
         }
         // TODO: Add Bluesound seek support if needed
+    }
+
+    // Handle player change - called when user switches between browser and Bluesound
+    function handlePlayerChange(previousType, newType, newPlayer) {
+        if (previousType === 'browser' && newType === 'bluesound') {
+            // Switching from browser to Bluesound - pause browser audio
+            if (audioPlayer.src && !audioPlayer.paused) {
+                audioPlayer.pause();
+                isPlaying = false;
+                updateTrackHighlight();
+            }
+        } else if (previousType === 'bluesound' && newType === 'browser') {
+            // Switching from Bluesound to browser - stop Bluesound polling
+            stopBluesoundStatusPolling();
+        }
     }
 
     // Send control command to Bluesound player

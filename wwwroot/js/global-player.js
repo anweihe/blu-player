@@ -28,6 +28,7 @@
     let onPlayPrevious = null;
     let onPlayNext = null;
     let onSeek = null;
+    let onPlayerChange = null;
 
     // DOM Elements (initialized after DOM ready)
     let nowPlayingBar = null;
@@ -676,6 +677,8 @@
     }
 
     window.selectGlobalPlayer = function(type, player = null) {
+        const previousType = globalSelectedPlayer.type;
+
         if (type === 'browser') {
             globalSelectedPlayer = { type: 'browser', name: 'Dieses Gerät' };
             stopStatusPolling();
@@ -695,6 +698,11 @@
         saveSelectedPlayer();
         updatePlayerDisplay();
         closeGlobalPlayerSelector();
+
+        // Notify page about player change
+        if (onPlayerChange) {
+            onPlayerChange(previousType, globalSelectedPlayer.type, globalSelectedPlayer);
+        }
     };
 
     // ==================== Utilities ====================
@@ -752,6 +760,7 @@
             if (callbacks.playPrevious) onPlayPrevious = callbacks.playPrevious;
             if (callbacks.playNext) onPlayNext = callbacks.playNext;
             if (callbacks.seek) onSeek = callbacks.seek;
+            if (callbacks.onPlayerChange) onPlayerChange = callbacks.onPlayerChange;
         },
         // Unregister callbacks (when leaving page)
         unregisterPlaybackCallbacks: () => {
@@ -759,6 +768,7 @@
             onPlayPrevious = null;
             onPlayNext = null;
             onSeek = null;
+            onPlayerChange = null;
         },
         // Update progress bar
         updateProgress: (currentSeconds, totalSeconds) => {
