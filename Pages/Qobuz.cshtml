@@ -2263,19 +2263,31 @@
 
             availablePlayers.forEach(player => {
                 const isSelected = selectedPlayer.type === 'bluesound' && selectedPlayer.id === player.id;
+                const isGroup = player.isGroup && player.memberCount > 1;
+                const detailText = isGroup
+                    ? `Gruppe · ${player.memberCount} Player`
+                    : escapeHtml(player.model || player.brand || 'Bluesound');
+
                 html += `
                     <div class="player-option${isSelected ? ' selected' : ''}"
                          onclick="selectPlayer('bluesound', '${escapeHtml(player.name)}', ${JSON.stringify(player).replace(/"/g, '&quot;')})">
                         <div class="player-option-icon">
+                            ${isGroup ? `
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="6" width="10" height="10" rx="1"/>
+                                <rect x="12" y="8" width="10" height="10" rx="1"/>
+                            </svg>
+                            ` : `
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="4" y="4" width="16" height="16" rx="2"/>
                                 <circle cx="12" cy="12" r="3"/>
                                 <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
                             </svg>
+                            `}
                         </div>
                         <div class="player-option-info">
                             <div class="player-option-name">${escapeHtml(player.name)}</div>
-                            <div class="player-option-detail">${escapeHtml(player.model || player.brand || 'Bluesound')}</div>
+                            <div class="player-option-detail">${detailText}</div>
                         </div>
                         <svg class="player-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                             <path d="M20 6L9 17l-5-5"/>

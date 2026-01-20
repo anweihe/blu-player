@@ -222,7 +222,7 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
-    /// Get available Bluesound players
+    /// Get available Bluesound players (grouped like on home page)
     /// </summary>
     public async Task<IActionResult> OnGetPlayersAsync(bool refresh = false)
     {
@@ -232,7 +232,7 @@ public class QobuzModel : PageModel
             return new JsonResult(new
             {
                 success = true,
-                players = FormatPlayersForJson(_cachedPlayers)
+                players = GetGroupedPlayersForSelector(_cachedPlayers)
             });
         }
 
@@ -243,9 +243,6 @@ public class QobuzModel : PageModel
             // Discover players on the network
             var players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
 
-            // Filter out secondary stereo pair speakers
-            players = players.Where(p => !p.IsSecondaryStereoPairSpeaker).ToList();
-
             _cachedPlayers = players;
             _lastDiscovery = DateTime.Now;
 
@@ -254,7 +251,7 @@ public class QobuzModel : PageModel
             return new JsonResult(new
             {
                 success = true,
-                players = FormatPlayersForJson(players)
+                players = GetGroupedPlayersForSelector(players)
             });
         }
         catch (Exception ex)
@@ -264,25 +261,117 @@ public class QobuzModel : PageModel
             {
                 success = false,
                 error = "Player-Suche fehlgeschlagen",
-                players = FormatPlayersForJson(_cachedPlayers)
+                players = GetGroupedPlayersForSelector(_cachedPlayers)
             });
         }
     }
 
-    private static object FormatPlayersForJson(List<BluesoundPlayer> players)
+    /// <summary>
+    /// Get players formatted for the player selector popup.
+    /// Groups are represented by their master player only.
+    /// </summary>
+    private static object GetGroupedPlayersForSelector(List<BluesoundPlayer> players)
     {
-        return players.Select(p => new
+        var result = new List<object>();
+        var processedIds = new HashSet<string>();
+
+        // Filter out secondary stereo pair speakers
+        var visiblePlayers = players
+            .Where(p => !p.IsSecondaryStereoPairSpeaker)
+            .ToList();
+
+        // Mark secondary speakers as processed
+        foreach (var secondary in players.Where(p => p.IsSecondaryStereoPairSpeaker))
         {
-            id = p.Id,
-            name = p.Name,
-            ip = p.IpAddress,
-            port = p.Port,
-            model = p.ModelName,
-            brand = p.Brand,
-            isGrouped = p.IsGrouped,
-            isMaster = p.IsMaster,
-            groupName = p.GroupName
-        });
+            processedIds.Add(secondary.Id);
+        }
+
+        // First, process masters of groups - they represent the entire group
+        foreach (var player in visiblePlayers.Where(p => p.IsMaster && p.IsGrouped))
+        {
+            // Count members in this group
+            var memberCount = player.SlaveIps.Count;
+
+            // Also count slaves that reference this master
+            var masterIp = player.IpAddress;
+            var additionalSlaves = visiblePlayers.Count(p =>
+                !processedIds.Contains(p.Id) &&
+                p.Id != player.Id &&
+                p.IsGrouped &&
+                !p.IsMaster &&
+                p.MasterIp != null &&
+                p.MasterIp.Split(':')[0] == masterIp);
+
+            memberCount = Math.Max(memberCount, additionalSlaves);
+
+            result.Add(new
+            {
+                id = player.Id,
+                name = player.GroupName ?? player.Name,
+                ip = player.IpAddress,
+                port = player.Port,
+                model = player.IsStereoPaired ? "Stereo Pair" : player.ModelName,
+                brand = player.Brand,
+                isGroup = true,
+                memberCount = memberCount + 1 // +1 for the master itself
+            });
+
+            processedIds.Add(player.Id);
+
+            // Mark all slaves of this group as processed
+            foreach (var slaveAddress in player.SlaveIps)
+            {
+                var slaveIp = slaveAddress.Split(':')[0];
+                var slave = visiblePlayers.FirstOrDefault(p => p.IpAddress == slaveIp);
+                if (slave != null)
+                {
+                    processedIds.Add(slave.Id);
+                }
+            }
+
+            // Mark slaves that reference this master
+            foreach (var slave in visiblePlayers.Where(p =>
+                p.IsGrouped && !p.IsMaster && p.MasterIp != null &&
+                p.MasterIp.Split(':')[0] == masterIp))
+            {
+                processedIds.Add(slave.Id);
+            }
+        }
+
+        // Add ungrouped players (singles and stereo pairs)
+        foreach (var player in visiblePlayers.Where(p => !processedIds.Contains(p.Id) && !p.IsGrouped))
+        {
+            result.Add(new
+            {
+                id = player.Id,
+                name = player.Name,
+                ip = player.IpAddress,
+                port = player.Port,
+                model = player.IsStereoPaired ? "Stereo Pair" : player.ModelName,
+                brand = player.Brand,
+                isGroup = false,
+                memberCount = 1
+            });
+            processedIds.Add(player.Id);
+        }
+
+        // Handle any remaining players (edge case)
+        foreach (var player in visiblePlayers.Where(p => !processedIds.Contains(p.Id)))
+        {
+            result.Add(new
+            {
+                id = player.Id,
+                name = player.Name,
+                ip = player.IpAddress,
+                port = player.Port,
+                model = player.ModelName,
+                brand = player.Brand,
+                isGroup = false,
+                memberCount = 1
+            });
+        }
+
+        return result.OrderByDescending(p => ((dynamic)p).isGroup).ThenBy(p => ((dynamic)p).name);
     }
 
     /// <summary>
