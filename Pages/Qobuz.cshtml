@@ -1211,6 +1211,103 @@
         flex-shrink: 0;
     }
 
+    /* Search Skeleton */
+    .search-skeleton {
+        animation: fadeIn 0.15s ease;
+    }
+
+    .skeleton-section {
+        margin-bottom: 24px;
+    }
+
+    .skeleton-title {
+        width: 120px;
+        height: 16px;
+        background: var(--bg-card);
+        border-radius: 4px;
+        margin-bottom: 14px;
+        animation: skeleton-pulse 1.5s ease-in-out infinite;
+    }
+
+    .skeleton-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 14px;
+    }
+
+    .skeleton-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+
+    .skeleton-cover {
+        aspect-ratio: 1;
+        background: var(--bg-secondary);
+        animation: skeleton-pulse 1.5s ease-in-out infinite;
+    }
+
+    .skeleton-text {
+        height: 14px;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        margin: 12px;
+        animation: skeleton-pulse 1.5s ease-in-out infinite;
+    }
+
+    .skeleton-text.short {
+        width: 60%;
+        height: 12px;
+        margin-top: 8px;
+    }
+
+    .skeleton-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .skeleton-track {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        background: var(--bg-card);
+        border-radius: var(--radius-sm);
+    }
+
+    .skeleton-track-cover {
+        width: 44px;
+        height: 44px;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        flex-shrink: 0;
+        animation: skeleton-pulse 1.5s ease-in-out infinite;
+    }
+
+    .skeleton-track-info {
+        flex: 1;
+    }
+
+    .skeleton-track-info .skeleton-text {
+        margin: 0 0 6px 0;
+        width: 70%;
+    }
+
+    .skeleton-track-info .skeleton-text.short {
+        margin: 0;
+        width: 50%;
+    }
+
+    @@keyframes skeleton-pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+    }
+
     /* Content Tabs */
     .content-tabs {
         display: flex;
@@ -2383,7 +2480,8 @@
 
     // Perform search
     async function performSearch(query) {
-        showLoading();
+        // Show skeleton loading state (don't block input)
+        showSearchSkeleton();
 
         try {
             const response = await fetch(`?handler=Search&query=${encodeURIComponent(query)}&limit=20`);
@@ -2392,18 +2490,66 @@
             if (data.success) {
                 showSearchResults(data);
             } else {
+                hideSearchSkeleton();
                 showError(data.error || 'Suche fehlgeschlagen');
             }
         } catch (error) {
             console.error('Search failed:', error);
+            hideSearchSkeleton();
             showError('Suche fehlgeschlagen');
         }
+    }
 
-        hideLoading();
+    // Show skeleton loading state for search
+    function showSearchSkeleton() {
+        browseContent.style.display = 'none';
+        searchResults.style.display = 'block';
+
+        // Hide all sections except show skeleton
+        document.getElementById('search-albums-section').style.display = 'none';
+        document.getElementById('search-playlists-section').style.display = 'none';
+        document.getElementById('search-tracks-section').style.display = 'none';
+        document.getElementById('search-no-results').style.display = 'none';
+
+        // Show skeleton in a temporary container
+        let skeletonContainer = document.getElementById('search-skeleton');
+        if (!skeletonContainer) {
+            skeletonContainer = document.createElement('div');
+            skeletonContainer.id = 'search-skeleton';
+            skeletonContainer.className = 'search-skeleton';
+            searchResults.appendChild(skeletonContainer);
+        }
+
+        skeletonContainer.style.display = 'block';
+        skeletonContainer.innerHTML = `
+            <div class="skeleton-section">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-grid">
+                    ${Array(4).fill('<div class="skeleton-card"><div class="skeleton-cover"></div><div class="skeleton-text"></div><div class="skeleton-text short"></div></div>').join('')}
+                </div>
+            </div>
+            <div class="skeleton-section">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-list">
+                    ${Array(3).fill('<div class="skeleton-track"><div class="skeleton-track-cover"></div><div class="skeleton-track-info"><div class="skeleton-text"></div><div class="skeleton-text short"></div></div></div>').join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Hide skeleton loading state
+    function hideSearchSkeleton() {
+        const skeletonContainer = document.getElementById('search-skeleton');
+        if (skeletonContainer) {
+            skeletonContainer.style.display = 'none';
+        }
     }
 
     // Show search results
     function showSearchResults(data) {
+        // Hide skeleton first
+        hideSearchSkeleton();
+
         const hasAlbums = data.albums && data.albums.length > 0;
         const hasPlaylists = data.playlists && data.playlists.length > 0;
         const hasTracks = data.tracks && data.tracks.length > 0;
