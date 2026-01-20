@@ -19,6 +19,7 @@ public interface IBluesoundApiService
     Task<bool> StopAsync(string ipAddress, int port);
     Task<bool> NextTrackAsync(string ipAddress, int port);
     Task<bool> PreviousTrackAsync(string ipAddress, int port);
+    Task<bool> PlayUrlAsync(string ipAddress, int port, string streamUrl, string? title = null, string? artist = null, string? album = null, string? imageUrl = null);
 }
 
 public class BluesoundApiService : IBluesoundApiService
@@ -248,6 +249,49 @@ public class BluesoundApiService : IBluesoundApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to go to previous track on {IpAddress}", ipAddress);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Plays a URL on the player (e.g., a Qobuz stream URL)
+    /// </summary>
+    public async Task<bool> PlayUrlAsync(string ipAddress, int port, string streamUrl, string? title = null, string? artist = null, string? album = null, string? imageUrl = null)
+    {
+        try
+        {
+            // Build the URL with query parameters
+            var queryParams = new List<string>
+            {
+                $"url={Uri.EscapeDataString(streamUrl)}"
+            };
+
+            if (!string.IsNullOrEmpty(title))
+                queryParams.Add($"title1={Uri.EscapeDataString(title)}");
+            if (!string.IsNullOrEmpty(artist))
+                queryParams.Add($"title2={Uri.EscapeDataString(artist)}");
+            if (!string.IsNullOrEmpty(album))
+                queryParams.Add($"title3={Uri.EscapeDataString(album)}");
+            if (!string.IsNullOrEmpty(imageUrl))
+                queryParams.Add($"image={Uri.EscapeDataString(imageUrl)}");
+
+            var url = $"http://{ipAddress}:{port}/Play?{string.Join("&", queryParams)}";
+            _logger.LogInformation("Playing URL on {IpAddress}:{Port}: {Title} by {Artist}", ipAddress, port, title ?? "Unknown", artist ?? "Unknown");
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to play URL on {IpAddress}:{Port}. Status: {Status}, Response: {Response}",
+                    ipAddress, port, response.StatusCode, content);
+            }
+
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to play URL on {IpAddress}:{Port}", ipAddress, port);
             return false;
         }
     }

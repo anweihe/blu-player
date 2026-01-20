@@ -1774,6 +1774,9 @@
         loggedInSection.style.display = 'block';
     }
 
+    // Bluesound status polling
+    let bluesoundStatusInterval = null;
+
     // Play track by index
     async function playTrack(index, event) {
         // Prevent any default behavior and stop propagation
@@ -1799,29 +1802,142 @@
         }
 
         try {
-            const response = await fetch(`?handler=TrackStreamUrl&trackId=${track.id}&authToken=${encodeURIComponent(authToken)}`);
-            const data = await response.json();
-
-            if (data.success && data.url) {
-                currentTrackIndex = index;
-                audioPlayer.src = data.url;
-                audioPlayer.play();
-                isPlaying = true;
-
-                updateNowPlaying(track);
-                updateTrackHighlight();
-                showNowPlayingBar();
+            // Check if we should play on Bluesound or browser
+            if (selectedPlayer.type === 'bluesound' && selectedPlayer.ip) {
+                await playOnBluesound(track, index, authToken);
             } else {
-                showError(data.error || 'Stream URL konnte nicht abgerufen werden');
+                await playOnBrowser(track, index, authToken);
             }
         } catch (error) {
-            console.error('Failed to get stream URL:', error);
+            console.error('Failed to play track:', error);
             showError('Fehler beim Laden des Streams');
         }
 
         // Restore track item opacity
         if (trackItem) {
             trackItem.style.opacity = '1';
+        }
+    }
+
+    // Play track in browser
+    async function playOnBrowser(track, index, authToken) {
+        // Stop Bluesound status polling if active
+        stopBluesoundStatusPolling();
+
+        const response = await fetch(`?handler=TrackStreamUrl&trackId=${track.id}&authToken=${encodeURIComponent(authToken)}`);
+        const data = await response.json();
+
+        if (data.success && data.url) {
+            currentTrackIndex = index;
+            audioPlayer.src = data.url;
+            audioPlayer.play();
+            isPlaying = true;
+
+            updateNowPlaying(track);
+            updateTrackHighlight();
+            showNowPlayingBar();
+        } else {
+            showError(data.error || 'Stream URL konnte nicht abgerufen werden');
+        }
+    }
+
+    // Play track on Bluesound player
+    async function playOnBluesound(track, index, authToken) {
+        // Pause browser playback if active
+        if (audioPlayer.src) {
+            audioPlayer.pause();
+        }
+
+        const response = await fetch('?handler=PlayOnBluesound', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            },
+            body: JSON.stringify({
+                ip: selectedPlayer.ip,
+                port: selectedPlayer.port || 11000,
+                trackId: track.id,
+                authToken: authToken,
+                title: track.title,
+                artist: track.artistName,
+                album: track.albumTitle,
+                imageUrl: track.albumCover
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            currentTrackIndex = index;
+            isPlaying = true;
+
+            updateNowPlaying(track);
+            updateTrackHighlight();
+            showNowPlayingBar();
+
+            // Start polling for Bluesound status
+            startBluesoundStatusPolling();
+        } else {
+            showError(data.error || 'Wiedergabe auf Bluesound fehlgeschlagen');
+        }
+    }
+
+    // Start polling Bluesound player status
+    function startBluesoundStatusPolling() {
+        stopBluesoundStatusPolling(); // Clear any existing interval
+
+        // Poll every 2 seconds
+        bluesoundStatusInterval = setInterval(async () => {
+            if (selectedPlayer.type !== 'bluesound' || !selectedPlayer.ip) {
+                stopBluesoundStatusPolling();
+                return;
+            }
+
+            try {
+                const response = await fetch(`?handler=BluesoundStatus&ip=${selectedPlayer.ip}&port=${selectedPlayer.port || 11000}`);
+                const data = await response.json();
+
+                if (data.success && data.status) {
+                    updateBluesoundStatus(data.status);
+                }
+            } catch (error) {
+                console.error('Failed to get Bluesound status:', error);
+            }
+        }, 2000);
+    }
+
+    // Stop polling Bluesound player status
+    function stopBluesoundStatusPolling() {
+        if (bluesoundStatusInterval) {
+            clearInterval(bluesoundStatusInterval);
+            bluesoundStatusInterval = null;
+        }
+    }
+
+    // Update UI based on Bluesound status
+    function updateBluesoundStatus(status) {
+        // Update play/pause state
+        const wasPlaying = isPlaying;
+        isPlaying = status.state === 'play' || status.state === 'stream';
+
+        if (wasPlaying !== isPlaying) {
+            updatePlayPauseButton();
+            updateTrackHighlight();
+        }
+
+        // Update progress if available
+        if (status.currentSeconds !== undefined && status.totalSeconds !== undefined && status.totalSeconds > 0) {
+            const progress = (status.currentSeconds / status.totalSeconds) * 100;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+            document.getElementById('current-time').textContent = formatTime(status.currentSeconds);
+            document.getElementById('total-time').textContent = formatTime(status.totalSeconds);
+        }
+
+        // Check if playback stopped (track ended)
+        if (status.state === 'stop' && wasPlaying) {
+            // Track might have ended, try to play next
+            playNext();
         }
     }
 
@@ -1834,8 +1950,17 @@
 
     // Play previous track
     function playPrevious() {
-        if (currentTrackIndex > 0) {
-            playTrack(currentTrackIndex - 1);
+        if (selectedPlayer.type === 'bluesound' && selectedPlayer.ip) {
+            // Send previous command to Bluesound
+            sendBluesoundControl('previous');
+            // Also try to play the previous track from our list
+            if (currentTrackIndex > 0) {
+                playTrack(currentTrackIndex - 1);
+            }
+        } else {
+            if (currentTrackIndex > 0) {
+                playTrack(currentTrackIndex - 1);
+            }
         }
     }
 
@@ -1847,23 +1972,62 @@
             // End of playlist
             isPlaying = false;
             updatePlayPauseButton();
+            if (selectedPlayer.type === 'bluesound') {
+                sendBluesoundControl('stop');
+                stopBluesoundStatusPolling();
+            }
         }
     }
 
     // Toggle play/pause
-    function togglePlayPause() {
-        if (!audioPlayer.src) return;
-
-        if (isPlaying) {
-            audioPlayer.pause();
-            isPlaying = false;
+    async function togglePlayPause() {
+        if (selectedPlayer.type === 'bluesound' && selectedPlayer.ip) {
+            // Send play/pause command to Bluesound
+            const action = isPlaying ? 'pause' : 'play';
+            await sendBluesoundControl(action);
+            isPlaying = !isPlaying;
+            updatePlayPauseButton();
+            updateTrackHighlight();
         } else {
-            audioPlayer.play();
-            isPlaying = true;
-        }
+            if (!audioPlayer.src) return;
 
-        updatePlayPauseButton();
-        updateTrackHighlight();
+            if (isPlaying) {
+                audioPlayer.pause();
+                isPlaying = false;
+            } else {
+                audioPlayer.play();
+                isPlaying = true;
+            }
+
+            updatePlayPauseButton();
+            updateTrackHighlight();
+        }
+    }
+
+    // Send control command to Bluesound player
+    async function sendBluesoundControl(action) {
+        if (!selectedPlayer.ip) return;
+
+        try {
+            const response = await fetch('?handler=BluesoundControl', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                    ip: selectedPlayer.ip,
+                    port: selectedPlayer.port || 11000,
+                    action: action
+                })
+            });
+
+            const data = await response.json();
+            return data.success;
+        } catch (error) {
+            console.error('Failed to send Bluesound control:', error);
+            return false;
+        }
     }
 
     // Update now playing bar
@@ -2132,7 +2296,11 @@
     }
 
     // Select a player
-    function selectPlayer(type, name, playerData = null) {
+    async function selectPlayer(type, name, playerData = null) {
+        const previousPlayer = { ...selectedPlayer };
+        const wasPlaying = isPlaying;
+        const currentIndex = currentTrackIndex;
+
         if (type === 'browser') {
             selectedPlayer = { type: 'browser', name: 'Dieses Gerät' };
         } else if (type === 'bluesound' && playerData) {
@@ -2153,6 +2321,48 @@
         setTimeout(() => {
             closePlayerSelector();
         }, 200);
+
+        // If something was playing, transfer playback to the new player
+        if (wasPlaying && currentIndex >= 0 && currentIndex < currentTracks.length) {
+            // Stop playback on the previous player
+            if (previousPlayer.type === 'bluesound' && previousPlayer.ip) {
+                await sendBluesoundControlToPlayer(previousPlayer, 'stop');
+                stopBluesoundStatusPolling();
+            } else if (previousPlayer.type === 'browser') {
+                audioPlayer.pause();
+            }
+
+            // Start playback on the new player
+            setTimeout(() => {
+                playTrack(currentIndex);
+            }, 300);
+        }
+    }
+
+    // Send control command to a specific Bluesound player
+    async function sendBluesoundControlToPlayer(player, action) {
+        if (!player.ip) return;
+
+        try {
+            const response = await fetch('?handler=BluesoundControl', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                    ip: player.ip,
+                    port: player.port || 11000,
+                    action: action
+                })
+            });
+
+            const data = await response.json();
+            return data.success;
+        } catch (error) {
+            console.error('Failed to send Bluesound control:', error);
+            return false;
+        }
     }
 
     // Initialize player selector on page load

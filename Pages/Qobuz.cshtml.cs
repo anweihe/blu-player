@@ -9,6 +9,7 @@ public class QobuzModel : PageModel
 {
     private readonly IQobuzApiService _qobuzService;
     private readonly IPlayerDiscoveryService _discoveryService;
+    private readonly IBluesoundApiService _bluesoundService;
     private readonly ILogger<QobuzModel> _logger;
 
     // Cache for discovered players
@@ -18,10 +19,12 @@ public class QobuzModel : PageModel
     public QobuzModel(
         IQobuzApiService qobuzService,
         IPlayerDiscoveryService discoveryService,
+        IBluesoundApiService bluesoundService,
         ILogger<QobuzModel> logger)
     {
         _qobuzService = qobuzService;
         _discoveryService = discoveryService;
+        _bluesoundService = bluesoundService;
         _logger = logger;
     }
 
@@ -281,4 +284,129 @@ public class QobuzModel : PageModel
             groupName = p.GroupName
         });
     }
+
+    /// <summary>
+    /// Play a Qobuz track on a Bluesound player
+    /// </summary>
+    public async Task<IActionResult> OnPostPlayOnBluesoundAsync(
+        [FromBody] PlayOnBluesoundRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Ip) || request.TrackId <= 0 || string.IsNullOrEmpty(request.AuthToken))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende Parameter" });
+        }
+
+        _logger.LogInformation("Playing track {TrackId} on Bluesound player {Ip}:{Port}",
+            request.TrackId, request.Ip, request.Port);
+
+        // Get the stream URL from Qobuz
+        var streamUrl = await _qobuzService.GetTrackStreamUrlAsync(request.TrackId, request.AuthToken);
+
+        if (string.IsNullOrEmpty(streamUrl))
+        {
+            return new JsonResult(new { success = false, error = "Stream URL nicht verfügbar" });
+        }
+
+        // Play the URL on the Bluesound player
+        var success = await _bluesoundService.PlayUrlAsync(
+            request.Ip,
+            request.Port,
+            streamUrl,
+            request.Title,
+            request.Artist,
+            request.Album,
+            request.ImageUrl);
+
+        if (!success)
+        {
+            return new JsonResult(new { success = false, error = "Wiedergabe auf Player fehlgeschlagen" });
+        }
+
+        return new JsonResult(new { success = true });
+    }
+
+    /// <summary>
+    /// Control playback on a Bluesound player (play/pause/stop)
+    /// </summary>
+    public async Task<IActionResult> OnPostBluesoundControlAsync(
+        [FromBody] BluesoundControlRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Ip) || string.IsNullOrEmpty(request.Action))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende Parameter" });
+        }
+
+        _logger.LogInformation("Bluesound control: {Action} on {Ip}:{Port}", request.Action, request.Ip, request.Port);
+
+        bool success = request.Action.ToLower() switch
+        {
+            "play" => await _bluesoundService.PlayAsync(request.Ip, request.Port),
+            "pause" => await _bluesoundService.PauseAsync(request.Ip, request.Port),
+            "stop" => await _bluesoundService.StopAsync(request.Ip, request.Port),
+            "next" => await _bluesoundService.NextTrackAsync(request.Ip, request.Port),
+            "previous" => await _bluesoundService.PreviousTrackAsync(request.Ip, request.Port),
+            _ => false
+        };
+
+        return new JsonResult(new { success });
+    }
+
+    /// <summary>
+    /// Get playback status from a Bluesound player
+    /// </summary>
+    public async Task<IActionResult> OnGetBluesoundStatusAsync(string ip, int port = 11000)
+    {
+        if (string.IsNullOrEmpty(ip))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende IP-Adresse" });
+        }
+
+        var status = await _bluesoundService.GetPlaybackStatusAsync(ip, port);
+
+        if (status == null)
+        {
+            return new JsonResult(new { success = false, error = "Status konnte nicht abgerufen werden" });
+        }
+
+        return new JsonResult(new
+        {
+            success = true,
+            status = new
+            {
+                state = status.State,
+                title = status.Title,
+                artist = status.Artist,
+                album = status.Album,
+                imageUrl = status.ImageUrl,
+                currentSeconds = status.CurrentSeconds,
+                totalSeconds = status.TotalSeconds,
+                service = status.Service
+            }
+        });
+    }
+}
+
+/// <summary>
+/// Request model for playing a track on a Bluesound player
+/// </summary>
+public class PlayOnBluesoundRequest
+{
+    public string Ip { get; set; } = string.Empty;
+    public int Port { get; set; } = 11000;
+    public long TrackId { get; set; }
+    public string AuthToken { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    public string? Artist { get; set; }
+    public string? Album { get; set; }
+    public string? ImageUrl { get; set; }
+}
+
+/// <summary>
+/// Request model for controlling Bluesound playback
+/// </summary>
+public class BluesoundControlRequest
+{
+    public string Ip { get; set; } = string.Empty;
+    public int Port { get; set; } = 11000;
+    public string Action { get; set; } = string.Empty;
 }
