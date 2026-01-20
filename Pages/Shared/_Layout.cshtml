@@ -540,6 +540,25 @@
                     </button>
                 </div>
             </div>
+            <div class="global-np-popup-queue" id="global-queue-section" style="display: none;">
+                <div class="global-queue-header">
+                    <div class="global-queue-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"/>
+                            <line x1="8" y1="12" x2="21" y2="12"/>
+                            <line x1="8" y1="18" x2="21" y2="18"/>
+                            <line x1="3" y1="6" x2="3.01" y2="6"/>
+                            <line x1="3" y1="12" x2="3.01" y2="12"/>
+                            <line x1="3" y1="18" x2="3.01" y2="18"/>
+                        </svg>
+                        <span>Warteschlange</span>
+                    </div>
+                    <span class="global-queue-source" id="global-queue-source"></span>
+                </div>
+                <div class="global-queue-list" id="global-queue-list">
+                    <!-- Queue tracks will be rendered here -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -566,6 +585,7 @@
     <script src="~/js/hamburger-menu.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/spa-router.js" asp-append-version="true"></script>
+    <script src="~/js/queue-api.js" asp-append-version="true"></script>
     <script src="~/js/global-player.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)

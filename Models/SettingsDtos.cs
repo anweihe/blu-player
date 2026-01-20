@@ -136,3 +136,58 @@ public class ApiResponse
     public static ApiResponse Ok() => new() { Success = true };
     public static ApiResponse Fail(string error) => new() { Success = false, Error = error };
 }
+
+// ==================== Queue DTOs ====================
+
+/// <summary>
+/// DTO for playback queue data
+/// </summary>
+public class PlaybackQueueDto
+{
+    public string? SourceType { get; set; }
+    public string? SourceId { get; set; }
+    public string? SourceName { get; set; }
+    public int CurrentIndex { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public List<QueueTrackDto> Tracks { get; set; } = new();
+}
+
+/// <summary>
+/// DTO for a track in the queue
+/// </summary>
+public class QueueTrackDto
+{
+    public int Position { get; set; }
+    public long Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? ArtistName { get; set; }
+    public string? AlbumTitle { get; set; }
+    public string? AlbumCover { get; set; }
+    public int Duration { get; set; }
+    public string? FormattedDuration { get; set; }
+    public bool IsHiRes { get; set; }
+    public string? QualityLabel { get; set; }
+    public bool IsStreamable { get; set; }
+    public int TrackNumber { get; set; }
+    public int MediaNumber { get; set; }
+}
+
+/// <summary>
+/// Request DTO for setting the playback queue
+/// </summary>
+public class SetQueueRequest
+{
+    public string? SourceType { get; set; }
+    public string? SourceId { get; set; }
+    public string? SourceName { get; set; }
+    public int CurrentIndex { get; set; }
+    public List<QueueTrackDto> Tracks { get; set; } = new();
+}
+
+/// <summary>
+/// Request DTO for updating the queue index
+/// </summary>
+public class UpdateQueueIndexRequest
+{
+    public int CurrentIndex { get; set; }
+}

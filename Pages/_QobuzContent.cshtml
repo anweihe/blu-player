@@ -1798,6 +1798,11 @@
     let audioPlayer = null;
     let isPlaying = false;
 
+    // Queue source tracking
+    let currentSourceType = null; // 'album' or 'playlist'
+    let currentSourceId = null;
+    let currentSourceName = null;
+
     // Progress animation state
     let progressAnimationFrame = null;
     let lastKnownPosition = 0;
@@ -1859,6 +1864,50 @@
         if (!activeProfileId) return;
 
         await UserProfileManager.clearQobuzCredentials(activeProfileId);
+    }
+
+    // Save queue to database
+    async function saveQueueToDb(currentIndex) {
+        if (!currentTracks || currentTracks.length === 0) return;
+
+        const activeProfileId = await UserProfileManager.getActiveProfileId();
+        if (!activeProfileId) return;
+
+        const queueData = {
+            sourceType: currentSourceType,
+            sourceId: currentSourceId,
+            sourceName: currentSourceName,
+            currentIndex: currentIndex,
+            tracks: currentTracks
+        };
+
+        try {
+            await QueueApi.setQueue(activeProfileId, queueData);
+
+            // Update GlobalPlayer queue
+            if (window.GlobalPlayer) {
+                window.GlobalPlayer.setQueue(queueData);
+            }
+        } catch (error) {
+            console.error('Failed to save queue:', error);
+        }
+    }
+
+    // Update queue index in database
+    async function updateQueueIndexInDb(currentIndex) {
+        const activeProfileId = await UserProfileManager.getActiveProfileId();
+        if (!activeProfileId) return;
+
+        try {
+            await QueueApi.updateQueueIndex(activeProfileId, currentIndex);
+
+            // Update GlobalPlayer queue index
+            if (window.GlobalPlayer) {
+                window.GlobalPlayer.updateQueueIndex(currentIndex);
+            }
+        } catch (error) {
+            console.error('Failed to update queue index:', error);
+        }
     }
 
     // Show/hide loading
@@ -1926,6 +1975,13 @@
                 playNext: playNext,
                 seek: seekTo,
                 onPlayerChange: handlePlayerChange
+            });
+
+            // Register queue callback for playing tracks from the popup queue
+            window.GlobalPlayer.registerQueueCallback(async (index) => {
+                if (index >= 0 && index < currentTracks.length) {
+                    await playTrack(index);
+                }
             });
         }
 
@@ -2442,6 +2498,11 @@
     function showAlbumDetail(album, tracks) {
         currentTracks = tracks || [];
 
+        // Set source tracking for queue
+        currentSourceType = 'album';
+        currentSourceId = album.id ? album.id.toString() : null;
+        currentSourceName = album.title;
+
         // Update header info
         document.getElementById('detail-name').textContent = album.title;
         document.getElementById('detail-description').textContent = album.artistName || '';
@@ -2763,6 +2824,11 @@
     function showPlaylistDetail(playlist, tracks) {
         currentTracks = tracks || [];
 
+        // Set source tracking for queue
+        currentSourceType = 'playlist';
+        currentSourceId = playlist.id ? playlist.id.toString() : null;
+        currentSourceName = playlist.name;
+
         // Update header info
         document.getElementById('detail-name').textContent = playlist.name;
         document.getElementById('detail-description').textContent = playlist.description || '';
@@ -2897,6 +2963,9 @@
                 window.GlobalPlayer.setPlaylist(currentTracks, index);
             }
 
+            // Save queue to database
+            await saveQueueToDb(index);
+
             audioPlayer.src = data.url;
             audioPlayer.play();
             isPlaying = true;
@@ -2942,6 +3011,9 @@
         if (data.success) {
             currentTrackIndex = index;
             isPlaying = true;
+
+            // Save queue to database
+            await saveQueueToDb(index);
 
             updateNowPlaying(track);
             updateTrackHighlight();

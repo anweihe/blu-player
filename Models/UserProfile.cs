@@ -25,4 +25,5 @@ public class UserProfile
     // Navigation properties
     public UserQobuzCredential? QobuzCredential { get; set; }
     public ProfileSettings? Settings { get; set; }
+    public PlaybackQueue? PlaybackQueue { get; set; }
 }

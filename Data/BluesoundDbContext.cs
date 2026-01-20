@@ -13,6 +13,8 @@ public class BluesoundDbContext : DbContext
     public DbSet<UserQobuzCredential> QobuzCredentials { get; set; } = null!;
     public DbSet<ProfileSettings> ProfileSettings { get; set; } = null!;
     public DbSet<GlobalSettings> GlobalSettings { get; set; } = null!;
+    public DbSet<PlaybackQueue> PlaybackQueues { get; set; } = null!;
+    public DbSet<QueueTrack> QueueTracks { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +68,39 @@ public class BluesoundDbContext : DbContext
 
             // Seed the singleton row
             entity.HasData(new GlobalSettings { Id = 1, ActiveProfileId = null });
+        });
+
+        // PlaybackQueue configuration (1:1 with UserProfile)
+        modelBuilder.Entity<PlaybackQueue>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserProfileId).IsUnique();
+            entity.Property(e => e.SourceType).HasMaxLength(50);
+            entity.Property(e => e.SourceId).HasMaxLength(100);
+            entity.Property(e => e.SourceName).HasMaxLength(500);
+
+            entity.HasOne(e => e.UserProfile)
+                  .WithOne(p => p.PlaybackQueue)
+                  .HasForeignKey<PlaybackQueue>(e => e.UserProfileId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // QueueTrack configuration
+        modelBuilder.Entity<QueueTrack>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PlaybackQueueId, e.Position });
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.ArtistName).HasMaxLength(500);
+            entity.Property(e => e.AlbumTitle).HasMaxLength(500);
+            entity.Property(e => e.AlbumCover).HasMaxLength(1000);
+            entity.Property(e => e.FormattedDuration).HasMaxLength(20);
+            entity.Property(e => e.QualityLabel).HasMaxLength(50);
+
+            entity.HasOne(e => e.PlaybackQueue)
+                  .WithMany(q => q.Tracks)
+                  .HasForeignKey(e => e.PlaybackQueueId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

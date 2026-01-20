@@ -17,6 +17,9 @@ builder.Services.AddDbContext<BluesoundDbContext>(options =>
 // Register Settings service
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 
+// Register Queue service
+builder.Services.AddScoped<IQueueService, QueueService>();
+
 // Register Bluesound services
 builder.Services.AddHttpClient<IBluesoundApiService, BluesoundApiService>();
 builder.Services.AddScoped<IPlayerDiscoveryService, PlayerDiscoveryService>();
@@ -27,11 +30,11 @@ builder.Services.AddHttpClient<IQobuzApiService, QobuzApiService>();
 
 var app = builder.Build();
 
-// Ensure database is created
+// Apply pending migrations at startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BluesoundDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.

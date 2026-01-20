@@ -40,6 +40,10 @@
     let currentPlaylist = [];
     let currentTrackIndex = -1;
 
+    // Queue state
+    let currentQueue = null; // { sourceType, sourceId, sourceName, currentIndex, tracks }
+    let onPlayQueueTrack = null; // Callback for playing a queue track
+
     // ==================== Playback State Persistence ====================
 
     function savePlaybackState() {
@@ -757,7 +761,7 @@
 
     // ==================== Now Playing Popup ====================
 
-    window.openGlobalNowPlayingPopup = function() {
+    window.openGlobalNowPlayingPopup = async function() {
         if (!popup || !globalCurrentTrack) return;
 
         // Sync cover
@@ -789,6 +793,9 @@
         // Update quality buttons
         updateQualityButtons();
 
+        // Load and render queue
+        await loadAndRenderQueue();
+
         popup.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     };
@@ -799,6 +806,151 @@
             document.body.style.overflow = '';
         }
     };
+
+    // ==================== Queue Functions ====================
+
+    async function loadAndRenderQueue() {
+        const queueSection = document.getElementById('global-queue-section');
+        const queueList = document.getElementById('global-queue-list');
+        const queueSource = document.getElementById('global-queue-source');
+
+        if (!queueSection || !queueList) return;
+
+        // If we have a current queue in memory, use it
+        if (currentQueue && currentQueue.tracks && currentQueue.tracks.length > 0) {
+            renderQueueInPopup(currentQueue);
+            return;
+        }
+
+        // Otherwise, try to load from server
+        try {
+            const activeProfileId = await SettingsApi.getActiveProfileId();
+            if (!activeProfileId) {
+                queueSection.style.display = 'none';
+                return;
+            }
+
+            const queueDto = await QueueApi.getQueue(activeProfileId);
+            if (queueDto && queueDto.tracks && queueDto.tracks.length > 0) {
+                currentQueue = QueueApi.mapQueueDtoToUi(queueDto);
+                renderQueueInPopup(currentQueue);
+            } else {
+                queueSection.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Failed to load queue:', error);
+            queueSection.style.display = 'none';
+        }
+    }
+
+    function renderQueueInPopup(queue) {
+        const queueSection = document.getElementById('global-queue-section');
+        const queueList = document.getElementById('global-queue-list');
+        const queueSource = document.getElementById('global-queue-source');
+
+        if (!queueSection || !queueList || !queue || !queue.tracks || queue.tracks.length === 0) {
+            if (queueSection) queueSection.style.display = 'none';
+            return;
+        }
+
+        queueSection.style.display = 'block';
+
+        // Update source label
+        if (queueSource && queue.sourceName) {
+            const sourceLabel = queue.sourceType === 'playlist' ? 'Playlist' : 'Album';
+            queueSource.textContent = `aus ${sourceLabel}: ${queue.sourceName}`;
+        } else if (queueSource) {
+            queueSource.textContent = '';
+        }
+
+        // Calculate which tracks to show (around current index)
+        const currentIndex = queue.currentIndex || 0;
+        const totalTracks = queue.tracks.length;
+        const showCount = 7; // Show up to 7 tracks
+        const halfShow = Math.floor(showCount / 2);
+
+        let startIdx = Math.max(0, currentIndex - halfShow);
+        let endIdx = Math.min(totalTracks, startIdx + showCount);
+
+        // Adjust start if we're near the end
+        if (endIdx - startIdx < showCount && startIdx > 0) {
+            startIdx = Math.max(0, endIdx - showCount);
+        }
+
+        // Render track items
+        let html = '';
+        for (let i = startIdx; i < endIdx; i++) {
+            const track = queue.tracks[i];
+            const isCurrent = i === currentIndex;
+
+            html += `
+                <div class="global-queue-item ${isCurrent ? 'playing' : ''}"
+                     data-index="${i}"
+                     onclick="playQueueTrackAtIndex(${i})">
+                    <span class="global-queue-item-position">${isCurrent ? '' : (i + 1)}</span>
+                    <div class="global-queue-item-cover">
+                        ${track.albumCover
+                            ? `<img src="${escapeHtml(track.albumCover)}" alt="" loading="lazy">`
+                            : `<div class="global-queue-item-cover-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M9 18V5l12-2v13"/>
+                                    <circle cx="6" cy="18" r="3"/>
+                                    <circle cx="18" cy="16" r="3"/>
+                                </svg>
+                               </div>`
+                        }
+                    </div>
+                    <div class="global-queue-item-info">
+                        <div class="global-queue-item-title">${escapeHtml(track.title)}</div>
+                        <div class="global-queue-item-artist">${escapeHtml(track.artistName || 'Unbekannt')}</div>
+                    </div>
+                    <span class="global-queue-item-duration">${track.formattedDuration || ''}</span>
+                </div>
+            `;
+        }
+
+        queueList.innerHTML = html;
+
+        // Scroll current track into view
+        setTimeout(() => {
+            const currentItem = queueList.querySelector('.global-queue-item.playing');
+            if (currentItem) {
+                currentItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
+    }
+
+    // Play a track from the queue at the given index
+    window.playQueueTrackAtIndex = function(index) {
+        if (!currentQueue || !currentQueue.tracks || index < 0 || index >= currentQueue.tracks.length) {
+            return;
+        }
+
+        // Update queue index
+        currentQueue.currentIndex = index;
+
+        // Use page callback if available
+        if (onPlayQueueTrack) {
+            onPlayQueueTrack(index);
+        }
+
+        // Re-render the queue to show the new current track
+        renderQueueInPopup(currentQueue);
+
+        // Update queue index in database
+        updateQueueIndexInDb(index);
+    };
+
+    async function updateQueueIndexInDb(index) {
+        try {
+            const activeProfileId = await SettingsApi.getActiveProfileId();
+            if (activeProfileId) {
+                await QueueApi.updateQueueIndex(activeProfileId, index);
+            }
+        } catch (error) {
+            console.error('Failed to update queue index:', error);
+        }
+    }
 
     // ==================== Quality Settings ====================
 
@@ -1080,7 +1232,42 @@
         // Check if audio is currently playing
         isPlaying: () => globalIsPlaying,
         // Reload settings from server (called when profile changes)
-        reloadSettings: loadSettingsFromServer
+        reloadSettings: loadSettingsFromServer,
+        // ==================== Queue API ====================
+        // Set the current queue (called by Qobuz page when starting playback)
+        setQueue: (queue) => {
+            currentQueue = queue;
+            // Update the popup if it's open
+            if (popup && popup.style.display === 'flex') {
+                renderQueueInPopup(queue);
+            }
+        },
+        // Get the current queue
+        getQueue: () => currentQueue,
+        // Update the current index in the queue
+        updateQueueIndex: (index) => {
+            if (currentQueue) {
+                currentQueue.currentIndex = index;
+                // Update the popup if it's open
+                if (popup && popup.style.display === 'flex') {
+                    renderQueueInPopup(currentQueue);
+                }
+            }
+        },
+        // Clear the queue
+        clearQueue: () => {
+            currentQueue = null;
+            const queueSection = document.getElementById('global-queue-section');
+            if (queueSection) queueSection.style.display = 'none';
+        },
+        // Register callback for playing a queue track
+        registerQueueCallback: (callback) => {
+            onPlayQueueTrack = callback;
+        },
+        // Unregister queue callback
+        unregisterQueueCallback: () => {
+            onPlayQueueTrack = null;
+        }
     };
 
     // Initialize when DOM is ready

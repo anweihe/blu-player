@@ -87,8 +87,13 @@
                 newScript.setAttribute(attr.name, attr.value);
             });
 
-            // Copy inline content
-            newScript.textContent = oldScript.textContent;
+            // Wrap inline content in IIFE to avoid redeclaration errors
+            // This creates a new scope for const/let declarations
+            if (oldScript.textContent && !oldScript.src) {
+                newScript.textContent = `(function() {\n${oldScript.textContent}\n})();`;
+            } else {
+                newScript.textContent = oldScript.textContent;
+            }
 
             // Replace the old script with the new one (this triggers execution)
             oldScript.parentNode.replaceChild(newScript, oldScript);
