@@ -28,15 +28,24 @@
                 </svg>
                 <h1>Bluesound</h1>
             </div>
-            <form method="post" asp-page-handler="Refresh">
-                <button type="submit" class="btn-refresh">
+            <div class="header-actions">
+                <a href="/Qobuz" class="btn-qobuz" title="Qobuz">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 4v6h-6M1 20v-6h6"/>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
                     </svg>
-                    <span>Aktualisieren</span>
-                </button>
-            </form>
+                    <span>Qobuz</span>
+                </a>
+                <form method="post" asp-page-handler="Refresh">
+                    <button type="submit" class="btn-refresh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        <span>Aktualisieren</span>
+                    </button>
+                </form>
+            </div>
         </div>
     </header>
 
@@ -590,6 +599,37 @@
         height: 16px;
     }
 
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-qobuz {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: rgba(29, 185, 84, 0.1);
+        border: 1px solid rgba(29, 185, 84, 0.3);
+        border-radius: var(--radius-md);
+        color: #1db954;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all var(--transition);
+    }
+
+    .btn-qobuz:hover {
+        background: rgba(29, 185, 84, 0.2);
+        border-color: rgba(29, 185, 84, 0.5);
+    }
+
+    .btn-qobuz svg {
+        width: 16px;
+        height: 16px;
+    }
+
     /* Alerts */
     .alert {
         display: flex;
@@ -1131,11 +1171,13 @@
 
     /* Mobile */
     @@media (max-width: 480px) {
-        .btn-refresh span {
+        .btn-refresh span,
+        .btn-qobuz span {
             display: none;
         }
 
-        .btn-refresh {
+        .btn-refresh,
+        .btn-qobuz {
             padding: 8px;
         }
 

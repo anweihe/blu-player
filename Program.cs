@@ -9,6 +9,9 @@ builder.Services.AddRazorPages();
 builder.Services.AddHttpClient<IBluesoundApiService, BluesoundApiService>();
 builder.Services.AddScoped<IPlayerDiscoveryService, PlayerDiscoveryService>();
 
+// Register Qobuz service
+builder.Services.AddHttpClient<IQobuzApiService, QobuzApiService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -16,13 +16,17 @@ Die Website ist unter `https://localhost:5001` oder `http://localhost:5000` erre
 ├── Models/
 │   ├── BluesoundPlayer.cs    # Player-Model mit Gruppen-/Stereopaar-Info
 │   ├── PlayerGroup.cs        # ViewModel für gruppierte Darstellung
-│   └── PlaybackStatus.cs     # Wiedergabe-Status (Track-Info, Position)
+│   ├── PlaybackStatus.cs     # Wiedergabe-Status (Track-Info, Position)
+│   └── QobuzModels.cs        # Qobuz User, Playlist, Login Models
 ├── Services/
 │   ├── BluesoundApiService.cs      # HTTP-Aufrufe zur BluOS API
-│   └── PlayerDiscoveryService.cs   # mDNS-basierte Player-Erkennung
+│   ├── PlayerDiscoveryService.cs   # mDNS-basierte Player-Erkennung
+│   └── QobuzApiService.cs          # Qobuz API Integration
 ├── Pages/
 │   ├── Index.cshtml          # Haupt-UI (Player-Liste)
-│   └── Index.cshtml.cs       # Page Model mit Gruppierungslogik
+│   ├── Index.cshtml.cs       # Page Model mit Gruppierungslogik
+│   ├── Qobuz.cshtml          # Qobuz Login & Playlists UI
+│   └── Qobuz.cshtml.cs       # Qobuz Page Model
 └── Program.cs                # Service-Registrierung
 ```
 
@@ -138,6 +142,36 @@ Verwendet mDNS/Bonjour mit Service-Typ `_musc._tcp.local.` via Zeroconf NuGet Pa
 - Stereopaare in Gruppen werden als einzelner Eintrag angezeigt
 - Volume-Änderungen per AJAX ohne Discovery (schnelle Reaktion)
 - Dark Mode als Standard, Light Mode über prefers-color-scheme
+
+## Qobuz API Integration
+
+### Authentifizierung (ohne API-Key)
+
+Die Qobuz API-Credentials werden automatisch aus dem Web Player extrahiert:
+
+1. `https://play.qobuz.com/` → bundle.js URL finden
+2. bundle.js fetchen
+3. `app_id` und `app_secret` per Regex extrahieren
+
+### Login-Flow
+
+1. Passwort mit MD5 hashen
+2. POST an `https://www.qobuz.com/api.json/0.2/user/login`
+3. Response enthält `user_auth_token`
+4. Token im Browser `localStorage` speichern (nicht das Passwort!)
+
+### Wichtige Endpunkte
+
+| Endpunkt | Beschreibung |
+|----------|--------------|
+| `/user/login` | Login mit email/username + MD5-Passwort |
+| `/playlist/getUserPlaylists` | User-Playlists abrufen |
+
+### Token-basierte Session
+
+- `localStorage.qobuz_user_id` - User ID
+- `localStorage.qobuz_auth_token` - Auth Token
+- Token-Verify bei Page Load für Session-Wiederherstellung
 
 ## NuGet Packages
 
