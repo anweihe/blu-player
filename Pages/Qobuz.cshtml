@@ -2083,6 +2083,34 @@
         padding: 8px 0;
     }
 
+    .player-list-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 40px 20px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .player-loading-spinner {
+        width: 32px;
+        height: 32px;
+        color: var(--accent-qobuz);
+        animation: spin 1s linear infinite;
+    }
+
+    .player-loading-spinner svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
     .player-option {
         display: flex;
         align-items: center;
@@ -3454,12 +3482,27 @@
         playerSelectorOverlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
-        // Load players if not already loaded
+        // Show loading state while fetching players
         if (availablePlayers.length === 0) {
+            showPlayerListLoading();
             await loadPlayers();
         }
 
         renderPlayerList();
+    }
+
+    // Show loading state in player list
+    function showPlayerListLoading() {
+        playerSelectorList.innerHTML = `
+            <div class="player-list-loading">
+                <div class="player-loading-spinner">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                </div>
+                <span>Player werden gesucht...</span>
+            </div>
+        `;
     }
 
     // Close player selector popup
