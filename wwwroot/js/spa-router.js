@@ -156,6 +156,14 @@
                 GlobalPlayer.unregisterPlaybackCallbacks();
             }
         };
+
+        // Call initQobuz directly since external scripts may not re-execute on SPA navigation
+        // Use setTimeout to ensure DOM is fully ready and scripts have loaded
+        setTimeout(() => {
+            if (typeof window.initQobuz === 'function') {
+                window.initQobuz();
+            }
+        }, 0);
     }
 
     /**
