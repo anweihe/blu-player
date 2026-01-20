@@ -203,4 +203,164 @@ public class QobuzAppCredentials
 {
     public string AppId { get; set; } = string.Empty;
     public string AppSecret { get; set; } = string.Empty;
+    public List<string>? AlternativeSecrets { get; set; }
+}
+
+/// <summary>
+/// Qobuz artist
+/// </summary>
+public class QobuzArtist
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("image")]
+    public QobuzImage? Image { get; set; }
+}
+
+/// <summary>
+/// Qobuz image with multiple sizes
+/// </summary>
+public class QobuzImage
+{
+    [JsonPropertyName("small")]
+    public string? Small { get; set; }
+
+    [JsonPropertyName("thumbnail")]
+    public string? Thumbnail { get; set; }
+
+    [JsonPropertyName("large")]
+    public string? Large { get; set; }
+}
+
+/// <summary>
+/// Qobuz album
+/// </summary>
+public class QobuzAlbum
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    [JsonPropertyName("artist")]
+    public QobuzArtist? Artist { get; set; }
+
+    [JsonPropertyName("image")]
+    public QobuzImage? Image { get; set; }
+
+    [JsonPropertyName("duration")]
+    public int Duration { get; set; }
+
+    [JsonPropertyName("tracks_count")]
+    public int TracksCount { get; set; }
+
+    [JsonPropertyName("released_at")]
+    public long? ReleasedAt { get; set; }
+
+    /// <summary>
+    /// Get the best available cover image URL
+    /// </summary>
+    public string? CoverUrl =>
+        Image?.Large ?? Image?.Small ?? Image?.Thumbnail;
+}
+
+/// <summary>
+/// Qobuz track
+/// </summary>
+public class QobuzTrack
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    [JsonPropertyName("duration")]
+    public int Duration { get; set; }
+
+    [JsonPropertyName("track_number")]
+    public int TrackNumber { get; set; }
+
+    [JsonPropertyName("media_number")]
+    public int MediaNumber { get; set; }
+
+    [JsonPropertyName("performer")]
+    public QobuzArtist? Performer { get; set; }
+
+    [JsonPropertyName("album")]
+    public QobuzAlbum? Album { get; set; }
+
+    [JsonPropertyName("hires")]
+    public bool IsHiRes { get; set; }
+
+    [JsonPropertyName("hires_streamable")]
+    public bool IsHiResStreamable { get; set; }
+
+    [JsonPropertyName("streamable")]
+    public bool IsStreamable { get; set; }
+
+    [JsonPropertyName("maximum_bit_depth")]
+    public int? MaxBitDepth { get; set; }
+
+    [JsonPropertyName("maximum_sampling_rate")]
+    public double? MaxSamplingRate { get; set; }
+
+    /// <summary>
+    /// Formatted duration string (m:ss)
+    /// </summary>
+    public string FormattedDuration
+    {
+        get
+        {
+            var ts = TimeSpan.FromSeconds(Duration);
+            if (ts.TotalHours >= 1)
+                return $"{(int)ts.TotalHours}:{ts.Minutes:D2}:{ts.Seconds:D2}";
+            return $"{ts.Minutes}:{ts.Seconds:D2}";
+        }
+    }
+
+    /// <summary>
+    /// Quality label (e.g., "24-Bit / 96kHz")
+    /// </summary>
+    public string? QualityLabel
+    {
+        get
+        {
+            if (MaxBitDepth.HasValue && MaxSamplingRate.HasValue && MaxBitDepth > 16)
+                return $"{MaxBitDepth}-Bit / {MaxSamplingRate}kHz";
+            return null;
+        }
+    }
+}
+
+/// <summary>
+/// Container for tracks in a playlist
+/// </summary>
+public class QobuzTracksContainer
+{
+    [JsonPropertyName("items")]
+    public List<QobuzTrack>? Items { get; set; }
+
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("offset")]
+    public int Offset { get; set; }
+
+    [JsonPropertyName("limit")]
+    public int Limit { get; set; }
+}
+
+/// <summary>
+/// Full playlist response with tracks
+/// </summary>
+public class QobuzPlaylistWithTracks : QobuzPlaylist
+{
+    [JsonPropertyName("tracks")]
+    public QobuzTracksContainer? Tracks { get; set; }
 }
