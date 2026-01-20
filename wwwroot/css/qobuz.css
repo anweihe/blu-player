@@ -31,6 +31,7 @@
     display: flex;
     flex-direction: column;
     flex: 1;
+    overflow-x: hidden;
 }
 
     /* Header */
@@ -262,6 +263,9 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Login Section - full height centering */
@@ -380,9 +384,12 @@
     }
 
     /* Logged In Section */
-    .logged-in-section {
-        animation: fadeIn 0.3s ease;
-    }
+.logged-in-section {
+    animation: fadeIn 0.3s ease;
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+}
 
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
