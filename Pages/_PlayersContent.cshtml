@@ -1517,6 +1517,9 @@
 </style>
 
 <script>
+(function() {
+    'use strict';
+
     async function adjustVolume(button, delta) {
         const container = button.closest('.volume-controls');
         const playerIp = container.dataset.playerIp;
@@ -2073,4 +2076,10 @@
         const panel = initVolumePanel();
         panel.toggle(selectedPlayerIp, selectedPlayerPort, selectedGroupData);
     });
+
+    // Expose functions globally for onclick handlers
+    window.adjustVolume = adjustVolume;
+    window.discoverPlayers = discoverPlayers;
+    window.selectPlayer = selectPlayer;
+})();
 </script>

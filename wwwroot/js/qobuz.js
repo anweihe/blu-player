@@ -1,3 +1,6 @@
+(function() {
+    'use strict';
+
     // Global player selection storage key (not per-profile)
     const STORAGE_SELECTED_PLAYER = 'qobuz_selected_player';
 
@@ -1857,3 +1860,4 @@
     window.openPlayerSelector = openPlayerSelector;
     window.closePlayerSelector = closePlayerSelector;
     window.logout = logout;
+})();
