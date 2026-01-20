@@ -1922,6 +1922,15 @@
         audioPlayer.addEventListener('ended', playNext);
         audioPlayer.addEventListener('loadedmetadata', updateTotalTime);
 
+        // Register playback callbacks with GlobalPlayer
+        if (window.GlobalPlayer) {
+            window.GlobalPlayer.registerPlaybackCallbacks({
+                togglePlayPause: togglePlayPause,
+                playPrevious: playPrevious,
+                playNext: playNext
+            });
+        }
+
         if (userId && authToken) {
             showLoading();
             try {
@@ -3174,7 +3183,6 @@
             });
 
             window.GlobalPlayer.setPlaying(isPlaying);
-            window.GlobalPlayer.showBar();
         }
     }
 
@@ -3273,28 +3281,16 @@
     function updateProgress() {
         if (!audioPlayer.duration) return;
 
-        const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-
-        // Update global progress bar
-        const progressFill = document.getElementById('global-progress-fill');
-        const currentTime = document.getElementById('global-current-time');
-        if (progressFill) progressFill.style.width = `${progress}%`;
-        if (currentTime) currentTime.textContent = formatTime(audioPlayer.currentTime);
-
-        // Update popup progress if open
-        const popupProgressFill = document.getElementById('global-popup-progress-fill');
-        const popupCurrentTime = document.getElementById('global-popup-current-time');
-        if (popupProgressFill) popupProgressFill.style.width = `${progress}%`;
-        if (popupCurrentTime) popupCurrentTime.textContent = formatTime(audioPlayer.currentTime);
+        if (window.GlobalPlayer) {
+            window.GlobalPlayer.updateProgress(audioPlayer.currentTime, audioPlayer.duration);
+        }
     }
 
     // Update total time display
     function updateTotalTime() {
-        const totalTime = document.getElementById('global-total-time');
-        if (totalTime) totalTime.textContent = formatTime(audioPlayer.duration);
-
-        const popupTotalTime = document.getElementById('global-popup-total-time');
-        if (popupTotalTime) popupTotalTime.textContent = formatTime(audioPlayer.duration);
+        if (window.GlobalPlayer && audioPlayer.duration) {
+            window.GlobalPlayer.updateProgress(audioPlayer.currentTime, audioPlayer.duration);
+        }
     }
 
     // Format time as m:ss
@@ -3317,10 +3313,15 @@
         currentTrackIndex = -1;
         stopBluesoundStatusPolling();
 
-        // Hide global now playing bar
+        // Reset global player state (but keep bar visible)
         if (window.GlobalPlayer) {
-            window.GlobalPlayer.hideBar();
             window.GlobalPlayer.setPlaying(false);
+            window.GlobalPlayer.setCurrentTrack({
+                title: 'Kein Titel',
+                artist: '-',
+                albumCover: null
+            });
+            window.GlobalPlayer.updateProgress(0, 0);
         }
 
         clearSession();

@@ -23,6 +23,11 @@
     let lastStatusTime = 0;
     let lastTrackTitle = null;
 
+    // Callbacks for page-specific playback control (set by Qobuz page)
+    let onTogglePlayPause = null;
+    let onPlayPrevious = null;
+    let onPlayNext = null;
+
     // DOM Elements (initialized after DOM ready)
     let nowPlayingBar = null;
     let popup = null;
@@ -396,7 +401,14 @@
     }
 
     window.globalTogglePlayPause = async function() {
-        if (globalSelectedPlayer.type === 'bluesound') {
+        // Use page callback if available (for browser playback)
+        if (onTogglePlayPause) {
+            onTogglePlayPause();
+            return;
+        }
+
+        // Fallback for Bluesound when no page callback
+        if (globalSelectedPlayer.type === 'bluesound' && globalSelectedPlayer.ip) {
             const action = globalIsPlaying ? 'pause' : 'play';
             const success = await sendBluesoundControl(action);
             if (success) {
@@ -413,13 +425,27 @@
     };
 
     window.globalPlayPrevious = async function() {
-        if (globalSelectedPlayer.type === 'bluesound') {
+        // Use page callback if available
+        if (onPlayPrevious) {
+            onPlayPrevious();
+            return;
+        }
+
+        // Fallback for Bluesound
+        if (globalSelectedPlayer.type === 'bluesound' && globalSelectedPlayer.ip) {
             await sendBluesoundControl('previous');
         }
     };
 
     window.globalPlayNext = async function() {
-        if (globalSelectedPlayer.type === 'bluesound') {
+        // Use page callback if available
+        if (onPlayNext) {
+            onPlayNext();
+            return;
+        }
+
+        // Fallback for Bluesound
+        if (globalSelectedPlayer.type === 'bluesound' && globalSelectedPlayer.ip) {
             await sendBluesoundControl('next');
         }
     };
@@ -667,6 +693,42 @@
         setPlaying: (playing) => {
             globalIsPlaying = playing;
             updatePlayPauseButtons();
+        },
+        // Register callbacks for page-specific playback control
+        registerPlaybackCallbacks: (callbacks) => {
+            if (callbacks.togglePlayPause) onTogglePlayPause = callbacks.togglePlayPause;
+            if (callbacks.playPrevious) onPlayPrevious = callbacks.playPrevious;
+            if (callbacks.playNext) onPlayNext = callbacks.playNext;
+        },
+        // Unregister callbacks (when leaving page)
+        unregisterPlaybackCallbacks: () => {
+            onTogglePlayPause = null;
+            onPlayPrevious = null;
+            onPlayNext = null;
+        },
+        // Update progress bar
+        updateProgress: (currentSeconds, totalSeconds) => {
+            if (totalSeconds > 0) {
+                const progress = (currentSeconds / totalSeconds) * 100;
+                const progressFill = document.getElementById('global-progress-fill');
+                const currentTime = document.getElementById('global-current-time');
+                const totalTime = document.getElementById('global-total-time');
+
+                if (progressFill) progressFill.style.width = `${progress}%`;
+                if (currentTime) currentTime.textContent = formatTime(currentSeconds);
+                if (totalTime) totalTime.textContent = formatTime(totalSeconds);
+
+                // Update popup if open
+                if (popup && popup.style.display === 'flex') {
+                    const popupProgressFill = document.getElementById('global-popup-progress-fill');
+                    const popupCurrentTime = document.getElementById('global-popup-current-time');
+                    const popupTotalTime = document.getElementById('global-popup-total-time');
+
+                    if (popupProgressFill) popupProgressFill.style.width = `${progress}%`;
+                    if (popupCurrentTime) popupCurrentTime.textContent = formatTime(currentSeconds);
+                    if (popupTotalTime) popupTotalTime.textContent = formatTime(totalSeconds);
+                }
+            }
         }
     };
 
