@@ -1839,3 +1839,21 @@
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // Expose functions globally for onclick handlers
+    window.selectAlbum = selectAlbum;
+    window.selectPlaylist = selectPlaylist;
+    window.playSearchTrack = playSearchTrack;
+    window.playTrack = playTrack;
+    window.playTrackDirectly = playSearchTrack; // Alias for favorites
+    window.switchTab = switchTab;
+    window.backToPlaylists = backToPlaylists;
+    window.playAll = playAll;
+    window.loadPlaylists = loadPlaylists;
+    window.loadNewReleases = loadNewReleases;
+    window.loadTopPlaylists = loadTopPlaylists;
+    window.loadRecommendations = loadRecommendations;
+    window.clearSearch = clearSearch;
+    window.openPlayerSelector = openPlayerSelector;
+    window.closePlayerSelector = closePlayerSelector;
+    window.logout = logout;
