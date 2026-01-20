@@ -34,6 +34,11 @@
     let nowPlayingBar = null;
     let popup = null;
     let playerSelector = null;
+    let globalAudioPlayer = null;
+
+    // Browser playback state
+    let currentPlaylist = [];
+    let currentTrackIndex = -1;
 
     // ==================== Initialization ====================
 
@@ -42,8 +47,24 @@
         nowPlayingBar = document.getElementById('global-now-playing-bar');
         popup = document.getElementById('global-np-popup');
         playerSelector = document.getElementById('global-player-selector');
+        globalAudioPlayer = document.getElementById('global-audio-player');
 
         if (!nowPlayingBar) return;
+
+        // Initialize global audio player
+        if (globalAudioPlayer) {
+            globalAudioPlayer.addEventListener('timeupdate', handleAudioTimeUpdate);
+            globalAudioPlayer.addEventListener('ended', handleAudioEnded);
+            globalAudioPlayer.addEventListener('loadedmetadata', handleAudioMetadata);
+            globalAudioPlayer.addEventListener('play', () => {
+                globalIsPlaying = true;
+                updatePlayPauseButtons();
+            });
+            globalAudioPlayer.addEventListener('pause', () => {
+                globalIsPlaying = false;
+                updatePlayPauseButtons();
+            });
+        }
 
         // Load saved player
         loadSavedPlayer();
@@ -70,6 +91,101 @@
         setupProgressBarSeek();
     }
 
+    // ==================== Global Audio Player Events ====================
+
+    function handleAudioTimeUpdate() {
+        if (!globalAudioPlayer || !globalAudioPlayer.duration) return;
+
+        const current = globalAudioPlayer.currentTime;
+        const total = globalAudioPlayer.duration;
+        const progress = (current / total) * 100;
+
+        // Update progress UI
+        const progressFill = document.getElementById('global-progress-fill');
+        const currentTime = document.getElementById('global-current-time');
+        const totalTime = document.getElementById('global-total-time');
+
+        if (progressFill) progressFill.style.width = `${progress}%`;
+        if (currentTime) currentTime.textContent = formatTime(current);
+        if (totalTime) totalTime.textContent = formatTime(total);
+
+        // Update popup if open
+        if (popup && popup.style.display === 'flex') {
+            const popupProgressFill = document.getElementById('global-popup-progress-fill');
+            const popupCurrentTime = document.getElementById('global-popup-current-time');
+            const popupTotalTime = document.getElementById('global-popup-total-time');
+
+            if (popupProgressFill) popupProgressFill.style.width = `${progress}%`;
+            if (popupCurrentTime) popupCurrentTime.textContent = formatTime(current);
+            if (popupTotalTime) popupTotalTime.textContent = formatTime(total);
+        }
+
+        // Store for seek calculations
+        lastKnownPosition = current;
+        lastKnownTotal = total;
+        lastStatusTime = Date.now();
+    }
+
+    function handleAudioEnded() {
+        // Play next track if available
+        if (onPlayNext) {
+            onPlayNext();
+        } else if (currentPlaylist.length > 0 && currentTrackIndex < currentPlaylist.length - 1) {
+            playTrackAtIndex(currentTrackIndex + 1);
+        } else {
+            globalIsPlaying = false;
+            updatePlayPauseButtons();
+        }
+    }
+
+    function handleAudioMetadata() {
+        if (!globalAudioPlayer) return;
+        const totalTime = document.getElementById('global-total-time');
+        const popupTotalTime = document.getElementById('global-popup-total-time');
+        if (totalTime) totalTime.textContent = formatTime(globalAudioPlayer.duration);
+        if (popupTotalTime) popupTotalTime.textContent = formatTime(globalAudioPlayer.duration);
+        lastKnownTotal = globalAudioPlayer.duration;
+    }
+
+    // Play a track from the current playlist
+    async function playTrackAtIndex(index) {
+        if (index < 0 || index >= currentPlaylist.length) return;
+
+        const track = currentPlaylist[index];
+        currentTrackIndex = index;
+
+        // Update UI with track info
+        setCurrentTrackInfo(track);
+
+        // Get stream URL and play
+        if (track.streamUrl) {
+            globalAudioPlayer.src = track.streamUrl;
+            globalAudioPlayer.play();
+            globalIsPlaying = true;
+            updatePlayPauseButtons();
+        }
+    }
+
+    function setCurrentTrackInfo(track) {
+        globalCurrentTrack = track;
+
+        document.getElementById('global-np-title').textContent = track.title || 'Unbekannt';
+        document.getElementById('global-np-artist').textContent = track.artist || track.artistName || '-';
+
+        const cover = document.getElementById('global-np-cover');
+        const placeholder = document.getElementById('global-np-cover-placeholder');
+        if (track.imageUrl || track.albumCover) {
+            cover.src = track.imageUrl || track.albumCover;
+            cover.style.display = 'block';
+            placeholder.style.display = 'none';
+        } else {
+            cover.style.display = 'none';
+            placeholder.style.display = 'flex';
+        }
+
+        lastTrackTitle = track.title;
+    }
+
     // ==================== Progress Bar Seek ====================
 
     function setupProgressBarSeek() {
@@ -80,27 +196,33 @@
         }
 
         // Popup progress bar
-        const popupProgressBar = document.querySelector('.global-popup-progress-bar');
+        const popupProgressBar = document.getElementById('global-popup-progress-bar');
         if (popupProgressBar) {
             popupProgressBar.addEventListener('click', handleProgressBarClick);
         }
     }
 
     function handleProgressBarClick(e) {
-        if (lastKnownTotal <= 0) return;
+        // Get duration from audio player if available, fallback to lastKnownTotal
+        const duration = (globalAudioPlayer && globalAudioPlayer.duration) || lastKnownTotal;
+        if (!duration || duration <= 0) return;
 
         const rect = e.currentTarget.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
-        const percentage = clickX / rect.width;
-        const seekTime = percentage * lastKnownTotal;
+        const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+        const seekTime = percentage * duration;
 
-        // Use page callback if available
-        if (onSeek) {
+        // Direct seek on global audio player (takes priority)
+        if (globalSelectedPlayer.type === 'browser' && globalAudioPlayer && globalAudioPlayer.src) {
+            globalAudioPlayer.currentTime = seekTime;
+        } else if (onSeek) {
+            // Use page callback for non-browser playback
             onSeek(seekTime);
         }
 
         // Update UI immediately for responsiveness
         lastKnownPosition = seekTime;
+        lastKnownTotal = duration;
         lastStatusTime = Date.now();
 
         const progress = percentage * 100;
@@ -141,9 +263,9 @@
             if (!data.activeProfileId || !data.profiles) return null;
 
             const profile = data.profiles.find(p => p.id === data.activeProfileId);
-            if (!profile || !profile.qobuzCredentials) return null;
+            if (!profile || !profile.qobuz) return null;
 
-            return profile.qobuzCredentials;
+            return profile.qobuz;
         } catch (e) {
             return null;
         }
@@ -460,6 +582,16 @@
             return;
         }
 
+        // Browser playback via global audio player
+        if (globalSelectedPlayer.type === 'browser' && globalAudioPlayer && globalAudioPlayer.src) {
+            if (globalIsPlaying) {
+                globalAudioPlayer.pause();
+            } else {
+                globalAudioPlayer.play();
+            }
+            return;
+        }
+
         // Fallback for Bluesound when no page callback
         if (globalSelectedPlayer.type === 'bluesound' && globalSelectedPlayer.ip) {
             const action = globalIsPlaying ? 'pause' : 'play';
@@ -484,6 +616,12 @@
             return;
         }
 
+        // Browser playback - previous track
+        if (globalSelectedPlayer.type === 'browser' && currentPlaylist.length > 0 && currentTrackIndex > 0) {
+            playTrackAtIndex(currentTrackIndex - 1);
+            return;
+        }
+
         // Fallback for Bluesound
         if (globalSelectedPlayer.type === 'bluesound' && globalSelectedPlayer.ip) {
             await sendBluesoundControl('previous');
@@ -494,6 +632,12 @@
         // Use page callback if available
         if (onPlayNext) {
             onPlayNext();
+            return;
+        }
+
+        // Browser playback - next track
+        if (globalSelectedPlayer.type === 'browser' && currentPlaylist.length > 0 && currentTrackIndex < currentPlaylist.length - 1) {
+            playTrackAtIndex(currentTrackIndex + 1);
             return;
         }
 
@@ -773,6 +917,10 @@
         // Update progress bar
         updateProgress: (currentSeconds, totalSeconds) => {
             if (totalSeconds > 0) {
+                lastKnownPosition = currentSeconds;
+                lastKnownTotal = totalSeconds;
+                lastStatusTime = Date.now();
+
                 const progress = (currentSeconds / totalSeconds) * 100;
                 const progressFill = document.getElementById('global-progress-fill');
                 const currentTime = document.getElementById('global-current-time');
@@ -793,7 +941,37 @@
                     if (popupTotalTime) popupTotalTime.textContent = formatTime(totalSeconds);
                 }
             }
-        }
+        },
+        // Play a track directly on the global audio player
+        playTrack: (streamUrl, track) => {
+            if (!globalAudioPlayer) return false;
+            if (globalSelectedPlayer.type !== 'browser') return false;
+
+            // Set track info
+            setCurrentTrackInfo(track);
+
+            // Play the stream
+            globalAudioPlayer.src = streamUrl;
+            globalAudioPlayer.play();
+            globalIsPlaying = true;
+            updatePlayPauseButtons();
+            return true;
+        },
+        // Set playlist for navigation
+        setPlaylist: (tracks, startIndex = 0) => {
+            currentPlaylist = tracks || [];
+            currentTrackIndex = startIndex;
+        },
+        // Get current track index
+        getCurrentTrackIndex: () => currentTrackIndex,
+        // Set current track index (for sync with page)
+        setCurrentTrackIndex: (index) => {
+            currentTrackIndex = index;
+        },
+        // Get audio player reference (for direct access)
+        getAudioPlayer: () => globalAudioPlayer,
+        // Check if audio is currently playing
+        isPlaying: () => globalIsPlaying
     };
 
     // Initialize when DOM is ready

@@ -1916,11 +1916,8 @@
         const userId = creds?.userId;
         const authToken = creds?.authToken;
 
-        // Initialize audio player
-        audioPlayer = new Audio();
-        audioPlayer.addEventListener('timeupdate', updateProgress);
-        audioPlayer.addEventListener('ended', playNext);
-        audioPlayer.addEventListener('loadedmetadata', updateTotalTime);
+        // Use global audio player (persists across page navigation)
+        audioPlayer = window.GlobalPlayer?.getAudioPlayer() || new Audio();
 
         // Register playback callbacks with GlobalPlayer
         if (window.GlobalPlayer) {
@@ -2845,6 +2842,12 @@
 
         if (data.success && data.url) {
             currentTrackIndex = index;
+
+            // Sync playlist with GlobalPlayer for cross-page navigation
+            if (window.GlobalPlayer) {
+                window.GlobalPlayer.setPlaylist(currentTracks, index);
+            }
+
             audioPlayer.src = data.url;
             audioPlayer.play();
             isPlaying = true;

@@ -392,6 +392,9 @@
     </style>
 </head>
 <body>
+    <!-- Global Audio Player (persists across page navigation) -->
+    <audio id="global-audio-player" preload="auto"></audio>
+
     <main role="main">
         @RenderBody()
     </main>
@@ -476,7 +479,7 @@
                 <p id="global-popup-album" class="global-np-popup-album">Album</p>
             </div>
             <div class="global-np-popup-progress">
-                <div class="global-popup-progress-bar">
+                <div class="global-popup-progress-bar" id="global-popup-progress-bar">
                     <div class="global-popup-progress-fill" id="global-popup-progress-fill"></div>
                 </div>
                 <div class="global-popup-progress-time">
