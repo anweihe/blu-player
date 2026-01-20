@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -15,9 +16,9 @@ namespace BluesoundWeb.Migrations
                 name: "GlobalSettings",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    ActiveProfileId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ActiveProfileId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -28,11 +29,11 @@ namespace BluesoundWeb.Migrations
                 name: "UserProfiles",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    ProfileId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ProfileId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -43,14 +44,14 @@ namespace BluesoundWeb.Migrations
                 name: "PlaybackQueues",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    UserProfileId = table.Column<int>(type: "INTEGER", nullable: false),
-                    SourceType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    SourceId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    SourceName = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    CurrentIndex = table.Column<int>(type: "INTEGER", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserProfileId = table.Column<int>(type: "integer", nullable: false),
+                    SourceType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    SourceId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    SourceName = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    CurrentIndex = table.Column<int>(type: "integer", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -67,15 +68,15 @@ namespace BluesoundWeb.Migrations
                 name: "ProfileSettings",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    UserProfileId = table.Column<int>(type: "INTEGER", nullable: false),
-                    StreamingQualityFormatId = table.Column<int>(type: "INTEGER", nullable: false),
-                    SelectedPlayerType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    SelectedPlayerName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    SelectedPlayerIp = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    SelectedPlayerPort = table.Column<int>(type: "INTEGER", nullable: true),
-                    SelectedPlayerModel = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserProfileId = table.Column<int>(type: "integer", nullable: false),
+                    StreamingQualityFormatId = table.Column<int>(type: "integer", nullable: false),
+                    SelectedPlayerType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    SelectedPlayerName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    SelectedPlayerIp = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    SelectedPlayerPort = table.Column<int>(type: "integer", nullable: true),
+                    SelectedPlayerModel = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -92,13 +93,13 @@ namespace BluesoundWeb.Migrations
                 name: "QobuzCredentials",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    UserProfileId = table.Column<int>(type: "INTEGER", nullable: false),
-                    QobuzUserId = table.Column<long>(type: "INTEGER", nullable: false),
-                    AuthToken = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    DisplayName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    Avatar = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserProfileId = table.Column<int>(type: "integer", nullable: false),
+                    QobuzUserId = table.Column<long>(type: "bigint", nullable: false),
+                    AuthToken = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    DisplayName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    Avatar = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -115,22 +116,22 @@ namespace BluesoundWeb.Migrations
                 name: "QueueTracks",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    PlaybackQueueId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Position = table.Column<int>(type: "INTEGER", nullable: false),
-                    QobuzTrackId = table.Column<long>(type: "INTEGER", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    ArtistName = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    AlbumTitle = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    AlbumCover = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    Duration = table.Column<int>(type: "INTEGER", nullable: false),
-                    FormattedDuration = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                    IsHiRes = table.Column<bool>(type: "INTEGER", nullable: false),
-                    QualityLabel = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    IsStreamable = table.Column<bool>(type: "INTEGER", nullable: false),
-                    TrackNumber = table.Column<int>(type: "INTEGER", nullable: false),
-                    MediaNumber = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    PlaybackQueueId = table.Column<int>(type: "integer", nullable: false),
+                    Position = table.Column<int>(type: "integer", nullable: false),
+                    QobuzTrackId = table.Column<long>(type: "bigint", nullable: false),
+                    Title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    ArtistName = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    AlbumTitle = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    AlbumCover = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    Duration = table.Column<int>(type: "integer", nullable: false),
+                    FormattedDuration = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    IsHiRes = table.Column<bool>(type: "boolean", nullable: false),
+                    QualityLabel = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    IsStreamable = table.Column<bool>(type: "boolean", nullable: false),
+                    TrackNumber = table.Column<int>(type: "integer", nullable: false),
+                    MediaNumber = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {

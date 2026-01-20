@@ -22,6 +22,14 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+main[role="main"] {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
 @media (prefers-color-scheme: light) {
   html, body {
     background: #f8f9fa;

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using BluesoundWeb.Data;
 using BluesoundWeb.Services;
 
@@ -23,7 +24,8 @@ else
     Directory.CreateDirectory(dataFolder);
     var dbPath = Path.Combine(dataFolder, "bluesound.db");
     builder.Services.AddDbContext<BluesoundDbContext>(options =>
-        options.UseSqlite($"Data Source={dbPath}"));
+        options.UseSqlite($"Data Source={dbPath}")
+               .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 }
 
 // Register Settings service
