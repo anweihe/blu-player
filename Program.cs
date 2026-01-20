@@ -8,6 +8,7 @@ builder.Services.AddRazorPages();
 // Register Bluesound services
 builder.Services.AddHttpClient<IBluesoundApiService, BluesoundApiService>();
 builder.Services.AddScoped<IPlayerDiscoveryService, PlayerDiscoveryService>();
+builder.Services.AddSingleton<IPlayerCacheService, PlayerCacheService>();
 
 // Register Qobuz service
 builder.Services.AddHttpClient<IQobuzApiService, QobuzApiService>();

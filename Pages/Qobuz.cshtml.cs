@@ -10,21 +10,20 @@ public class QobuzModel : PageModel
     private readonly IQobuzApiService _qobuzService;
     private readonly IPlayerDiscoveryService _discoveryService;
     private readonly IBluesoundApiService _bluesoundService;
+    private readonly IPlayerCacheService _playerCache;
     private readonly ILogger<QobuzModel> _logger;
-
-    // Cache for discovered players
-    private static List<BluesoundPlayer> _cachedPlayers = new();
-    private static DateTime _lastDiscovery = DateTime.MinValue;
 
     public QobuzModel(
         IQobuzApiService qobuzService,
         IPlayerDiscoveryService discoveryService,
         IBluesoundApiService bluesoundService,
+        IPlayerCacheService playerCache,
         ILogger<QobuzModel> logger)
     {
         _qobuzService = qobuzService;
         _discoveryService = discoveryService;
         _bluesoundService = bluesoundService;
+        _playerCache = playerCache;
         _logger = logger;
     }
 
@@ -226,13 +225,16 @@ public class QobuzModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnGetPlayersAsync(bool refresh = false)
     {
-        // Use cached players if recent (within 30 seconds) and not forcing refresh
-        if (!refresh && _cachedPlayers.Count > 0 && DateTime.Now - _lastDiscovery < TimeSpan.FromSeconds(30))
+        // Use shared cache if recent (within 60 seconds) and not forcing refresh
+        if (!refresh && _playerCache.HasRecentCache(TimeSpan.FromSeconds(60)))
         {
+            var cachedPlayers = _playerCache.GetCachedPlayers();
+            _logger.LogInformation("Using {Count} cached players from shared cache", cachedPlayers.Count);
+
             return new JsonResult(new
             {
                 success = true,
-                players = GetGroupedPlayersForSelector(_cachedPlayers)
+                players = GetGroupedPlayersForSelector(cachedPlayers)
             });
         }
 
@@ -243,8 +245,8 @@ public class QobuzModel : PageModel
             // Discover players on the network
             var players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
 
-            _cachedPlayers = players;
-            _lastDiscovery = DateTime.Now;
+            // Update shared cache
+            _playerCache.SetCachedPlayers(players);
 
             _logger.LogInformation("Discovered {Count} Bluesound players", players.Count);
 
@@ -261,7 +263,7 @@ public class QobuzModel : PageModel
             {
                 success = false,
                 error = "Player-Suche fehlgeschlagen",
-                players = GetGroupedPlayersForSelector(_cachedPlayers)
+                players = GetGroupedPlayersForSelector(_playerCache.GetCachedPlayers())
             });
         }
     }

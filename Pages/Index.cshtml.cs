@@ -9,19 +9,18 @@ public class IndexModel : PageModel
 {
     private readonly IPlayerDiscoveryService _discoveryService;
     private readonly IBluesoundApiService _apiService;
+    private readonly IPlayerCacheService _playerCache;
     private readonly ILogger<IndexModel> _logger;
-
-    // Cache for known player addresses (IP:Port)
-    private static List<(string Ip, int Port)> _knownPlayers = new();
-    private static readonly object _cacheLock = new();
 
     public IndexModel(
         IPlayerDiscoveryService discoveryService,
         IBluesoundApiService apiService,
+        IPlayerCacheService playerCache,
         ILogger<IndexModel> logger)
     {
         _discoveryService = discoveryService;
         _apiService = apiService;
+        _playerCache = playerCache;
         _logger = logger;
     }
 
@@ -232,11 +231,8 @@ public class IndexModel : PageModel
 
             _logger.LogInformation("Discovery complete. Found {Count} players.", players.Count);
 
-            // Cache the discovered player addresses
-            lock (_cacheLock)
-            {
-                _knownPlayers = players.Select(p => (p.IpAddress, p.Port)).ToList();
-            }
+            // Cache the discovered players in the shared cache
+            _playerCache.SetCachedPlayers(players);
 
             PlayerGroups = OrganizeIntoGroups(players);
         }
@@ -252,31 +248,31 @@ public class IndexModel : PageModel
     /// </summary>
     private async Task RefreshKnownPlayersAsync()
     {
-        List<(string Ip, int Port)> playersToQuery;
+        var cachedPlayers = _playerCache.GetCachedPlayers();
 
-        lock (_cacheLock)
-        {
-            playersToQuery = _knownPlayers.ToList();
-        }
-
-        if (playersToQuery.Count == 0)
+        if (cachedPlayers.Count == 0)
         {
             _logger.LogWarning("No known players cached, falling back to full discovery");
             await DiscoverAndGroupPlayersAsync();
             return;
         }
 
+        var playersToQuery = cachedPlayers.Select(p => (p.IpAddress, p.Port)).ToList();
+
         try
         {
             _logger.LogInformation("Quick refresh of {Count} known players...", playersToQuery.Count);
 
             // Query all known players in parallel
-            var tasks = playersToQuery.Select(p => _apiService.GetPlayerStatusAsync(p.Ip, p.Port));
+            var tasks = playersToQuery.Select(p => _apiService.GetPlayerStatusAsync(p.IpAddress, p.Port));
             var results = await Task.WhenAll(tasks);
 
             var players = results.Where(p => p != null).Cast<BluesoundPlayer>().ToList();
 
             _logger.LogInformation("Quick refresh complete. Got status from {Count} players.", players.Count);
+
+            // Update the shared cache
+            _playerCache.SetCachedPlayers(players);
 
             PlayerGroups = OrganizeIntoGroups(players);
         }
