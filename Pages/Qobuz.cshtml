@@ -1924,6 +1924,11 @@
         if (wasPlaying !== isPlaying) {
             updatePlayPauseButton();
             updateTrackHighlight();
+
+            // Stop polling if playback paused/stopped (not by us)
+            if (!isPlaying && status.state === 'pause') {
+                stopBluesoundStatusPolling();
+            }
         }
 
         // Update progress if available
@@ -1936,6 +1941,7 @@
 
         // Check if playback stopped (track ended)
         if (status.state === 'stop' && wasPlaying) {
+            stopBluesoundStatusPolling();
             // Track might have ended, try to play next
             playNext();
         }
@@ -1988,6 +1994,13 @@
             isPlaying = !isPlaying;
             updatePlayPauseButton();
             updateTrackHighlight();
+
+            // Stop polling when paused, start when playing
+            if (isPlaying) {
+                startBluesoundStatusPolling();
+            } else {
+                stopBluesoundStatusPolling();
+            }
         } else {
             if (!audioPlayer.src) return;
 
