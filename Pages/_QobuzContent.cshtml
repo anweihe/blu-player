@@ -1939,6 +1939,11 @@
         loginFormSetup = false;
         searchSetup = false;
 
+        // Invalidate cache on SPA navigation to ensure fresh profile data
+        if (typeof SettingsApi !== 'undefined' && SettingsApi.invalidateCache) {
+            SettingsApi.invalidateCache();
+        }
+
         // Initialize profile manager
         if (typeof UserProfileManager !== 'undefined') {
             console.log('initQobuz: Initializing UserProfileManager');

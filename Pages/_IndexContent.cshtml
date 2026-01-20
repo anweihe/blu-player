@@ -637,86 +637,87 @@
     // State
     let selectedSource = null;
 
-    // Initialize on page load
-    async function initIndexPage() {
-        // Setup event listeners for this page
-        setupEventListeners();
-
-        // Initialize profile manager and perform migration
-        if (typeof UserProfileManager !== 'undefined') {
-            await UserProfileManager.initialize();
-
-            // Check if there are any profiles
-            const profiles = await UserProfileManager.getAllProfiles();
-            if (profiles.length === 0) {
-                // No profiles - show add profile dialog directly
-                showAddProfileDialog();
-            }
-        }
-    }
-
-    // Setup event listeners
-    function setupEventListeners() {
-        // Form submission handler
-        const form = document.getElementById('add-profile-form');
-        if (form && !form.dataset.listenerAttached) {
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                await createProfile(e);
-            });
-            form.dataset.listenerAttached = 'true';
-        }
-
-        // Close overlays when clicking outside
-        const userOverlay = document.getElementById('user-overlay');
-        if (userOverlay && !userOverlay.dataset.listenerAttached) {
-            userOverlay.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeUserOverlay();
-                }
-            });
-            userOverlay.dataset.listenerAttached = 'true';
-        }
-
-        const addDialog = document.getElementById('add-profile-dialog');
-        if (addDialog && !addDialog.dataset.listenerAttached) {
-            addDialog.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeAddProfileDialog();
-                }
-            });
-            addDialog.dataset.listenerAttached = 'true';
-        }
-    }
-
-    // Initialize when loaded via SPA or directly
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initIndexPage);
-    } else {
-        initIndexPage();
-    }
+    // ==================== Global Functions (for onclick handlers) ====================
+    // These must be defined before initIndexPage() is called
 
     // Select a music source
-    async function selectSource(source) {
+    window.selectSource = async function(source) {
         selectedSource = source;
-        await showUserOverlay();
-    }
+        await window.showUserOverlay();
+    };
 
     // Show user selection overlay
-    async function showUserOverlay() {
+    window.showUserOverlay = async function() {
         const overlay = document.getElementById('user-overlay');
         await renderUserGrid();
         overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
-    }
+    };
 
     // Close user selection overlay
-    function closeUserOverlay() {
+    window.closeUserOverlay = function() {
         const overlay = document.getElementById('user-overlay');
         overlay.classList.remove('active');
         document.body.style.overflow = '';
         selectedSource = null;
-    }
+    };
+
+    // Select a user profile
+    window.selectUser = async function(profileId) {
+        // Set the profile as active
+        await UserProfileManager.setActiveProfileId(profileId);
+
+        // Get the profile to check if Qobuz is logged in
+        const profile = await UserProfileManager.getProfileById(profileId);
+
+        // Save the source before closing (closeUserOverlay resets selectedSource)
+        const source = selectedSource;
+
+        // Close overlay
+        window.closeUserOverlay();
+
+        // Navigate to Qobuz page using SPA navigation
+        if (source === 'qobuz') {
+            if (typeof navigateTo === 'function') {
+                navigateTo('/Qobuz');
+            } else {
+                window.location.href = '/Qobuz';
+            }
+        }
+    };
+
+    // Show add profile dialog
+    window.showAddProfileDialog = function() {
+        const dialog = document.getElementById('add-profile-dialog');
+        if (!dialog) return;
+
+        dialog.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Focus input
+        setTimeout(() => {
+            const input = document.getElementById('profile-name');
+            if (input) input.focus();
+        }, 100);
+    };
+
+    // Close add profile dialog
+    window.closeAddProfileDialog = function() {
+        const dialog = document.getElementById('add-profile-dialog');
+        if (!dialog) return;
+
+        dialog.classList.remove('active');
+        const input = document.getElementById('profile-name');
+        if (input) input.value = '';
+
+        // Restore body scroll only if user overlay is not active
+        const userOverlay = document.getElementById('user-overlay');
+        if (!userOverlay || !userOverlay.classList.contains('active')) {
+            document.body.style.overflow = '';
+        }
+    };
+
+    // ==================== Internal Functions ====================
 
     // Render user grid
     async function renderUserGrid() {
@@ -754,61 +755,6 @@
         }).join('');
     }
 
-    // Select a user profile
-    async function selectUser(profileId) {
-        // Set the profile as active
-        await UserProfileManager.setActiveProfileId(profileId);
-
-        // Get the profile to check if Qobuz is logged in
-        const profile = await UserProfileManager.getProfileById(profileId);
-
-        // Save the source before closing (closeUserOverlay resets selectedSource)
-        const source = selectedSource;
-
-        // Close overlay
-        closeUserOverlay();
-
-        // Navigate to Qobuz page using SPA navigation
-        if (source === 'qobuz') {
-            if (typeof navigateTo === 'function') {
-                navigateTo('/Qobuz');
-            } else {
-                window.location.href = '/Qobuz';
-            }
-        }
-    }
-
-    // Show add profile dialog
-    function showAddProfileDialog() {
-        const dialog = document.getElementById('add-profile-dialog');
-        if (!dialog) return;
-
-        dialog.classList.add('active');
-        document.body.style.overflow = 'hidden';
-
-        // Focus input
-        setTimeout(() => {
-            const input = document.getElementById('profile-name');
-            if (input) input.focus();
-        }, 100);
-    }
-
-    // Close add profile dialog
-    function closeAddProfileDialog() {
-        const dialog = document.getElementById('add-profile-dialog');
-        if (!dialog) return;
-
-        dialog.classList.remove('active');
-        const input = document.getElementById('profile-name');
-        if (input) input.value = '';
-
-        // Restore body scroll only if user overlay is not active
-        const userOverlay = document.getElementById('user-overlay');
-        if (!userOverlay || !userOverlay.classList.contains('active')) {
-            document.body.style.overflow = '';
-        }
-    }
-
     // Create new profile
     async function createProfile(event) {
         if (event) event.preventDefault();
@@ -831,7 +777,7 @@
             await UserProfileManager.setActiveProfileId(newProfile.id);
 
             // Close dialog
-            closeAddProfileDialog();
+            window.closeAddProfileDialog();
 
             // If user overlay is open, refresh the grid
             const userOverlay = document.getElementById('user-overlay');
@@ -839,7 +785,7 @@
                 await renderUserGrid();
             } else {
                 // If this was the first profile, go ahead and select a source
-                await showUserOverlay();
+                await window.showUserOverlay();
             }
         } catch (error) {
             console.error('Error creating profile:', error);
@@ -854,6 +800,60 @@
         return div.innerHTML;
     }
 
+    // Setup event listeners
+    function setupEventListeners() {
+        // Form submission handler
+        const form = document.getElementById('add-profile-form');
+        if (form && !form.dataset.listenerAttached) {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await createProfile(e);
+            });
+            form.dataset.listenerAttached = 'true';
+        }
+
+        // Close overlays when clicking outside
+        const userOverlay = document.getElementById('user-overlay');
+        if (userOverlay && !userOverlay.dataset.listenerAttached) {
+            userOverlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    window.closeUserOverlay();
+                }
+            });
+            userOverlay.dataset.listenerAttached = 'true';
+        }
+
+        const addDialog = document.getElementById('add-profile-dialog');
+        if (addDialog && !addDialog.dataset.listenerAttached) {
+            addDialog.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    window.closeAddProfileDialog();
+                }
+            });
+            addDialog.dataset.listenerAttached = 'true';
+        }
+    }
+
+    // Initialize on page load
+    async function initIndexPage() {
+        // Setup event listeners for this page
+        setupEventListeners();
+
+        // Initialize profile manager and perform migration
+        if (typeof UserProfileManager !== 'undefined') {
+            await UserProfileManager.initialize();
+
+            // Check if there are any profiles
+            const profiles = await UserProfileManager.getAllProfiles();
+            if (profiles.length === 0) {
+                // No profiles - show add profile dialog directly
+                window.showAddProfileDialog();
+            }
+        }
+    }
+
+    // ==================== Event Listeners ====================
+
     // Close overlays on escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
@@ -861,11 +861,19 @@
             const userOverlay = document.getElementById('user-overlay');
 
             if (addDialog && addDialog.classList.contains('active')) {
-                closeAddProfileDialog();
+                window.closeAddProfileDialog();
             } else if (userOverlay && userOverlay.classList.contains('active')) {
-                closeUserOverlay();
+                window.closeUserOverlay();
             }
         }
     });
 
+    // ==================== Initialization ====================
+
+    // Initialize when loaded via SPA or directly
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initIndexPage);
+    } else {
+        initIndexPage();
+    }
 </script>

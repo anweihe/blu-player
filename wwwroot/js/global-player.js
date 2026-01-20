@@ -809,7 +809,8 @@
 
     // ==================== Queue Functions ====================
 
-    async function loadAndRenderQueue() {
+    // Make loadAndRenderQueue globally accessible
+    window.loadAndRenderQueue = async function() {
         const queueSection = document.getElementById('global-queue-section');
         const queueList = document.getElementById('global-queue-list');
         const queueSource = document.getElementById('global-queue-source');
@@ -843,43 +844,41 @@
         }
     }
 
-    function renderQueueInPopup(queue) {
+    // Make renderQueueInPopup globally accessible
+    window.renderQueueInPopup = function(queue) {
         const queueSection = document.getElementById('global-queue-section');
         const queueList = document.getElementById('global-queue-list');
         const queueSource = document.getElementById('global-queue-source');
 
-        if (!queueSection || !queueList || !queue || !queue.tracks || queue.tracks.length === 0) {
-            if (queueSection) queueSection.style.display = 'none';
+        if (!queueList) return;
+
+        if (!queue || !queue.tracks || queue.tracks.length === 0) {
+            queueList.innerHTML = `
+                <div class="global-queue-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
+                    </svg>
+                    <p>Keine Warteschlange</p>
+                </div>
+            `;
             return;
         }
-
-        queueSection.style.display = 'block';
 
         // Update source label
         if (queueSource && queue.sourceName) {
             const sourceLabel = queue.sourceType === 'playlist' ? 'Playlist' : 'Album';
-            queueSource.textContent = `aus ${sourceLabel}: ${queue.sourceName}`;
+            queueSource.textContent = `${sourceLabel}: ${queue.sourceName}`;
         } else if (queueSource) {
             queueSource.textContent = '';
         }
 
-        // Calculate which tracks to show (around current index)
         const currentIndex = queue.currentIndex || 0;
-        const totalTracks = queue.tracks.length;
-        const showCount = 7; // Show up to 7 tracks
-        const halfShow = Math.floor(showCount / 2);
 
-        let startIdx = Math.max(0, currentIndex - halfShow);
-        let endIdx = Math.min(totalTracks, startIdx + showCount);
-
-        // Adjust start if we're near the end
-        if (endIdx - startIdx < showCount && startIdx > 0) {
-            startIdx = Math.max(0, endIdx - showCount);
-        }
-
-        // Render track items
+        // Render all track items (scrollable list)
         let html = '';
-        for (let i = startIdx; i < endIdx; i++) {
+        for (let i = 0; i < queue.tracks.length; i++) {
             const track = queue.tracks[i];
             const isCurrent = i === currentIndex;
 
@@ -970,7 +969,8 @@
         }
     }
 
-    function updateQualityButtons() {
+    // Make updateQualityButtons globally accessible
+    window.updateQualityButtons = function() {
         document.querySelectorAll('.global-quality-option').forEach(btn => {
             const format = parseInt(btn.dataset.format, 10);
             btn.classList.toggle('active', format === globalStreamQuality);
@@ -1134,6 +1134,7 @@
         startPolling: startStatusPolling,
         stopPolling: stopStatusPolling,
         getSelectedPlayer: () => globalSelectedPlayer,
+        getCurrentTrack: () => globalCurrentTrack,
         getStreamQuality: () => globalStreamQuality,
         setCurrentTrack: (track) => {
             globalCurrentTrack = track;

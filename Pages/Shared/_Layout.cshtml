@@ -8,6 +8,7 @@
     <meta name="theme-color" content="#0a0a0b" />
     <title>@ViewData["Title"] - Bluesound</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/now-playing-popup.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/BluesoundWeb.styles.css" asp-append-version="true" />
     <style>
         /* Shared Hamburger Menu Styles */
@@ -463,100 +464,136 @@
     </div>
 
     <!-- Global Now Playing Popup -->
-    <div id="global-np-popup" class="global-np-popup-overlay" style="display: none;">
-        <div class="global-np-popup">
+    <div id="global-np-popup" class="global-np-popup-overlay">
+        <div class="global-np-popup" id="global-np-popup-sheet">
+            <!-- Drag Handle for mobile swipe -->
+            <div class="global-np-popup-handle" id="global-np-handle"></div>
+
+            <!-- Close Button (desktop only) -->
             <button type="button" class="global-np-popup-close" onclick="closeGlobalNowPlayingPopup()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
             </button>
-            <div class="global-np-popup-cover">
-                <img id="global-popup-cover" src="" alt="Album Cover">
-                <div class="global-np-popup-cover-placeholder" id="global-popup-cover-placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M9 18V5l12-2v13"/>
-                        <circle cx="6" cy="18" r="3"/>
-                        <circle cx="18" cy="16" r="3"/>
-                    </svg>
-                </div>
-            </div>
-            <div class="global-np-popup-info">
-                <h2 id="global-popup-title" class="global-np-popup-title">Titel</h2>
-                <p id="global-popup-artist" class="global-np-popup-artist">Interpret</p>
-                <p id="global-popup-album" class="global-np-popup-album">Album</p>
-            </div>
-            <div class="global-np-popup-progress">
-                <div class="global-popup-progress-bar" id="global-popup-progress-bar">
-                    <div class="global-popup-progress-fill" id="global-popup-progress-fill"></div>
-                </div>
-                <div class="global-popup-progress-time">
-                    <span id="global-popup-current-time">0:00</span>
-                    <span id="global-popup-total-time">0:00</span>
-                </div>
-            </div>
-            <div class="global-np-popup-controls">
-                <button type="button" class="global-popup-btn" onclick="globalPlayPrevious()">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
-                    </svg>
+
+            <!-- Tab Navigation -->
+            <div class="global-np-tabs">
+                <button type="button" class="global-np-tab active" data-tab="player" onclick="switchNowPlayingTab('player')">
+                    Aktueller Titel
                 </button>
-                <button type="button" class="global-popup-btn global-popup-btn-play" onclick="globalTogglePlayPause()" id="global-popup-btn-play-pause">
-                    <svg viewBox="0 0 24 24" fill="currentColor" class="global-popup-icon-play">
-                        <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    <svg viewBox="0 0 24 24" fill="currentColor" class="global-popup-icon-pause" style="display: none;">
-                        <path d="M6 4h4v16H6zM14 4h4v16h-4z"/>
-                    </svg>
-                </button>
-                <button type="button" class="global-popup-btn" onclick="globalPlayNext()">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                    </svg>
+                <button type="button" class="global-np-tab" data-tab="queue" onclick="switchNowPlayingTab('queue')">
+                    Warteschlange
                 </button>
             </div>
-            <div class="global-np-popup-quality">
-                <label class="global-quality-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 20v-6M6 20V10M18 20V4"/>
-                    </svg>
-                    Streamqualität
-                </label>
-                <div class="global-quality-options" id="global-quality-options">
-                    <button type="button" class="global-quality-option" data-format="5" onclick="setGlobalStreamQuality(5)">
-                        <span class="global-quality-name">MP3</span>
-                        <span class="global-quality-detail">320 kbps</span>
-                    </button>
-                    <button type="button" class="global-quality-option" data-format="6" onclick="setGlobalStreamQuality(6)">
-                        <span class="global-quality-name">CD</span>
-                        <span class="global-quality-detail">16-Bit / 44.1kHz</span>
-                    </button>
-                    <button type="button" class="global-quality-option" data-format="7" onclick="setGlobalStreamQuality(7)">
-                        <span class="global-quality-name">Hi-Res</span>
-                        <span class="global-quality-detail">24-Bit / 96kHz</span>
-                    </button>
-                    <button type="button" class="global-quality-option active" data-format="27" onclick="setGlobalStreamQuality(27)">
-                        <span class="global-quality-name">Hi-Res Max</span>
-                        <span class="global-quality-detail">24-Bit / 192kHz</span>
-                    </button>
-                </div>
-            </div>
-            <div class="global-np-popup-queue" id="global-queue-section" style="display: none;">
-                <div class="global-queue-header">
-                    <div class="global-queue-title">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="8" y1="6" x2="21" y2="6"/>
-                            <line x1="8" y1="12" x2="21" y2="12"/>
-                            <line x1="8" y1="18" x2="21" y2="18"/>
-                            <line x1="3" y1="6" x2="3.01" y2="6"/>
-                            <line x1="3" y1="12" x2="3.01" y2="12"/>
-                            <line x1="3" y1="18" x2="3.01" y2="18"/>
-                        </svg>
-                        <span>Warteschlange</span>
+
+            <!-- Tab Content -->
+            <div class="global-np-tab-content">
+                <!-- Now Playing Panel -->
+                <div class="global-np-tab-panel active" id="global-np-panel-player">
+                    <div class="global-np-player">
+                        <!-- Album Art + Info -->
+                        <div class="global-np-header">
+                            <div class="global-np-popup-cover">
+                                <img id="global-popup-cover" src="" alt="Album Cover">
+                                <div class="global-np-popup-cover-placeholder" id="global-popup-cover-placeholder">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M9 18V5l12-2v13"/>
+                                        <circle cx="6" cy="18" r="3"/>
+                                        <circle cx="18" cy="16" r="3"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="global-np-popup-info">
+                                <h2 id="global-popup-title" class="global-np-popup-title">Titel</h2>
+                                <p id="global-popup-artist" class="global-np-popup-artist">Interpret</p>
+                                <p id="global-popup-album" class="global-np-popup-album">Album</p>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="global-np-popup-progress">
+                            <div class="global-popup-progress-bar" id="global-popup-progress-bar">
+                                <div class="global-popup-progress-fill" id="global-popup-progress-fill"></div>
+                            </div>
+                            <div class="global-popup-progress-time">
+                                <span id="global-popup-current-time">0:00</span>
+                                <span id="global-popup-total-time">0:00</span>
+                            </div>
+                        </div>
+
+                        <!-- Playback Controls -->
+                        <div class="global-np-popup-controls">
+                            <button type="button" class="global-popup-btn" onclick="globalPlayPrevious()">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="global-popup-btn global-popup-btn-play" onclick="globalTogglePlayPause()" id="global-popup-btn-play-pause">
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="global-popup-icon-play">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="global-popup-icon-pause" style="display: none;">
+                                    <path d="M6 4h4v16H6zM14 4h4v16h-4z"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="global-popup-btn" onclick="globalPlayNext()">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Quality Selector -->
+                        <div class="global-np-popup-quality">
+                            <label class="global-quality-label">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 20v-6M6 20V10M18 20V4"/>
+                                </svg>
+                                Qualität
+                            </label>
+                            <div class="global-quality-options" id="global-quality-options">
+                                <button type="button" class="global-quality-option" data-format="5" onclick="setGlobalStreamQuality(5)">
+                                    <span class="global-quality-name">MP3</span>
+                                    <span class="global-quality-detail">320k</span>
+                                </button>
+                                <button type="button" class="global-quality-option" data-format="6" onclick="setGlobalStreamQuality(6)">
+                                    <span class="global-quality-name">CD</span>
+                                    <span class="global-quality-detail">16/44</span>
+                                </button>
+                                <button type="button" class="global-quality-option" data-format="7" onclick="setGlobalStreamQuality(7)">
+                                    <span class="global-quality-name">Hi-Res</span>
+                                    <span class="global-quality-detail">24/96</span>
+                                </button>
+                                <button type="button" class="global-quality-option active" data-format="27" onclick="setGlobalStreamQuality(27)">
+                                    <span class="global-quality-name">Max</span>
+                                    <span class="global-quality-detail">24/192</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <span class="global-queue-source" id="global-queue-source"></span>
                 </div>
-                <div class="global-queue-list" id="global-queue-list">
-                    <!-- Queue tracks will be rendered here -->
+
+                <!-- Queue Panel -->
+                <div class="global-np-tab-panel" id="global-np-panel-queue">
+                    <div class="global-np-queue-panel" id="global-queue-section">
+                        <div class="global-queue-header">
+                            <div class="global-queue-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="8" y1="6" x2="21" y2="6"/>
+                                    <line x1="8" y1="12" x2="21" y2="12"/>
+                                    <line x1="8" y1="18" x2="21" y2="18"/>
+                                    <line x1="3" y1="6" x2="3.01" y2="6"/>
+                                    <line x1="3" y1="12" x2="3.01" y2="12"/>
+                                    <line x1="3" y1="18" x2="3.01" y2="18"/>
+                                </svg>
+                                <span>Warteschlange</span>
+                            </div>
+                            <span class="global-queue-source" id="global-queue-source"></span>
+                        </div>
+                        <div class="global-queue-list" id="global-queue-list">
+                            <!-- Queue tracks will be rendered here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -587,6 +624,7 @@
     <script src="~/js/spa-router.js" asp-append-version="true"></script>
     <script src="~/js/queue-api.js" asp-append-version="true"></script>
     <script src="~/js/global-player.js" asp-append-version="true"></script>
+    <script src="~/js/now-playing-swipe.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
