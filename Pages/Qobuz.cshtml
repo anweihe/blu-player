@@ -181,13 +181,20 @@
         </div>
 
         <!-- Now Playing Bar -->
-        <div id="now-playing-bar" class="now-playing-bar" style="display: none;">
+        <div id="now-playing-bar" class="now-playing-bar">
             <div class="now-playing-content">
                 <div class="now-playing-info">
-                    <img id="np-cover" class="np-cover" src="" alt="Cover">
+                    <img id="np-cover" class="np-cover" src="" alt="Cover" style="display: none;">
+                    <div class="np-cover-placeholder" id="np-cover-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9 18V5l12-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="18" cy="16" r="3"/>
+                        </svg>
+                    </div>
                     <div class="np-details">
-                        <span id="np-title" class="np-title"></span>
-                        <span id="np-artist" class="np-artist"></span>
+                        <span id="np-title" class="np-title">Kein Titel ausgewählt</span>
+                        <span id="np-artist" class="np-artist">Wähle einen Titel zum Abspielen</span>
                     </div>
                 </div>
                 <div class="now-playing-controls">
@@ -472,7 +479,7 @@
     /* Main Content */
     .main-content {
         padding: 20px max(16px, env(safe-area-inset-left));
-        padding-bottom: max(20px, env(safe-area-inset-bottom));
+        padding-bottom: calc(100px + max(20px, env(safe-area-inset-bottom)));
         max-width: 1200px;
         margin: 0 auto;
     }
@@ -1042,6 +1049,24 @@
         border-radius: 6px;
         object-fit: cover;
         flex-shrink: 0;
+    }
+
+    .np-cover-placeholder {
+        width: 48px;
+        height: 48px;
+        border-radius: 6px;
+        background: var(--bg-card);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: var(--text-muted);
+    }
+
+    .np-cover-placeholder svg {
+        width: 24px;
+        height: 24px;
+        opacity: 0.5;
     }
 
     .np-details {
@@ -1835,7 +1860,6 @@
 
             updateNowPlaying(track);
             updateTrackHighlight();
-            showNowPlayingBar();
         } else {
             showError(data.error || 'Stream URL konnte nicht abgerufen werden');
         }
@@ -1874,7 +1898,6 @@
 
             updateNowPlaying(track);
             updateTrackHighlight();
-            showNowPlayingBar();
 
             // Start polling for Bluesound status
             startBluesoundStatusPolling();
@@ -2049,11 +2072,15 @@
         document.getElementById('np-artist').textContent = track.artistName || 'Unbekannt';
 
         const cover = document.getElementById('np-cover');
+        const placeholder = document.getElementById('np-cover-placeholder');
+
         if (track.albumCover) {
             cover.src = track.albumCover;
             cover.style.display = 'block';
+            placeholder.style.display = 'none';
         } else {
             cover.style.display = 'none';
+            placeholder.style.display = 'flex';
         }
 
         updatePlayPauseButton();
@@ -2085,12 +2112,6 @@
                 btn.innerHTML = '<path d="M8 5v14l11-7z"/>';
             }
         });
-    }
-
-    // Show now playing bar
-    function showNowPlayingBar() {
-        nowPlayingBar.style.display = 'block';
-        document.querySelector('.main-content').style.paddingBottom = '120px';
     }
 
     // Update progress bar
@@ -2135,14 +2156,22 @@
         currentTracks = [];
         currentTrackIndex = -1;
 
+        // Reset now playing bar to placeholder state
+        document.getElementById('np-title').textContent = 'Kein Titel ausgewählt';
+        document.getElementById('np-artist').textContent = 'Wähle einen Titel zum Abspielen';
+        document.getElementById('np-cover').style.display = 'none';
+        document.getElementById('np-cover-placeholder').style.display = 'flex';
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('current-time').textContent = '0:00';
+        document.getElementById('total-time').textContent = '0:00';
+        updatePlayPauseButton();
+
         clearSession();
         loginSection.style.display = 'flex';
         loggedInSection.style.display = 'none';
         playlistDetailSection.style.display = 'none';
-        nowPlayingBar.style.display = 'none';
         userMenu.style.display = 'none';
         document.getElementById('playlists-grid').innerHTML = '';
-        document.querySelector('.main-content').style.paddingBottom = '';
     }
 
     // Clear session data
