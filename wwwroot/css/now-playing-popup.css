@@ -207,21 +207,23 @@
   gap: 20px;
 }
 
-/* Album Art + Info Row */
+/* Album Art + Info - Vertical Layout */
 .global-np-header {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
   align-items: center;
+  gap: 16px;
+  text-align: center;
 }
 
 .global-np-popup-cover {
-  width: 100px;
-  height: 100px;
-  border-radius: 10px;
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--np-sheet-surface);
   flex-shrink: 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
 
 .global-np-popup-cover img {
@@ -247,8 +249,9 @@
 }
 
 .global-np-popup-info {
-  flex: 1;
+  width: 100%;
   min-width: 0;
+  text-align: center;
 }
 
 .global-np-popup-title {
@@ -638,12 +641,16 @@
   }
 
   .global-np-popup-cover {
-    width: 120px;
-    height: 120px;
+    width: 220px;
+    height: 220px;
   }
 
   .global-np-popup-title {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
+  }
+
+  .global-np-popup-artist {
+    font-size: 1rem;
   }
 
   .global-np-tab-panel {
