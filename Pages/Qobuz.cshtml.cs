@@ -176,6 +176,104 @@ public class QobuzModel : PageModel
         });
     }
 
+    /// <summary>
+    /// Get featured/new release albums from Qobuz
+    /// </summary>
+    public async Task<IActionResult> OnGetFeaturedAlbumsAsync(string type = "new-releases", int limit = 50)
+    {
+        _logger.LogInformation("Fetching featured albums: {Type}", type);
+
+        var albums = await _qobuzService.GetFeaturedAlbumsAsync(type, limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            albums = albums.Select(a => new
+            {
+                id = a.Id,
+                title = a.Title,
+                artistName = a.Artist?.Name,
+                coverUrl = a.CoverUrl,
+                tracksCount = a.TracksCount,
+                duration = a.Duration,
+                releasedAt = a.ReleasedAt
+            })
+        });
+    }
+
+    /// <summary>
+    /// Get featured/editorial playlists from Qobuz
+    /// </summary>
+    public async Task<IActionResult> OnGetFeaturedPlaylistsAsync(int limit = 50)
+    {
+        _logger.LogInformation("Fetching featured playlists");
+
+        var playlists = await _qobuzService.GetFeaturedPlaylistsAsync(limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            playlists = playlists.Select(p => new
+            {
+                id = p.Id,
+                name = p.Name,
+                description = p.Description,
+                tracksCount = p.TracksCount,
+                duration = p.Duration,
+                formattedDuration = p.FormattedDuration,
+                coverUrl = p.CoverUrl,
+                ownerName = p.Owner?.Name
+            })
+        });
+    }
+
+    /// <summary>
+    /// Get album with tracks
+    /// </summary>
+    public async Task<IActionResult> OnGetAlbumTracksAsync(string albumId, string authToken)
+    {
+        _logger.LogInformation("Fetching tracks for album {AlbumId}", albumId);
+
+        var album = await _qobuzService.GetAlbumAsync(albumId, authToken);
+
+        if (album == null)
+        {
+            return new JsonResult(new { success = false, error = "Album nicht gefunden" });
+        }
+
+        return new JsonResult(new
+        {
+            success = true,
+            album = new
+            {
+                id = album.Id,
+                title = album.Title,
+                artistName = album.Artist?.Name,
+                coverUrl = album.CoverUrl,
+                tracksCount = album.TracksCount,
+                duration = album.Duration,
+                label = album.Label?.Name,
+                genre = album.Genre?.Name,
+                description = album.Description,
+                isHiRes = album.IsHiRes
+            },
+            tracks = album.Tracks?.Items?.Select(t => new
+            {
+                id = t.Id,
+                title = t.Title,
+                trackNumber = t.TrackNumber,
+                duration = t.Duration,
+                formattedDuration = t.FormattedDuration,
+                artistName = t.Performer?.Name ?? album.Artist?.Name,
+                albumTitle = album.Title,
+                albumCover = album.CoverUrl,
+                isHiRes = t.IsHiRes,
+                qualityLabel = t.QualityLabel,
+                isStreamable = t.IsStreamable
+            }) ?? []
+        });
+    }
+
     public async Task<IActionResult> OnGetTrackStreamUrlAsync(long trackId, string authToken)
     {
         _logger.LogInformation("Getting stream URL for track {TrackId}", trackId);

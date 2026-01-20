@@ -364,3 +364,90 @@ public class QobuzPlaylistWithTracks : QobuzPlaylist
     [JsonPropertyName("tracks")]
     public QobuzTracksContainer? Tracks { get; set; }
 }
+
+/// <summary>
+/// Container for albums
+/// </summary>
+public class QobuzAlbumsContainer
+{
+    [JsonPropertyName("items")]
+    public List<QobuzAlbum>? Items { get; set; }
+
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("offset")]
+    public int Offset { get; set; }
+
+    [JsonPropertyName("limit")]
+    public int Limit { get; set; }
+}
+
+/// <summary>
+/// Response for featured albums endpoint
+/// </summary>
+public class QobuzFeaturedAlbumsResponse
+{
+    [JsonPropertyName("albums")]
+    public QobuzAlbumsContainer? Albums { get; set; }
+}
+
+/// <summary>
+/// Response for featured playlists endpoint
+/// </summary>
+public class QobuzFeaturedPlaylistsResponse
+{
+    [JsonPropertyName("playlists")]
+    public QobuzPlaylistsContainer? Playlists { get; set; }
+}
+
+/// <summary>
+/// Full album response with tracks
+/// </summary>
+public class QobuzAlbumWithTracks : QobuzAlbum
+{
+    [JsonPropertyName("tracks")]
+    public QobuzTracksContainer? Tracks { get; set; }
+
+    [JsonPropertyName("label")]
+    public QobuzLabel? Label { get; set; }
+
+    [JsonPropertyName("genre")]
+    public QobuzGenre? Genre { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("hires")]
+    public bool IsHiRes { get; set; }
+
+    [JsonPropertyName("hires_streamable")]
+    public bool IsHiResStreamable { get; set; }
+}
+
+/// <summary>
+/// Qobuz label info
+/// </summary>
+public class QobuzLabel
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
+/// <summary>
+/// Qobuz genre info
+/// </summary>
+public class QobuzGenre
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
+}

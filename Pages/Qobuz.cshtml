@@ -190,29 +190,108 @@
                 </div>
             </div>
 
-            <!-- Playlists -->
-            <div class="playlists-header">
-                <h2>Deine Playlists</h2>
-                <button type="button" class="btn-refresh" onclick="loadPlaylists()">
+            <!-- Content Tabs -->
+            <div class="content-tabs">
+                <button type="button" class="tab-btn active" data-tab="my-playlists" onclick="switchTab('my-playlists')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 4v6h-6M1 20v-6h6"/>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
                     </svg>
+                    <span>Meine Playlists</span>
+                </button>
+                <button type="button" class="tab-btn" data-tab="new-releases" onclick="switchTab('new-releases')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 2v4M12 18v4"/>
+                    </svg>
+                    <span>Neuheiten</span>
+                </button>
+                <button type="button" class="tab-btn" data-tab="top-playlists" onclick="switchTab('top-playlists')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    <span>Top Playlists</span>
                 </button>
             </div>
 
-            <div id="playlists-grid" class="playlists-grid">
-                <!-- Playlists will be loaded here -->
+            <!-- Tab Content: My Playlists -->
+            <div id="tab-my-playlists" class="tab-content active">
+                <div class="section-header">
+                    <h2>Deine Playlists</h2>
+                    <button type="button" class="btn-refresh" onclick="loadPlaylists()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="playlists-grid" class="playlists-grid">
+                    <!-- Playlists will be loaded here -->
+                </div>
+
+                <div id="playlists-empty" class="empty-state" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
+                    </svg>
+                    <h3>Keine Playlists</h3>
+                    <p>Du hast noch keine Playlists erstellt.</p>
+                </div>
             </div>
 
-            <div id="playlists-empty" class="empty-state" style="display: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M9 18V5l12-2v13"/>
-                    <circle cx="6" cy="18" r="3"/>
-                    <circle cx="18" cy="16" r="3"/>
-                </svg>
-                <h3>Keine Playlists</h3>
-                <p>Du hast noch keine Playlists erstellt.</p>
+            <!-- Tab Content: New Releases -->
+            <div id="tab-new-releases" class="tab-content">
+                <div class="section-header">
+                    <h2>Neuheiten</h2>
+                    <button type="button" class="btn-refresh" onclick="loadNewReleases()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="albums-grid" class="playlists-grid">
+                    <!-- Albums will be loaded here -->
+                </div>
+
+                <div id="albums-empty" class="empty-state" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <h3>Keine Neuheiten</h3>
+                    <p>Momentan keine neuen Alben verfügbar.</p>
+                </div>
+            </div>
+
+            <!-- Tab Content: Top Playlists -->
+            <div id="tab-top-playlists" class="tab-content">
+                <div class="section-header">
+                    <h2>Top Playlists</h2>
+                    <button type="button" class="btn-refresh" onclick="loadTopPlaylists()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="top-playlists-grid" class="playlists-grid">
+                    <!-- Top playlists will be loaded here -->
+                </div>
+
+                <div id="top-playlists-empty" class="empty-state" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    <h3>Keine Top Playlists</h3>
+                    <p>Momentan keine Top Playlists verfügbar.</p>
+                </div>
             </div>
         </div>
 
@@ -760,7 +839,81 @@
         letter-spacing: 0.03em;
     }
 
-    /* Playlists */
+    /* Content Tabs */
+    .content-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-subtle);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .content-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: transparent;
+        border: 1px solid var(--border-accent);
+        border-radius: var(--radius-md);
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .tab-btn:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+        border-color: var(--border-accent);
+    }
+
+    .tab-btn.active {
+        background: var(--accent-qobuz);
+        border-color: var(--accent-qobuz);
+        color: white;
+    }
+
+    .tab-btn svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+
+    /* Tab Content */
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Section Header (replaces playlists-header) */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .section-header h2 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* Playlists (kept for backward compatibility) */
     .playlists-header {
         display: flex;
         justify-content: space-between;
@@ -1825,6 +1978,209 @@
         } else {
             avatar.style.display = 'none';
         }
+    }
+
+    // Tab switching
+    let currentTab = 'my-playlists';
+    let newReleasesLoaded = false;
+    let topPlaylistsLoaded = false;
+
+    function switchTab(tabId) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.toggle('active', content.id === `tab-${tabId}`);
+        });
+
+        currentTab = tabId;
+
+        // Load content if needed
+        if (tabId === 'new-releases' && !newReleasesLoaded) {
+            loadNewReleases();
+        } else if (tabId === 'top-playlists' && !topPlaylistsLoaded) {
+            loadTopPlaylists();
+        }
+    }
+
+    // Load new releases
+    async function loadNewReleases() {
+        showLoading();
+
+        try {
+            const response = await fetch('?handler=FeaturedAlbums&type=new-releases&limit=50');
+            const data = await response.json();
+
+            if (data.success) {
+                renderAlbums(data.albums);
+                newReleasesLoaded = true;
+            } else {
+                showError('Neuheiten konnten nicht geladen werden');
+            }
+        } catch (error) {
+            console.error('Failed to load new releases:', error);
+            showError('Neuheiten konnten nicht geladen werden');
+        }
+
+        hideLoading();
+    }
+
+    // Render albums grid
+    function renderAlbums(albums) {
+        const grid = document.getElementById('albums-grid');
+        const emptyState = document.getElementById('albums-empty');
+
+        if (!albums || albums.length === 0) {
+            grid.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+
+        grid.innerHTML = albums.map(album => `
+            <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+                <div class="playlist-cover">
+                    ${album.coverUrl
+                        ? `<img src="${album.coverUrl}" alt="${escapeHtml(album.title)}" loading="lazy">`
+                        : `<div class="playlist-cover-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                           </div>`
+                    }
+                </div>
+                <div class="playlist-info">
+                    <h3 class="playlist-name">${escapeHtml(album.title)}</h3>
+                    <div class="playlist-meta">${escapeHtml(album.artistName || 'Unbekannt')}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Select album - load and show tracks
+    async function selectAlbum(albumId) {
+        const creds = getQobuzCredentials();
+        const authToken = creds?.authToken;
+        if (!authToken) {
+            showError('Bitte melde dich an, um Alben abzuspielen');
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch(`?handler=AlbumTracks&albumId=${albumId}&authToken=${encodeURIComponent(authToken)}`);
+            const data = await response.json();
+
+            if (data.success) {
+                showAlbumDetail(data.album, data.tracks);
+            } else {
+                showError(data.error || 'Album konnte nicht geladen werden');
+            }
+        } catch (error) {
+            console.error('Failed to load album:', error);
+            showError('Album konnte nicht geladen werden');
+        }
+
+        hideLoading();
+    }
+
+    // Show album detail view
+    function showAlbumDetail(album, tracks) {
+        currentTracks = tracks || [];
+
+        // Update header info
+        document.getElementById('detail-name').textContent = album.title;
+        document.getElementById('detail-description').textContent = album.artistName || '';
+        document.getElementById('detail-tracks-count').textContent = `${album.tracksCount} Titel`;
+
+        // Format duration
+        const totalSeconds = album.duration || 0;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const formattedDuration = hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')} Std.` : `${minutes} Min.`;
+        document.getElementById('detail-duration').textContent = formattedDuration;
+
+        // Update cover
+        const cover = document.getElementById('detail-cover');
+        const placeholder = document.getElementById('detail-cover-placeholder');
+        if (album.coverUrl) {
+            cover.src = album.coverUrl;
+            cover.style.display = 'block';
+            placeholder.style.display = 'none';
+        } else {
+            cover.style.display = 'none';
+            placeholder.style.display = 'flex';
+        }
+
+        // Render tracks
+        renderTracks(tracks);
+
+        // Show detail section, hide logged in section
+        loggedInSection.style.display = 'none';
+        playlistDetailSection.style.display = 'block';
+    }
+
+    // Load top playlists
+    async function loadTopPlaylists() {
+        showLoading();
+
+        try {
+            const response = await fetch('?handler=FeaturedPlaylists&limit=50');
+            const data = await response.json();
+
+            if (data.success) {
+                renderTopPlaylists(data.playlists);
+                topPlaylistsLoaded = true;
+            } else {
+                showError('Top Playlists konnten nicht geladen werden');
+            }
+        } catch (error) {
+            console.error('Failed to load top playlists:', error);
+            showError('Top Playlists konnten nicht geladen werden');
+        }
+
+        hideLoading();
+    }
+
+    // Render top playlists grid
+    function renderTopPlaylists(playlists) {
+        const grid = document.getElementById('top-playlists-grid');
+        const emptyState = document.getElementById('top-playlists-empty');
+
+        if (!playlists || playlists.length === 0) {
+            grid.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+
+        grid.innerHTML = playlists.map(playlist => `
+            <div class="playlist-card" onclick="selectPlaylist(${playlist.id})">
+                <div class="playlist-cover">
+                    ${playlist.coverUrl
+                        ? `<img src="${playlist.coverUrl}" alt="${escapeHtml(playlist.name)}" loading="lazy">`
+                        : `<div class="playlist-cover-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M9 18V5l12-2v13"/>
+                                <circle cx="6" cy="18" r="3"/>
+                                <circle cx="18" cy="16" r="3"/>
+                            </svg>
+                           </div>`
+                    }
+                </div>
+                <div class="playlist-info">
+                    <h3 class="playlist-name">${escapeHtml(playlist.name)}</h3>
+                    <div class="playlist-meta">${playlist.tracksCount} Titel · ${playlist.formattedDuration}</div>
+                </div>
+            </div>
+        `).join('');
     }
 
     // Load playlists

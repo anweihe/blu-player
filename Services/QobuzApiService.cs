@@ -43,6 +43,21 @@ public interface IQobuzApiService
     Task<string?> GetTrackStreamUrlAsync(long trackId, string authToken, int formatId = 27);
 
     /// <summary>
+    /// Get featured/new release albums
+    /// </summary>
+    Task<List<QobuzAlbum>> GetFeaturedAlbumsAsync(string type = "new-releases", int limit = 50);
+
+    /// <summary>
+    /// Get featured/editorial playlists from Qobuz
+    /// </summary>
+    Task<List<QobuzPlaylist>> GetFeaturedPlaylistsAsync(int limit = 50);
+
+    /// <summary>
+    /// Get album with tracks
+    /// </summary>
+    Task<QobuzAlbumWithTracks?> GetAlbumAsync(string albumId, string authToken);
+
+    /// <summary>
     /// Check if app credentials are available
     /// </summary>
     bool HasAppCredentials { get; }
@@ -688,6 +703,146 @@ public class QobuzApiService : IQobuzApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get stream URL for track {TrackId}", trackId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Get featured/new release albums from Qobuz
+    /// </summary>
+    public async Task<List<QobuzAlbum>> GetFeaturedAlbumsAsync(string type = "new-releases", int limit = 50)
+    {
+        var albums = new List<QobuzAlbum>();
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get featured albums: app credentials not available");
+                return albums;
+            }
+
+            // type can be: new-releases, most-streamed, best-sellers, press-awards, editor-picks, most-featured
+            var url = $"{QobuzApiBase}/album/getFeatured" +
+                      $"?type={type}" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}";
+
+            _logger.LogDebug("Fetching featured albums: {Type}", type);
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get featured albums: {Status}", response.StatusCode);
+                return albums;
+            }
+
+            var albumsResponse = JsonSerializer.Deserialize<QobuzFeaturedAlbumsResponse>(responseContent);
+            if (albumsResponse?.Albums?.Items != null)
+            {
+                albums.AddRange(albumsResponse.Albums.Items);
+            }
+
+            _logger.LogInformation("Retrieved {Count} featured albums ({Type})", albums.Count, type);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get featured albums");
+        }
+
+        return albums;
+    }
+
+    /// <summary>
+    /// Get featured/editorial playlists from Qobuz
+    /// </summary>
+    public async Task<List<QobuzPlaylist>> GetFeaturedPlaylistsAsync(int limit = 50)
+    {
+        var playlists = new List<QobuzPlaylist>();
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get featured playlists: app credentials not available");
+                return playlists;
+            }
+
+            var url = $"{QobuzApiBase}/playlist/getFeatured" +
+                      $"?type=editor-picks" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}";
+
+            _logger.LogDebug("Fetching featured playlists");
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get featured playlists: {Status}", response.StatusCode);
+                return playlists;
+            }
+
+            var playlistsResponse = JsonSerializer.Deserialize<QobuzFeaturedPlaylistsResponse>(responseContent);
+            if (playlistsResponse?.Playlists?.Items != null)
+            {
+                playlists.AddRange(playlistsResponse.Playlists.Items);
+            }
+
+            _logger.LogInformation("Retrieved {Count} featured playlists", playlists.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get featured playlists");
+        }
+
+        return playlists;
+    }
+
+    /// <summary>
+    /// Get album with all tracks
+    /// </summary>
+    public async Task<QobuzAlbumWithTracks?> GetAlbumAsync(string albumId, string authToken)
+    {
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get album: app credentials not available");
+                return null;
+            }
+
+            var url = $"{QobuzApiBase}/album/get" +
+                      $"?album_id={albumId}" +
+                      $"&app_id={credentials.AppId}" +
+                      $"&user_auth_token={authToken}";
+
+            _logger.LogDebug("Fetching album {AlbumId}", albumId);
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get album: {Status}", response.StatusCode);
+                return null;
+            }
+
+            var album = JsonSerializer.Deserialize<QobuzAlbumWithTracks>(responseContent);
+            _logger.LogInformation("Retrieved album {AlbumId} with {TrackCount} tracks",
+                albumId, album?.Tracks?.Items?.Count ?? 0);
+
+            return album;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get album {AlbumId}", albumId);
             return null;
         }
     }
