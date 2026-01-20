@@ -1,0 +1,2004 @@
+@page "/Players"
+@model PlayersModel
+@{
+    ViewData["Title"] = "Bluesound Player";
+    ViewData["ShowHamburgerMenu"] = true;
+    ViewData["CurrentPage"] = "Players";
+}
+
+@Html.AntiForgeryToken()
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <span class="loading-text">Laden...</span>
+    </div>
+</div>
+
+<div class="bluesound-app">
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <button type="button" class="hamburger-btn" onclick="toggleMenu()" aria-label="Menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div class="brand">
+                    <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                    </svg>
+                    <h1>Players</h1>
+                </div>
+            </div>
+            <div class="header-actions">
+                <form method="post" asp-page-handler="Refresh">
+                    <button type="submit" class="btn-refresh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        <span>Aktualisieren</span>
+                    </button>
+                </form>
+                <div class="profile-indicator" onclick="toggleMenu()">
+                    <span id="header-profile-initial" class="profile-initial">?</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hamburger Menu Overlay -->
+    <div id="menu-overlay" class="menu-overlay" onclick="closeMenu()"></div>
+
+    <!-- Hamburger Menu Panel -->
+    <nav id="menu-panel" class="menu-panel">
+        <div class="menu-header">
+            <div class="menu-profile" onclick="showProfileSwitcher()">
+                <div class="menu-profile-avatar" id="menu-profile-avatar">?</div>
+                <div class="menu-profile-info">
+                    <span class="menu-profile-name" id="menu-profile-name">Profil</span>
+                    <span class="menu-profile-switch">Profil wechseln</span>
+                </div>
+                <svg class="menu-profile-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                </svg>
+            </div>
+        </div>
+        <div class="menu-items">
+            <a href="/Qobuz" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>Qobuz</span>
+            </a>
+            <a href="/Players" class="menu-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
+                </svg>
+                <span>Players</span>
+            </a>
+        </div>
+        <div class="menu-footer">
+            <a href="/" class="menu-item menu-item-home">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span>Quellen</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Profile Switcher Modal -->
+    <div id="profile-switcher-overlay" class="profile-switcher-overlay" onclick="closeProfileSwitcher(event)">
+        <div class="profile-switcher-modal" onclick="event.stopPropagation()">
+            <div class="profile-switcher-header">
+                <h3>Profil wechseln</h3>
+                <button type="button" class="btn-close-modal" onclick="closeProfileSwitcher()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="profile-switcher-list" id="profile-switcher-list">
+                <!-- Profiles will be rendered here -->
+            </div>
+            <button type="button" class="btn-add-profile" onclick="createNewProfile()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Neues Profil erstellen</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="error-message" class="alert alert-error" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        <span id="error-text"></span>
+    </div>
+
+    <div id="success-message" class="alert alert-success" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span id="success-text"></span>
+    </div>
+
+    <!-- Content -->
+    <main class="main-content">
+        <!-- Loading Skeleton -->
+        <div id="loading-skeleton" class="loading-skeleton">
+            <div class="skeleton-header">
+                <div class="skeleton-pulse skeleton-stats"></div>
+            </div>
+            <div class="skeleton-grid">
+                <div class="skeleton-card">
+                    <div class="skeleton-card-header">
+                        <div class="skeleton-pulse skeleton-title"></div>
+                        <div class="skeleton-pulse skeleton-badge"></div>
+                    </div>
+                    <div class="skeleton-card-body">
+                        <div class="skeleton-player-row">
+                            <div class="skeleton-pulse skeleton-icon"></div>
+                            <div class="skeleton-info">
+                                <div class="skeleton-pulse skeleton-name"></div>
+                                <div class="skeleton-pulse skeleton-model"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-pulse skeleton-volume"></div>
+                    </div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton-card-header">
+                        <div class="skeleton-pulse skeleton-title"></div>
+                        <div class="skeleton-pulse skeleton-badge"></div>
+                    </div>
+                    <div class="skeleton-card-body">
+                        <div class="skeleton-player-row">
+                            <div class="skeleton-pulse skeleton-icon"></div>
+                            <div class="skeleton-info">
+                                <div class="skeleton-pulse skeleton-name"></div>
+                                <div class="skeleton-pulse skeleton-model"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-pulse skeleton-volume"></div>
+                    </div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton-card-header">
+                        <div class="skeleton-pulse skeleton-title"></div>
+                        <div class="skeleton-pulse skeleton-badge"></div>
+                    </div>
+                    <div class="skeleton-card-body">
+                        <div class="skeleton-player-row">
+                            <div class="skeleton-pulse skeleton-icon"></div>
+                            <div class="skeleton-info">
+                                <div class="skeleton-pulse skeleton-name"></div>
+                                <div class="skeleton-pulse skeleton-model"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-pulse skeleton-volume"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="skeleton-status">
+                <div class="skeleton-spinner"></div>
+                <span>Suche nach Playern im Netzwerk...</span>
+            </div>
+        </div>
+
+        <!-- Empty State (hidden initially) -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="4" y="2" width="16" height="20" rx="2"/>
+                <circle cx="12" cy="14" r="4"/>
+                <line x1="12" y1="6" x2="12" y2="6.01"/>
+            </svg>
+            <h2>Keine Player gefunden</h2>
+            <p>Stellen Sie sicher, dass Ihre Bluesound Player eingeschaltet sind und Sie sich im selben Netzwerk befinden.</p>
+            <button type="button" class="btn-retry" onclick="discoverPlayers()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6M1 20v-6h6"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                Erneut suchen
+            </button>
+        </div>
+
+        <!-- Players Content (hidden initially) -->
+        <div id="players-content" style="display: none;">
+            <div id="player-stats" class="player-stats"></div>
+            <div id="player-grid" class="player-grid"></div>
+        </div>
+
+        <!-- Now Playing Section -->
+        <div id="now-playing" class="now-playing-section" style="display: none;">
+                <div class="now-playing-header">
+                    <h2>Wiedergabe</h2>
+                    <span id="np-player-name" class="np-player-name"></span>
+                </div>
+                <div class="now-playing-content">
+                    <div id="np-artwork" class="np-artwork">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </div>
+                    <div class="np-info">
+                        <div id="np-title" class="np-title">Kein Titel</div>
+                        <div id="np-artist" class="np-artist"></div>
+                        <div id="np-album" class="np-album"></div>
+                        <div id="np-progress" class="np-progress">
+                            <div class="np-progress-bar">
+                                <div id="np-progress-fill" class="np-progress-fill" style="width: 0%"></div>
+                            </div>
+                            <div class="np-time">
+                                <span id="np-current-time">0:00</span>
+                                <span id="np-total-time">0:00</span>
+                            </div>
+                        </div>
+                        <div class="np-controls">
+                            <button type="button" id="btn-prev" class="np-control-btn np-track-btn" title="Vorheriger Titel">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                                </svg>
+                            </button>
+                            <button type="button" id="btn-play-pause" class="np-control-btn np-control-main" title="Wiedergabe/Pause">
+                                <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                                <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                </svg>
+                            </button>
+                            <button type="button" id="btn-next" class="np-control-btn np-track-btn" title="Nächster Titel">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="np-service" class="np-service"></div>
+                    </div>
+                </div>
+            </div>
+    </main>
+</div>
+
+<script src="~/js/user-profiles.js"></script>
+<script src="~/js/hamburger-menu.js"></script>
+
+<style>
+    /* Loading Overlay */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(10, 10, 11, 0.85);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .loading-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .spinner-ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        animation: spin 1.2s linear infinite;
+    }
+
+    .spinner-ring:nth-child(1) {
+        width: 50px;
+        height: 50px;
+        border-top-color: #22c55e;
+        animation-duration: 1s;
+    }
+
+    .spinner-ring:nth-child(2) {
+        width: 38px;
+        height: 38px;
+        border-right-color: #3b82f6;
+        animation-duration: 1.5s;
+        animation-direction: reverse;
+    }
+
+    .spinner-ring:nth-child(3) {
+        width: 26px;
+        height: 26px;
+        border-bottom-color: #f4f4f5;
+        animation-duration: 2s;
+    }
+
+    .loading-spinner {
+        position: relative;
+        width: 50px;
+        height: 50px;
+    }
+
+    .loading-text {
+        position: absolute;
+        top: 70px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        letter-spacing: 0.02em;
+    }
+
+    /* Skeleton Loading */
+    .loading-skeleton {
+        padding: 20px 0;
+    }
+
+    .skeleton-header {
+        margin-bottom: 16px;
+    }
+
+    .skeleton-stats {
+        width: 140px;
+        height: 20px;
+        border-radius: 4px;
+    }
+
+    .skeleton-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .skeleton-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        padding: 14px;
+        border-left: 3px solid var(--border-subtle);
+    }
+
+    .skeleton-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .skeleton-title {
+        width: 120px;
+        height: 20px;
+        border-radius: 4px;
+    }
+
+    .skeleton-badge {
+        width: 70px;
+        height: 22px;
+        border-radius: 20px;
+    }
+
+    .skeleton-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .skeleton-player-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .skeleton-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-sm);
+        flex-shrink: 0;
+    }
+
+    .skeleton-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .skeleton-name {
+        width: 100px;
+        height: 16px;
+        border-radius: 4px;
+    }
+
+    .skeleton-model {
+        width: 140px;
+        height: 12px;
+        border-radius: 4px;
+    }
+
+    .skeleton-volume {
+        width: 100%;
+        height: 28px;
+        border-radius: 14px;
+        margin-left: 46px;
+        max-width: 180px;
+    }
+
+    .skeleton-pulse {
+        background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-card-hover) 50%, var(--bg-secondary) 100%);
+        background-size: 200% 100%;
+        animation: skeleton-pulse 1.5s ease-in-out infinite;
+    }
+
+    @@keyframes skeleton-pulse {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .skeleton-status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 20px;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .skeleton-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--border-accent);
+        border-top-color: var(--accent-group);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    /* Retry Button */
+    .btn-retry {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        padding: 12px 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-accent);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .btn-retry:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--accent-group);
+    }
+
+    .btn-retry svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* CSS Variables */
+    :root {
+        --bg-primary: #0a0a0b;
+        --bg-secondary: #111113;
+        --bg-card: #161618;
+        --bg-card-hover: #1c1c1f;
+        --border-subtle: rgba(255, 255, 255, 0.06);
+        --border-accent: rgba(255, 255, 255, 0.1);
+        --text-primary: #f4f4f5;
+        --text-secondary: #a1a1aa;
+        --text-muted: #71717a;
+        --accent-group: #22c55e;
+        --accent-stereo: #3b82f6;
+        --accent-single: #71717a;
+        --danger: #ef4444;
+        --danger-hover: #dc2626;
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+        --transition: 0.15s ease;
+    }
+
+    /* Reset & Base */
+    .bluesound-app {
+        font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        background: var(--bg-primary);
+        min-height: 100vh;
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .app-header {
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-subtle);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        padding: 0 max(16px, env(safe-area-inset-left));
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 0;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .hamburger-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        transition: all var(--transition);
+    }
+
+    .hamburger-btn:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+    }
+
+    .hamburger-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .brand-icon {
+        width: 28px;
+        height: 28px;
+        color: var(--text-primary);
+    }
+
+    .brand h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin: 0;
+    }
+
+    .btn-refresh {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-accent);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .btn-refresh:hover {
+        background: var(--bg-card-hover);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-refresh svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Profile Indicator */
+    .profile-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: var(--accent-group);
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .profile-indicator:hover {
+        transform: scale(1.05);
+    }
+
+    .profile-initial {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: white;
+        text-transform: uppercase;
+    }
+
+    /* Alerts */
+    .alert {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        margin: 16px max(16px, env(safe-area-inset-left));
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .alert svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+
+    .alert-error {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+    }
+
+    .alert-success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.2);
+        color: #86efac;
+    }
+
+    /* Main Content */
+    .main-content {
+        padding: 20px max(16px, env(safe-area-inset-left));
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+
+    .empty-state svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+        opacity: 0.4;
+    }
+
+    .empty-state h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0 0 8px;
+        color: var(--text-primary);
+    }
+
+    .empty-state p {
+        font-size: 0.875rem;
+        margin: 0;
+        max-width: 300px;
+        margin-inline: auto;
+    }
+
+    /* Stats */
+    .player-stats {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .stat strong {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .stat-divider {
+        color: var(--text-muted);
+    }
+
+    /* Player Grid */
+    .player-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+    }
+
+    /* Player Card */
+    .player-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-card);
+        transition: all var(--transition);
+        cursor: pointer;
+    }
+
+    .player-card:hover {
+        border-color: var(--border-accent);
+        transform: translateY(-1px);
+    }
+
+    .player-card.selected {
+        border-color: var(--accent-group);
+        box-shadow: 0 0 0 1px var(--accent-group), var(--shadow-card);
+    }
+
+    .card-group {
+        border-left: 3px solid var(--accent-group);
+    }
+
+    .card-stereo {
+        border-left: 3px solid var(--accent-stereo);
+    }
+
+    .card-single {
+        border-left: 3px solid transparent;
+    }
+
+    /* Card Header */
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 14px 14px 0;
+        gap: 10px;
+    }
+
+    .card-title-area {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .card-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .card-badge svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .badge-group {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--accent-group);
+    }
+
+    .badge-stereo {
+        background: rgba(59, 130, 246, 0.15);
+        color: var(--accent-stereo);
+    }
+
+    .badge-single {
+        background: rgba(113, 113, 122, 0.15);
+        color: var(--accent-single);
+    }
+
+    /* Dissolve Button */
+    .btn-dissolve {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: 1px solid var(--border-accent);
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all var(--transition);
+        flex-shrink: 0;
+    }
+
+    .btn-dissolve:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+
+    .btn-dissolve svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Player List */
+    .player-list {
+        padding: 10px 14px 14px;
+    }
+
+    .player-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        margin: 0 -10px;
+        border-radius: var(--radius-md);
+        transition: background var(--transition);
+    }
+
+    .player-item:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .player-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .player-volume-row {
+        padding-left: 46px;
+    }
+
+    .player-slave .player-volume-row {
+        padding-left: 80px;
+    }
+
+    .player-icon {
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-secondary);
+        border-radius: var(--radius-sm);
+    }
+
+    .player-icon svg {
+        width: 20px;
+        height: 20px;
+        color: var(--text-secondary);
+    }
+
+    .player-master .player-icon svg {
+        color: var(--text-primary);
+    }
+
+    .player-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .player-name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .master-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 2px 5px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 4px;
+        color: var(--text-secondary);
+    }
+
+    .stereo-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 2px 5px;
+        background: rgba(59, 130, 246, 0.15);
+        border-radius: 4px;
+        color: var(--accent-stereo);
+    }
+
+    .player-stereo {
+        border-left-color: var(--accent-stereo);
+    }
+
+    .icon-stereo svg {
+        color: var(--accent-stereo) !important;
+    }
+
+    .player-model {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    .channel-indicator {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        background: var(--accent-stereo);
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 700;
+        border-radius: 4px;
+    }
+
+    /* Volume Controls */
+    .volume-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .fixed-volume {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+    }
+
+    .fixed-volume svg {
+        width: 16px;
+        height: 16px;
+        opacity: 0.6;
+    }
+
+    .btn-volume {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-accent);
+        border-radius: 50%;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .btn-volume:hover {
+        background: var(--bg-card-hover);
+        color: var(--text-primary);
+        border-color: var(--text-muted);
+    }
+
+    .btn-volume:active {
+        transform: scale(0.95);
+    }
+
+    .btn-volume svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .btn-volume-up:hover {
+        border-color: var(--accent-group);
+        color: var(--accent-group);
+    }
+
+    .btn-volume-down:hover {
+        border-color: var(--accent-stereo);
+        color: var(--accent-stereo);
+    }
+
+    .volume-bar {
+        flex: 1;
+        max-width: 120px;
+        height: 4px;
+        background: var(--bg-secondary);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .volume-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent-group), #4ade80);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+
+    /* Ungroup Button */
+    .btn-ungroup {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all var(--transition);
+        opacity: 0.4;
+        flex-shrink: 0;
+    }
+
+    .player-item:hover .btn-ungroup {
+        opacity: 1;
+    }
+
+    .btn-ungroup:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+
+    .btn-ungroup svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    /* Join Group Button & Dropdown */
+    .join-group-dropdown {
+        position: relative;
+    }
+
+    .btn-join {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: 1px solid var(--border-accent);
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all var(--transition);
+        flex-shrink: 0;
+    }
+
+    .btn-join:hover {
+        background: rgba(34, 197, 94, 0.1);
+        border-color: var(--accent-group);
+        color: var(--accent-group);
+    }
+
+    .btn-join svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .join-dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 6px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-accent);
+        border-radius: var(--radius-md);
+        min-width: 180px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        overflow: hidden;
+    }
+
+    .join-group-dropdown:focus-within .join-dropdown-menu,
+    .join-group-dropdown:hover .join-dropdown-menu {
+        display: block;
+    }
+
+    .dropdown-header {
+        padding: 8px 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .dropdown-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 10px 12px;
+        background: none;
+        border: none;
+        color: var(--text-primary);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background var(--transition);
+        text-align: left;
+    }
+
+    .dropdown-item:hover {
+        background: rgba(34, 197, 94, 0.1);
+    }
+
+    .dropdown-item-name {
+        font-weight: 500;
+    }
+
+    .dropdown-item-type {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+    }
+
+    /* Now Playing Section */
+    .now-playing-section {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-card);
+    }
+
+    .now-playing-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .now-playing-header h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .np-player-name {
+        font-size: 0.8rem;
+        color: var(--accent-group);
+        font-weight: 500;
+        background: rgba(34, 197, 94, 0.1);
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+
+    .now-playing-content {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .np-artwork {
+        flex-shrink: 0;
+        width: 120px;
+        height: 120px;
+        background: var(--bg-secondary);
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .np-artwork svg {
+        width: 48px;
+        height: 48px;
+        color: var(--text-muted);
+        opacity: 0.5;
+    }
+
+    .np-artwork img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .np-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .np-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .np-artist {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .np-album {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .np-progress {
+        margin-bottom: 16px;
+    }
+
+    .np-progress-bar {
+        width: 100%;
+        height: 4px;
+        background: var(--bg-secondary);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 6px;
+    }
+
+    .np-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent-group), #4ade80);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+
+    .np-time {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .np-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .np-control-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-accent);
+        border-radius: 50%;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .np-control-btn:hover {
+        background: var(--bg-card-hover);
+        color: var(--text-primary);
+        border-color: var(--text-muted);
+    }
+
+    .np-control-btn:active {
+        transform: scale(0.95);
+    }
+
+    .np-control-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .np-control-main {
+        width: 52px;
+        height: 52px;
+        background: var(--accent-group);
+        border-color: var(--accent-group);
+        color: white;
+    }
+
+    .np-control-main:hover {
+        background: #16a34a;
+        border-color: #16a34a;
+        color: white;
+    }
+
+    .np-control-main svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .np-service {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Mobile */
+    @@media (max-width: 480px) {
+        .btn-refresh span {
+            display: none;
+        }
+
+        .btn-refresh {
+            padding: 8px;
+        }
+
+        .player-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .brand h1 {
+            font-size: 1.1rem;
+        }
+
+        .player-item:hover .btn-ungroup {
+            opacity: 1;
+        }
+
+        .btn-ungroup {
+            opacity: 0.7;
+        }
+
+        .player-volume-row {
+            padding-left: 46px;
+        }
+
+        .player-slave .player-volume-row {
+            padding-left: 70px;
+        }
+
+        .volume-bar {
+            max-width: 100px;
+        }
+
+        .now-playing-content {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .np-artwork {
+            width: 160px;
+            height: 160px;
+        }
+
+        .np-info {
+            width: 100%;
+        }
+
+        .np-controls {
+            justify-content: center;
+        }
+
+        .np-time {
+            padding: 0 10px;
+        }
+    }
+
+    /* Light mode support */
+    @@media (prefers-color-scheme: light) {
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f8f9fa;
+            --border-subtle: rgba(0, 0, 0, 0.06);
+            --border-accent: rgba(0, 0, 0, 0.1);
+            --text-primary: #18181b;
+            --text-secondary: #52525b;
+            --text-muted: #a1a1aa;
+            --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        .volume-bar {
+            background: #e4e4e7;
+        }
+
+        .player-icon {
+            background: #f4f4f5;
+        }
+
+        .master-label {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .loading-overlay {
+            background: rgba(248, 249, 250, 0.9);
+        }
+    }
+</style>
+
+<script>
+    async function adjustVolume(button, delta) {
+        const container = button.closest('.volume-controls');
+        const playerIp = container.dataset.playerIp;
+        const playerPort = container.dataset.playerPort;
+        let currentVolume = parseInt(container.dataset.volume) || 0;
+
+        // Calculate new volume
+        let newVolume = Math.max(0, Math.min(100, currentVolume + delta));
+
+        // Optimistic UI update
+        container.dataset.volume = newVolume;
+        const volumeFill = container.querySelector('.volume-fill');
+        if (volumeFill) {
+            volumeFill.style.width = newVolume + '%';
+        }
+
+        // Disable buttons temporarily
+        const buttons = container.querySelectorAll('.btn-volume');
+        buttons.forEach(btn => btn.disabled = true);
+
+        try {
+            const formData = new FormData();
+            formData.append('playerIp', playerIp);
+            formData.append('playerPort', playerPort);
+            formData.append('volume', newVolume);
+
+            const response = await fetch('/Players?handler=Volume', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                container.dataset.volume = data.volume;
+                if (volumeFill) {
+                    volumeFill.style.width = data.volume + '%';
+                }
+            }
+        } catch (error) {
+            console.error('Volume adjustment failed:', error);
+            container.dataset.volume = currentVolume;
+            if (volumeFill) {
+                volumeFill.style.width = currentVolume + '%';
+            }
+        } finally {
+            buttons.forEach(btn => btn.disabled = false);
+        }
+    }
+
+    // Loading overlay functions
+    const loadingOverlay = document.getElementById('loading-overlay');
+
+    function showLoading() {
+        loadingOverlay.style.display = 'flex';
+        loadingOverlay.offsetHeight;
+        loadingOverlay.classList.add('active');
+    }
+
+    function hideLoading() {
+        loadingOverlay.classList.remove('active');
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+        }, 200);
+    }
+
+    // Cached player groups for rendering
+    let cachedGroups = [];
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize profile display
+        initializeProfileDisplay();
+
+        // Start discovering players
+        discoverPlayers();
+
+        // Override refresh button to use AJAX
+        const refreshBtn = document.querySelector('.btn-refresh');
+        if (refreshBtn) {
+            const form = refreshBtn.closest('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    discoverPlayers();
+                });
+            }
+        }
+    });
+
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            hideLoading();
+            // Re-discover if returning to page
+            discoverPlayers();
+        }
+    });
+
+    // Discover players via AJAX
+    async function discoverPlayers() {
+        const skeleton = document.getElementById('loading-skeleton');
+        const emptyState = document.getElementById('empty-state');
+        const playersContent = document.getElementById('players-content');
+        const errorMsg = document.getElementById('error-message');
+
+        // Show skeleton, hide others
+        skeleton.style.display = 'block';
+        emptyState.style.display = 'none';
+        playersContent.style.display = 'none';
+        errorMsg.style.display = 'none';
+
+        try {
+            const response = await fetch('/Players?handler=Discover');
+            const data = await response.json();
+
+            skeleton.style.display = 'none';
+
+            if (data.success && data.groups && data.groups.length > 0) {
+                cachedGroups = data.groups;
+                renderPlayerGroups(data.groups);
+                playersContent.style.display = 'block';
+            } else if (data.success) {
+                emptyState.style.display = 'block';
+            } else {
+                showError(data.error || 'Fehler bei der Player-Suche');
+                emptyState.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Discovery failed:', error);
+            skeleton.style.display = 'none';
+            showError('Fehler bei der Verbindung zum Server');
+            emptyState.style.display = 'block';
+        }
+    }
+
+    // Show error message
+    function showError(message) {
+        const errorMsg = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        if (errorMsg && errorText) {
+            errorText.textContent = message;
+            errorMsg.style.display = 'flex';
+            setTimeout(() => {
+                errorMsg.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    // Render player groups
+    function renderPlayerGroups(groups) {
+        const statsEl = document.getElementById('player-stats');
+        const gridEl = document.getElementById('player-grid');
+
+        // Calculate stats
+        const totalPlayers = groups.reduce((sum, g) => sum + g.totalMembers, 0);
+        const groupedCount = groups.filter(g => g.type !== 'Single').length;
+
+        // Render stats
+        let statsHtml = `<span class="stat"><strong>${totalPlayers}</strong> Player</span>`;
+        if (groupedCount > 0) {
+            statsHtml += `<span class="stat-divider">·</span><span class="stat"><strong>${groupedCount}</strong> Gruppen</span>`;
+        }
+        statsEl.innerHTML = statsHtml;
+
+        // Render player cards
+        gridEl.innerHTML = groups.map(group => renderPlayerCard(group, groups)).join('');
+    }
+
+    // Render a single player card
+    function renderPlayerCard(group, allGroups) {
+        const isGroup = group.type === 'MultiRoom' && group.members && group.members.length > 0;
+        const isStereoPair = group.type === 'StereoPair' || (group.master && group.master.isStereoPaired);
+        const cardClass = isGroup ? 'card-group' : (isStereoPair ? 'card-stereo' : 'card-single');
+
+        const master = group.master;
+        if (!master) return '';
+
+        // Badge HTML
+        let badgeClass = isGroup ? 'badge-group' : (isStereoPair ? 'badge-stereo' : 'badge-single');
+        let badgeIcon = isGroup
+            ? '<rect x="2" y="7" width="6" height="10" rx="1"/><rect x="16" y="7" width="6" height="10" rx="1"/><path d="M8 12h8"/>'
+            : (isStereoPair
+                ? '<rect x="4" y="6" width="6" height="12" rx="1"/><rect x="14" y="6" width="6" height="12" rx="1"/>'
+                : '<rect x="6" y="4" width="12" height="16" rx="2"/><circle cx="12" cy="14" r="3"/><circle cx="12" cy="7" r="1"/>');
+        let badgeText = isGroup ? 'Gruppe' : (isStereoPair ? 'Stereo' : 'Einzeln');
+
+        // Header buttons
+        let headerButtons = '';
+        if (isGroup) {
+            const slaveIps = group.members.map(m => m.ipAddress).join(',');
+            headerButtons = `
+                <form method="post" action="/Players?handler=DissolveGroup" class="dissolve-form">
+                    <input type="hidden" name="masterIp" value="${master.ipAddress}" />
+                    <input type="hidden" name="masterPort" value="${master.port}" />
+                    <input type="hidden" name="slaveIps" value="${slaveIps}" />
+                    <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+                    <button type="submit" class="btn-dissolve" title="Gruppe auflösen" onclick="return confirm('Möchten Sie diese Gruppe wirklich auflösen?')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </form>`;
+        } else {
+            // Join group dropdown
+            const otherGroups = allGroups.filter(g => g.id !== group.id && g.master);
+            if (otherGroups.length > 0) {
+                const dropdownItems = otherGroups.map(target => `
+                    <form method="post" action="/Players?handler=AddToGroup">
+                        <input type="hidden" name="masterIp" value="${target.master.ipAddress}" />
+                        <input type="hidden" name="masterPort" value="${target.master.port}" />
+                        <input type="hidden" name="slaveIp" value="${master.ipAddress}" />
+                        <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+                        <button type="submit" class="dropdown-item">
+                            <span class="dropdown-item-name">${escapeHtml(target.name)}</span>
+                            <span class="dropdown-item-type">${target.displayType}</span>
+                        </button>
+                    </form>
+                `).join('');
+
+                headerButtons = `
+                    <div class="join-group-dropdown">
+                        <button type="button" class="btn-join" title="Zur Gruppe hinzufügen">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                                <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 14v7M14 17.5h7"/>
+                            </svg>
+                        </button>
+                        <div class="join-dropdown-menu">
+                            <div class="dropdown-header">Hinzufügen zu:</div>
+                            ${dropdownItems}
+                        </div>
+                    </div>`;
+            }
+        }
+
+        // Render master player
+        const masterHtml = renderPlayerItem(master, isGroup, false, null);
+
+        // Render slave players
+        const membersHtml = (group.members || []).map(member =>
+            renderPlayerItem(member, isGroup, true, master)
+        ).join('');
+
+        return `
+            <div class="player-card ${cardClass}"
+                 data-player-ip="${master.ipAddress}"
+                 data-player-port="${master.port}"
+                 data-player-name="${escapeHtml(group.name)}"
+                 onclick="selectPlayer(this)">
+                <div class="card-header">
+                    <div class="card-title-area">
+                        <h3 class="card-title">${escapeHtml(group.name)}</h3>
+                        <div class="card-badge ${badgeClass}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${badgeIcon}</svg>
+                            <span>${badgeText}</span>
+                        </div>
+                    </div>
+                    ${headerButtons}
+                </div>
+                <div class="player-list">
+                    ${masterHtml}
+                    ${membersHtml}
+                </div>
+            </div>`;
+    }
+
+    // Render a single player item (master or slave)
+    function renderPlayerItem(player, isGroup, isSlave, master) {
+        const isStereo = player.isStereoPaired;
+        const channelLabel = player.channelMode === 'left' ? 'L' : (player.channelMode === 'right' ? 'R' : '');
+
+        let ungroupBtn = '';
+        if (isSlave && master) {
+            ungroupBtn = `
+                <form method="post" action="/Players?handler=Ungroup" class="ungroup-form">
+                    <input type="hidden" name="masterIp" value="${master.ipAddress}" />
+                    <input type="hidden" name="masterPort" value="${master.port}" />
+                    <input type="hidden" name="slaveIp" value="${player.ipAddress}" />
+                    <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+                    <button type="submit" class="btn-ungroup" title="Aus Gruppe entfernen" onclick="return confirm('Player aus der Gruppe entfernen?')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </form>`;
+        }
+
+        const icon = isStereo
+            ? '<rect x="4" y="6" width="6" height="12" rx="1"/><rect x="14" y="6" width="6" height="12" rx="1"/>'
+            : '<rect x="6" y="4" width="12" height="16" rx="2"/><circle cx="12" cy="14" r="3"/><circle cx="12" cy="7" r="1"/>';
+
+        const volumeHtml = player.isFixedVolume
+            ? `<div class="fixed-volume">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="5" height="8" rx="1"/><path d="M8 15l4-4v8l-4-4z"/><path d="M16 12a4 4 0 0 1 0 6"/>
+                </svg>
+                <span>Fixed Volume</span>
+               </div>`
+            : `<div class="volume-controls" data-player-ip="${player.ipAddress}" data-player-port="${player.port}" data-volume="${player.volume}">
+                <button type="button" class="btn-volume btn-volume-down" title="Leiser" onclick="adjustVolume(this, -5)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <div class="volume-bar"><div class="volume-fill" style="width: ${Math.max(0, Math.min(100, player.volume))}%"></div></div>
+                <button type="button" class="btn-volume btn-volume-up" title="Lauter" onclick="adjustVolume(this, 5)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+               </div>`;
+
+        const itemClass = isSlave ? 'player-slave' : 'player-master';
+        const stereoClass = isStereo ? (isSlave ? 'player-stereo' : '') : '';
+
+        return `
+            <div class="player-item ${itemClass} ${stereoClass}">
+                <div class="player-row">
+                    ${ungroupBtn}
+                    <div class="player-icon ${isStereo && isSlave ? 'icon-stereo' : ''}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg>
+                    </div>
+                    <div class="player-info">
+                        <span class="player-name">
+                            ${escapeHtml(player.name)}
+                            ${isGroup && !isSlave ? '<span class="master-label">Master</span>' : ''}
+                            ${isStereo && isSlave ? '<span class="stereo-label">Stereo</span>' : ''}
+                        </span>
+                        <span class="player-model">
+                            ${isStereo && isSlave ? 'Stereo Pair' : `${escapeHtml(player.brand || '')} ${escapeHtml(player.modelName || '')}`}
+                            ${channelLabel ? `<span class="channel-indicator">${channelLabel}</span>` : ''}
+                        </span>
+                    </div>
+                </div>
+                <div class="player-volume-row">${volumeHtml}</div>
+            </div>`;
+    }
+
+    // Get anti-forgery token
+    function getAntiForgeryToken() {
+        return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initialize profile display in header
+    function initializeProfileDisplay() {
+        if (typeof UserProfileManager !== 'undefined') {
+            UserProfileManager.initialize();
+            updateProfileDisplay();
+        }
+    }
+
+    function updateProfileDisplay() {
+        if (typeof UserProfileManager === 'undefined') return;
+
+        const activeProfile = UserProfileManager.getActiveProfile();
+        if (activeProfile) {
+            const initial = UserProfileManager.getProfileInitial(activeProfile.name);
+            const color = UserProfileManager.getProfileColor(activeProfile.id);
+
+            const headerInitial = document.getElementById('header-profile-initial');
+            if (headerInitial) {
+                headerInitial.textContent = initial;
+                headerInitial.parentElement.style.background = color;
+            }
+
+            const menuAvatar = document.getElementById('menu-profile-avatar');
+            const menuName = document.getElementById('menu-profile-name');
+            if (menuAvatar) {
+                menuAvatar.textContent = initial;
+                menuAvatar.style.background = color;
+            }
+            if (menuName) {
+                menuName.textContent = activeProfile.name;
+            }
+        }
+    }
+
+    // Now Playing functionality
+    let selectedPlayerIp = null;
+    let selectedPlayerPort = null;
+    let selectedPlayerName = null;
+    let playbackRefreshInterval = null;
+
+    function selectPlayer(cardElement) {
+        if (event.target.closest('button') || event.target.closest('form') || event.target.closest('.join-dropdown-menu')) {
+            return;
+        }
+
+        const ip = cardElement.dataset.playerIp;
+        const port = cardElement.dataset.playerPort;
+        const name = cardElement.dataset.playerName;
+
+        if (!ip || !port) return;
+
+        document.querySelectorAll('.player-card').forEach(c => c.classList.remove('selected'));
+        cardElement.classList.add('selected');
+
+        selectedPlayerIp = ip;
+        selectedPlayerPort = port;
+        selectedPlayerName = name;
+
+        document.getElementById('now-playing').style.display = 'block';
+        document.getElementById('np-player-name').textContent = name;
+
+        fetchPlaybackStatus();
+
+        if (playbackRefreshInterval) {
+            clearInterval(playbackRefreshInterval);
+        }
+        playbackRefreshInterval = setInterval(fetchPlaybackStatus, 2000);
+    }
+
+    async function fetchPlaybackStatus() {
+        if (!selectedPlayerIp || !selectedPlayerPort) return;
+
+        try {
+            const response = await fetch(`/Players?handler=PlaybackStatus&playerIp=${selectedPlayerIp}&playerPort=${selectedPlayerPort}`);
+            const data = await response.json();
+
+            if (data.success) {
+                updateNowPlaying(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch playback status:', error);
+        }
+    }
+
+    function updateNowPlaying(data) {
+        document.getElementById('np-title').textContent = data.title || 'Kein Titel';
+        document.getElementById('np-artist').textContent = data.artist || '';
+        document.getElementById('np-album').textContent = data.album || '';
+
+        const artworkContainer = document.getElementById('np-artwork');
+        if (data.imageUrl) {
+            artworkContainer.innerHTML = `<img src="${data.imageUrl}" alt="Album Art" onerror="this.parentElement.innerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><circle cx=\\'12\\' cy=\\'12\\' r=\\'10\\'/><circle cx=\\'12\\' cy=\\'12\\' r=\\'3\\'/></svg>'">`;
+        } else {
+            artworkContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>`;
+        }
+
+        const progressSection = document.getElementById('np-progress');
+        const trackButtons = document.querySelectorAll('.np-track-btn');
+        const hasTrackInfo = data.totalSeconds && data.totalSeconds > 0;
+
+        if (hasTrackInfo) {
+            progressSection.style.display = 'block';
+            trackButtons.forEach(btn => btn.style.display = 'flex');
+            document.getElementById('np-progress-fill').style.width = `${data.progressPercent || 0}%`;
+            document.getElementById('np-current-time').textContent = data.formattedPosition || '0:00';
+            document.getElementById('np-total-time').textContent = data.formattedDuration || '0:00';
+        } else {
+            progressSection.style.display = 'none';
+            trackButtons.forEach(btn => btn.style.display = 'none');
+        }
+
+        const iconPlay = document.getElementById('icon-play');
+        const iconPause = document.getElementById('icon-pause');
+        if (data.isPlaying) {
+            iconPlay.style.display = 'none';
+            iconPause.style.display = 'block';
+        } else {
+            iconPlay.style.display = 'block';
+            iconPause.style.display = 'none';
+        }
+
+        document.getElementById('np-service').textContent = data.service || '';
+    }
+
+    async function controlPlayback(action) {
+        if (!selectedPlayerIp || !selectedPlayerPort) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('playerIp', selectedPlayerIp);
+            formData.append('playerPort', selectedPlayerPort);
+
+            const response = await fetch(`/Players?handler=${action}`, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                setTimeout(fetchPlaybackStatus, 200);
+            }
+        } catch (error) {
+            console.error(`Playback control failed (${action}):`, error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('btn-play-pause')?.addEventListener('click', function() {
+            const iconPlay = document.getElementById('icon-play');
+            if (iconPlay.style.display !== 'none') {
+                controlPlayback('Play');
+            } else {
+                controlPlayback('Pause');
+            }
+        });
+
+        document.getElementById('btn-prev')?.addEventListener('click', function() {
+            controlPlayback('PreviousTrack');
+        });
+
+        document.getElementById('btn-next')?.addEventListener('click', function() {
+            controlPlayback('NextTrack');
+        });
+    });
+</script>

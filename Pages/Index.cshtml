@@ -1,24 +1,13 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = "Bluesound Player";
+    ViewData["Title"] = "Musik streamen";
+    ViewData["ShowHamburgerMenu"] = false;
 }
 
-@Html.AntiForgeryToken()
-
-<!-- Loading Overlay -->
-<div id="loading-overlay" class="loading-overlay">
-    <div class="loading-spinner">
-        <div class="spinner-ring"></div>
-        <div class="spinner-ring"></div>
-        <div class="spinner-ring"></div>
-        <span class="loading-text">Laden...</span>
-    </div>
-</div>
-
-<div class="bluesound-app">
+<div class="source-app">
     <!-- Header -->
-    <header class="app-header">
+    <header class="source-header">
         <div class="header-content">
             <div class="brand">
                 <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -28,482 +17,89 @@
                 </svg>
                 <h1>Bluesound</h1>
             </div>
-            <div class="header-actions">
-                <a href="/Qobuz" class="btn-qobuz" title="Qobuz">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 6v6l4 2"/>
-                    </svg>
-                    <span>Qobuz</span>
-                </a>
-                <form method="post" asp-page-handler="Refresh">
-                    <button type="submit" class="btn-refresh">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M23 4v6h-6M1 20v-6h6"/>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                        </svg>
-                        <span>Aktualisieren</span>
-                    </button>
-                </form>
-            </div>
         </div>
     </header>
 
-    <!-- Messages -->
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="alert alert-error">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
-            <span>@Model.ErrorMessage</span>
-        </div>
-    }
+    <!-- Main Content -->
+    <main class="source-main">
+        <div class="source-container">
+            <h2 class="source-title">Musik streamen</h2>
+            <p class="source-subtitle">Wahle eine Quelle um loszulegen</p>
 
-    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-    {
-        <div class="alert alert-success">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <span>@Model.SuccessMessage</span>
-        </div>
-    }
-
-    <!-- Content -->
-    <main class="main-content">
-        @if (Model.PlayerGroups.Count == 0)
-        {
-            <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <rect x="4" y="2" width="16" height="20" rx="2"/>
-                    <circle cx="12" cy="14" r="4"/>
-                    <line x1="12" y1="6" x2="12" y2="6.01"/>
-                </svg>
-                <h2>Keine Player gefunden</h2>
-                <p>Stellen Sie sicher, dass Ihre Bluesound Player eingeschaltet sind und Sie sich im selben Netzwerk befinden.</p>
-            </div>
-        }
-        else
-        {
-            <div class="player-stats">
-                @{
-                    var totalPlayers = Model.PlayerGroups.Sum(g => g.TotalMembers);
-                    var groupedCount = Model.PlayerGroups.Count(g => g.Type != BluesoundWeb.Models.GroupType.Single);
-                }
-                <span class="stat">
-                    <strong>@totalPlayers</strong> Player
-                </span>
-                @if (groupedCount > 0)
-                {
-                    <span class="stat-divider">·</span>
-                    <span class="stat">
-                        <strong>@groupedCount</strong> Gruppen
-                    </span>
-                }
-            </div>
-
-            <div class="player-grid">
-                @foreach (var group in Model.PlayerGroups)
-                {
-                    var isGroup = group.Type == BluesoundWeb.Models.GroupType.MultiRoom && group.Members.Count > 0;
-                    var isStereoPair = group.Type == BluesoundWeb.Models.GroupType.StereoPair ||
-                                       (group.Master?.IsStereoPaired == true);
-                    var cardClass = isGroup ? "card-group" : (isStereoPair ? "card-stereo" : "card-single");
-
-                    <div class="player-card @cardClass"
-                         data-player-ip="@group.Master?.IpAddress"
-                         data-player-port="@group.Master?.Port"
-                         data-player-name="@group.Name"
-                         onclick="selectPlayer(this)">
-                        <!-- Card Header -->
-                        <div class="card-header">
-                            <div class="card-title-area">
-                                <h3 class="card-title">@group.Name</h3>
-                                <div class="card-badge @(isGroup ? "badge-group" : (isStereoPair ? "badge-stereo" : "badge-single"))">
-                                    @if (isGroup)
-                                    {
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="2" y="7" width="6" height="10" rx="1"/>
-                                            <rect x="16" y="7" width="6" height="10" rx="1"/>
-                                            <path d="M8 12h8"/>
-                                        </svg>
-                                        <span>Gruppe</span>
-                                    }
-                                    else if (isStereoPair)
-                                    {
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="4" y="6" width="6" height="12" rx="1"/>
-                                            <rect x="14" y="6" width="6" height="12" rx="1"/>
-                                        </svg>
-                                        <span>Stereo</span>
-                                    }
-                                    else
-                                    {
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="6" y="4" width="12" height="16" rx="2"/>
-                                            <circle cx="12" cy="14" r="3"/>
-                                            <circle cx="12" cy="7" r="1"/>
-                                        </svg>
-                                        <span>Einzeln</span>
-                                    }
-                                </div>
-                            </div>
-
-                            @if (isGroup && group.Master != null)
-                            {
-                                <form method="post" asp-page-handler="DissolveGroup" class="dissolve-form">
-                                    <input type="hidden" name="masterIp" value="@group.Master.IpAddress" />
-                                    <input type="hidden" name="masterPort" value="@group.Master.Port" />
-                                    <input type="hidden" name="slaveIps" value="@string.Join(",", group.Members.Select(m => m.IpAddress))" />
-                                    <button type="submit" class="btn-dissolve" title="Gruppe auflösen"
-                                            onclick="return confirm('Möchten Sie diese Gruppe wirklich auflösen?')">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <line x1="18" y1="6" x2="6" y2="18"/>
-                                            <line x1="6" y1="6" x2="18" y2="18"/>
-                                        </svg>
-                                    </button>
-                                </form>
-                            }
-
-                            @{
-                                // Get other players/groups that this player can join
-                                var otherPlayers = Model.PlayerGroups
-                                    .Where(g => g.Id != group.Id && g.Master != null)
-                                    .ToList();
-                            }
-
-                            @if (!isGroup && group.Master != null && otherPlayers.Any())
-                            {
-                                <div class="join-group-dropdown">
-                                    <button type="button" class="btn-join" title="Zur Gruppe hinzufügen">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="3" y="3" width="7" height="7" rx="1"/>
-                                            <rect x="14" y="3" width="7" height="7" rx="1"/>
-                                            <rect x="3" y="14" width="7" height="7" rx="1"/>
-                                            <path d="M17.5 14v7M14 17.5h7"/>
-                                        </svg>
-                                    </button>
-                                    <div class="join-dropdown-menu">
-                                        <div class="dropdown-header">Hinzufügen zu:</div>
-                                        @foreach (var target in otherPlayers)
-                                        {
-                                            <form method="post" asp-page-handler="AddToGroup">
-                                                <input type="hidden" name="masterIp" value="@target.Master!.IpAddress" />
-                                                <input type="hidden" name="masterPort" value="@target.Master.Port" />
-                                                <input type="hidden" name="slaveIp" value="@group.Master.IpAddress" />
-                                                <button type="submit" class="dropdown-item">
-                                                    <span class="dropdown-item-name">@target.Name</span>
-                                                    <span class="dropdown-item-type">@target.DisplayType</span>
-                                                </button>
-                                            </form>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- Player List -->
-                        <div class="player-list">
-                            @if (group.Master != null)
-                            {
-                                <!-- Master Player -->
-                                <div class="player-item player-master">
-                                    <div class="player-row">
-                                        <div class="player-icon">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <rect x="6" y="4" width="12" height="16" rx="2"/>
-                                                <circle cx="12" cy="14" r="3"/>
-                                                <circle cx="12" cy="7" r="1"/>
-                                            </svg>
-                                        </div>
-                                        <div class="player-info">
-                                            <span class="player-name">
-                                                @group.Master.Name
-                                                @if (isGroup)
-                                                {
-                                                    <span class="master-label">Master</span>
-                                                }
-                                            </span>
-                                            <span class="player-model">
-                                                @group.Master.Brand @group.Master.ModelName
-                                                @if (group.Master.IsStereoPaired && !string.IsNullOrEmpty(group.Master.ChannelMode))
-                                                {
-                                                    <span class="channel-indicator">@(group.Master.ChannelMode == "left" ? "L" : "R")</span>
-                                                }
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="player-volume-row">
-                                        @if (group.Master.IsFixedVolume)
-                                        {
-                                            <div class="fixed-volume">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <rect x="3" y="11" width="5" height="8" rx="1"/>
-                                                    <path d="M8 15l4-4v8l-4-4z"/>
-                                                    <path d="M16 12a4 4 0 0 1 0 6"/>
-                                                </svg>
-                                                <span>Fixed Volume</span>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="volume-controls" data-player-ip="@group.Master.IpAddress" data-player-port="@group.Master.Port" data-volume="@group.Master.Volume">
-                                                <button type="button" class="btn-volume btn-volume-down" title="Leiser" onclick="adjustVolume(this, -5)">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <line x1="5" y1="12" x2="19" y2="12"/>
-                                                    </svg>
-                                                </button>
-                                                <div class="volume-bar">
-                                                    <div class="volume-fill" style="width: @(Math.Max(0, Math.Min(100, group.Master.Volume)))%"></div>
-                                                </div>
-                                                <button type="button" class="btn-volume btn-volume-up" title="Lauter" onclick="adjustVolume(this, 5)">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <line x1="12" y1="5" x2="12" y2="19"/>
-                                                        <line x1="5" y1="12" x2="19" y2="12"/>
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-
-                                <!-- Slave Players -->
-                                @foreach (var member in group.Members)
-                                {
-                                    var isMemberStereoPair = member.IsStereoPaired;
-                                    <div class="player-item player-slave @(isMemberStereoPair ? "player-stereo" : "")">
-                                        <div class="player-row">
-                                            <form method="post" asp-page-handler="Ungroup" class="ungroup-form">
-                                                <input type="hidden" name="masterIp" value="@group.Master.IpAddress" />
-                                                <input type="hidden" name="masterPort" value="@group.Master.Port" />
-                                                <input type="hidden" name="slaveIp" value="@member.IpAddress" />
-                                                <button type="submit" class="btn-ungroup" title="Aus Gruppe entfernen"
-                                                        onclick="return confirm('Player aus der Gruppe entfernen?')">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <line x1="18" y1="6" x2="6" y2="18"/>
-                                                        <line x1="6" y1="6" x2="18" y2="18"/>
-                                                    </svg>
-                                                </button>
-                                            </form>
-                                            <div class="player-icon @(isMemberStereoPair ? "icon-stereo" : "")">
-                                                @if (isMemberStereoPair)
-                                                {
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <rect x="4" y="6" width="6" height="12" rx="1"/>
-                                                        <rect x="14" y="6" width="6" height="12" rx="1"/>
-                                                    </svg>
-                                                }
-                                                else
-                                                {
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <rect x="6" y="4" width="12" height="16" rx="2"/>
-                                                        <circle cx="12" cy="14" r="3"/>
-                                                        <circle cx="12" cy="7" r="1"/>
-                                                    </svg>
-                                                }
-                                            </div>
-                                            <div class="player-info">
-                                                <span class="player-name">
-                                                    @member.Name
-                                                    @if (isMemberStereoPair)
-                                                    {
-                                                        <span class="stereo-label">Stereo</span>
-                                                    }
-                                                </span>
-                                                <span class="player-model">
-                                                    @if (isMemberStereoPair)
-                                                    {
-                                                        <span>Stereo Pair</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        @member.Brand @member.ModelName
-                                                    }
-                                                    @if (member.IsStereoPaired && !string.IsNullOrEmpty(member.ChannelMode))
-                                                    {
-                                                        <span class="channel-indicator">@(member.ChannelMode == "left" ? "L" : "R")</span>
-                                                    }
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="player-volume-row">
-                                            @if (member.IsFixedVolume)
-                                            {
-                                                <div class="fixed-volume">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <rect x="3" y="11" width="5" height="8" rx="1"/>
-                                                        <path d="M8 15l4-4v8l-4-4z"/>
-                                                        <path d="M16 12a4 4 0 0 1 0 6"/>
-                                                    </svg>
-                                                    <span>Fixed Volume</span>
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                <div class="volume-controls" data-player-ip="@member.IpAddress" data-player-port="@member.Port" data-volume="@member.Volume">
-                                                    <button type="button" class="btn-volume btn-volume-down" title="Leiser" onclick="adjustVolume(this, -5)">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <line x1="5" y1="12" x2="19" y2="12"/>
-                                                        </svg>
-                                                    </button>
-                                                    <div class="volume-bar">
-                                                        <div class="volume-fill" style="width: @(Math.Max(0, Math.Min(100, member.Volume)))%"></div>
-                                                    </div>
-                                                    <button type="button" class="btn-volume btn-volume-up" title="Lauter" onclick="adjustVolume(this, 5)">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <line x1="12" y1="5" x2="12" y2="19"/>
-                                                            <line x1="5" y1="12" x2="19" y2="12"/>
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            }
-                                        </div>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </div>
-                }
-            </div>
-
-            <!-- Now Playing Section -->
-            <div id="now-playing" class="now-playing-section" style="display: none;">
-                <div class="now-playing-header">
-                    <h2>Wiedergabe</h2>
-                    <span id="np-player-name" class="np-player-name"></span>
-                </div>
-                <div class="now-playing-content">
-                    <div id="np-artwork" class="np-artwork">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <circle cx="12" cy="12" r="10"/>
-                            <circle cx="12" cy="12" r="3"/>
+            <div class="source-grid">
+                <!-- Qobuz Source -->
+                <button type="button" class="source-card" onclick="selectSource('qobuz')">
+                    <div class="source-icon qobuz-icon">
+                        <svg viewBox="0 0 100 100" fill="currentColor">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="6"/>
+                            <circle cx="50" cy="50" r="20"/>
                         </svg>
                     </div>
-                    <div class="np-info">
-                        <div id="np-title" class="np-title">Kein Titel</div>
-                        <div id="np-artist" class="np-artist"></div>
-                        <div id="np-album" class="np-album"></div>
-                        <div id="np-progress" class="np-progress">
-                            <div class="np-progress-bar">
-                                <div id="np-progress-fill" class="np-progress-fill" style="width: 0%"></div>
-                            </div>
-                            <div class="np-time">
-                                <span id="np-current-time">0:00</span>
-                                <span id="np-total-time">0:00</span>
-                            </div>
-                        </div>
-                        <div class="np-controls">
-                            <button type="button" id="btn-prev" class="np-control-btn np-track-btn" title="Vorheriger Titel">
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
-                                </svg>
-                            </button>
-                            <button type="button" id="btn-play-pause" class="np-control-btn np-control-main" title="Wiedergabe/Pause">
-                                <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M8 5v14l11-7z"/>
-                                </svg>
-                                <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
-                                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                                </svg>
-                            </button>
-                            <button type="button" id="btn-next" class="np-control-btn np-track-btn" title="Nächster Titel">
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="np-service" class="np-service"></div>
-                    </div>
-                </div>
+                    <span class="source-name">Qobuz</span>
+                    <span class="source-desc">Hi-Res Streaming</span>
+                </button>
+
+                <!-- Future sources can be added here -->
             </div>
-        }
+
+            <a href="/Players" class="players-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
+                </svg>
+                <span>Bluesound Players verwalten</span>
+            </a>
+        </div>
     </main>
+
+    <!-- User Selection Overlay -->
+    <div id="user-overlay" class="user-overlay">
+        <div class="user-modal">
+            <div class="user-modal-header">
+                <h3>Wer streamt?</h3>
+                <button type="button" class="btn-close-modal" onclick="closeUserOverlay()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="user-grid" id="user-grid">
+                <!-- Profiles will be rendered here -->
+            </div>
+            <button type="button" class="btn-add-user" onclick="showAddProfileDialog()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Profil hinzufugen</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Profile Dialog -->
+    <div id="add-profile-dialog" class="add-profile-dialog">
+        <div class="add-profile-modal">
+            <div class="add-profile-header">
+                <h3>Neues Profil</h3>
+            </div>
+            <form id="add-profile-form" onsubmit="createProfile(event)">
+                <div class="form-group">
+                    <label for="profile-name">Name</label>
+                    <input type="text" id="profile-name" placeholder="z.B. Max" required autofocus>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeAddProfileDialog()">Abbrechen</button>
+                    <button type="submit" class="btn-primary">Erstellen</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
+<script src="~/js/user-profiles.js"></script>
+
 <style>
-    /* Loading Overlay */
-    .loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(10, 10, 11, 0.85);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-    }
-
-    .loading-overlay.active {
-        display: flex;
-        opacity: 1;
-    }
-
-    .loading-spinner {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .spinner-ring {
-        position: absolute;
-        border-radius: 50%;
-        border: 2px solid transparent;
-        animation: spin 1.2s linear infinite;
-    }
-
-    .spinner-ring:nth-child(1) {
-        width: 50px;
-        height: 50px;
-        border-top-color: #22c55e;
-        animation-duration: 1s;
-    }
-
-    .spinner-ring:nth-child(2) {
-        width: 38px;
-        height: 38px;
-        border-right-color: #3b82f6;
-        animation-duration: 1.5s;
-        animation-direction: reverse;
-    }
-
-    .spinner-ring:nth-child(3) {
-        width: 26px;
-        height: 26px;
-        border-bottom-color: #f4f4f5;
-        animation-duration: 2s;
-    }
-
-    .loading-spinner {
-        position: relative;
-        width: 50px;
-        height: 50px;
-    }
-
-    .loading-text {
-        position: absolute;
-        top: 70px;
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-        letter-spacing: 0.02em;
-    }
-
-    @@keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
     /* CSS Variables */
     :root {
         --bg-primary: #0a0a0b;
@@ -515,20 +111,19 @@
         --text-primary: #f4f4f5;
         --text-secondary: #a1a1aa;
         --text-muted: #71717a;
-        --accent-group: #22c55e;
-        --accent-stereo: #3b82f6;
-        --accent-single: #71717a;
-        --danger: #ef4444;
-        --danger-hover: #dc2626;
+        --accent-qobuz: #1db954;
+        --accent-blue: #3b82f6;
         --radius-sm: 6px;
         --radius-md: 10px;
         --radius-lg: 14px;
+        --radius-xl: 20px;
         --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+        --shadow-modal: 0 25px 50px rgba(0, 0, 0, 0.5);
         --transition: 0.15s ease;
     }
 
-    /* Reset & Base */
-    .bluesound-app {
+    /* Base */
+    .source-app {
         font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
         background: var(--bg-primary);
         min-height: 100vh;
@@ -537,18 +132,15 @@
     }
 
     /* Header */
-    .app-header {
+    .source-header {
         background: var(--bg-secondary);
         border-bottom: 1px solid var(--border-subtle);
-        position: sticky;
-        top: 0;
-        z-index: 100;
         padding: 0 max(16px, env(safe-area-inset-left));
     }
 
-    .header-content {
+    .source-header .header-content {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         padding: 14px 0;
         max-width: 1200px;
@@ -574,868 +166,444 @@
         margin: 0;
     }
 
-    .btn-refresh {
+    /* Main Content */
+    .source-main {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 14px;
+        justify-content: center;
+        min-height: calc(100vh - 60px);
+        padding: 40px 20px;
+    }
+
+    .source-container {
+        text-align: center;
+        max-width: 600px;
+        width: 100%;
+    }
+
+    .source-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 8px;
+        letter-spacing: -0.02em;
+    }
+
+    .source-subtitle {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin: 0 0 40px;
+    }
+
+    /* Source Grid */
+    .source-grid {
+        display: flex;
+        justify-content: center;
+        gap: 24px;
+        margin-bottom: 60px;
+    }
+
+    .source-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 32px;
+        width: 180px;
+        background: var(--bg-card);
+        border: 2px solid var(--border-subtle);
+        border-radius: var(--radius-xl);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .source-card:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--accent-qobuz);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .source-card:active {
+        transform: translateY(-2px);
+    }
+
+    .source-icon {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(29, 185, 84, 0.1);
+    }
+
+    .source-icon svg {
+        width: 48px;
+        height: 48px;
+    }
+
+    .qobuz-icon {
+        color: var(--accent-qobuz);
+    }
+
+    .source-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .source-desc {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* Players Link */
+    .players-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 24px;
         background: var(--bg-card);
         border: 1px solid var(--border-accent);
         border-radius: var(--radius-md);
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all var(--transition);
+    }
+
+    .players-link:hover {
+        background: var(--bg-card-hover);
         color: var(--text-primary);
-        font-size: 0.875rem;
-        font-weight: 500;
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .players-link svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* User Overlay */
+    .user-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .user-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .user-modal {
+        background: var(--bg-secondary);
+        border-radius: var(--radius-lg);
+        width: 100%;
+        max-width: 500px;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: var(--shadow-modal);
+        animation: modalIn 0.25s ease;
+    }
+
+    @@keyframes modalIn {
+        from {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .user-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .user-modal-header h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .btn-close-modal {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        transition: all var(--transition);
+    }
+
+    .btn-close-modal:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+    }
+
+    .btn-close-modal svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* User Grid */
+    .user-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 16px;
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .user-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 20px 16px;
+        background: var(--bg-card);
+        border: 2px solid transparent;
+        border-radius: var(--radius-md);
         cursor: pointer;
         transition: all var(--transition);
     }
 
-    .btn-refresh:hover {
+    .user-card:hover {
         background: var(--bg-card-hover);
-        border-color: rgba(255, 255, 255, 0.15);
+        border-color: var(--border-accent);
     }
 
-    .btn-refresh svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .btn-qobuz {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 14px;
+    .user-card.selected {
+        border-color: var(--accent-qobuz);
         background: rgba(29, 185, 84, 0.1);
-        border: 1px solid rgba(29, 185, 84, 0.3);
-        border-radius: var(--radius-md);
-        color: #1db954;
-        font-size: 0.875rem;
-        font-weight: 500;
-        text-decoration: none;
-        transition: all var(--transition);
     }
 
-    .btn-qobuz:hover {
-        background: rgba(29, 185, 84, 0.2);
-        border-color: rgba(29, 185, 84, 0.5);
-    }
-
-    .btn-qobuz svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    /* Alerts */
-    .alert {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
-        margin: 16px max(16px, env(safe-area-inset-left));
-        border-radius: var(--radius-md);
-        font-size: 0.875rem;
-        max-width: 1200px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-
-    .alert svg {
-        width: 18px;
-        height: 18px;
-        flex-shrink: 0;
-    }
-
-    .alert-error {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-        color: #fca5a5;
-    }
-
-    .alert-success {
-        background: rgba(34, 197, 94, 0.1);
-        border: 1px solid rgba(34, 197, 94, 0.2);
-        color: #86efac;
-    }
-
-    /* Main Content */
-    .main-content {
-        padding: 20px max(16px, env(safe-area-inset-left));
-        padding-bottom: max(20px, env(safe-area-inset-bottom));
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
-    /* Empty State */
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: var(--text-secondary);
-    }
-
-    .empty-state svg {
+    .user-avatar {
         width: 64px;
         height: 64px;
-        margin-bottom: 16px;
-        opacity: 0.4;
-    }
-
-    .empty-state h2 {
-        font-size: 1.125rem;
-        font-weight: 600;
-        margin: 0 0 8px;
-        color: var(--text-primary);
-    }
-
-    .empty-state p {
-        font-size: 0.875rem;
-        margin: 0;
-        max-width: 300px;
-        margin-inline: auto;
-    }
-
-    /* Stats */
-    .player-stats {
+        border-radius: 50%;
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 16px;
-        font-size: 0.875rem;
-        color: var(--text-secondary);
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: white;
     }
 
-    .stat strong {
+    .user-name {
+        font-size: 0.9rem;
+        font-weight: 500;
         color: var(--text-primary);
-        font-weight: 600;
-    }
-
-    .stat-divider {
-        color: var(--text-muted);
-    }
-
-    /* Player Grid */
-    .player-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 16px;
-    }
-
-    /* Player Card */
-    .player-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-lg);
-        overflow: hidden;
-        box-shadow: var(--shadow-card);
-        transition: all var(--transition);
-    }
-
-    .player-card:hover {
-        border-color: var(--border-accent);
-        transform: translateY(-1px);
-    }
-
-    .card-group {
-        border-left: 3px solid var(--accent-group);
-    }
-
-    .card-stereo {
-        border-left: 3px solid var(--accent-stereo);
-    }
-
-    .card-single {
-        border-left: 3px solid transparent;
-    }
-
-    /* Card Header */
-    .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        padding: 14px 14px 0;
-        gap: 10px;
-    }
-
-    .card-title-area {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .card-title {
-        font-size: 1rem;
-        font-weight: 600;
-        margin: 0 0 6px;
-        letter-spacing: -0.01em;
+        text-align: center;
+        max-width: 100%;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .card-badge {
-        display: inline-flex;
+    .user-status {
+        font-size: 0.7rem;
+        color: var(--accent-qobuz);
+        display: flex;
         align-items: center;
         gap: 4px;
-        padding: 3px 8px;
-        border-radius: 20px;
-        font-size: 0.7rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
     }
 
-    .card-badge svg {
+    .user-status svg {
         width: 12px;
         height: 12px;
     }
 
-    .badge-group {
-        background: rgba(34, 197, 94, 0.15);
-        color: var(--accent-group);
-    }
-
-    .badge-stereo {
-        background: rgba(59, 130, 246, 0.15);
-        color: var(--accent-stereo);
-    }
-
-    .badge-single {
-        background: rgba(113, 113, 122, 0.15);
-        color: var(--accent-single);
-    }
-
-    /* Dissolve Button */
-    .btn-dissolve {
+    /* Add User Button */
+    .btn-add-user {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
+        gap: 10px;
+        width: 100%;
+        padding: 16px;
         background: transparent;
-        border: 1px solid var(--border-accent);
-        border-radius: var(--radius-sm);
-        color: var(--text-muted);
+        border: none;
+        border-top: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-size: 0.9rem;
         cursor: pointer;
         transition: all var(--transition);
-        flex-shrink: 0;
     }
 
-    .btn-dissolve:hover {
-        background: rgba(239, 68, 68, 0.1);
-        border-color: var(--danger);
-        color: var(--danger);
+    .btn-add-user:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
     }
 
-    .btn-dissolve svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    /* Player List */
-    .player-list {
-        padding: 10px 14px 14px;
-    }
-
-    .player-item {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding: 10px;
-        margin: 0 -10px;
-        border-radius: var(--radius-md);
-        transition: background var(--transition);
-    }
-
-    .player-item:hover {
-        background: rgba(255, 255, 255, 0.03);
-    }
-
-    .player-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .player-volume-row {
-        padding-left: 46px; /* Align with player info (icon width + gap) */
-    }
-
-    .player-slave {
-        /* No indentation - all players on same level */
-    }
-
-    .player-slave .player-volume-row {
-        padding-left: 80px; /* Account for ungroup button + icon + gaps */
-    }
-
-    .player-icon {
-        flex-shrink: 0;
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--bg-secondary);
-        border-radius: var(--radius-sm);
-    }
-
-    .player-icon svg {
+    .btn-add-user svg {
         width: 20px;
         height: 20px;
-        color: var(--text-secondary);
     }
 
-    .player-master .player-icon svg {
-        color: var(--text-primary);
-    }
-
-    .player-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .player-name {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: var(--text-primary);
-    }
-
-    .master-label {
-        font-size: 0.65rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        padding: 2px 5px;
-        background: rgba(255, 255, 255, 0.08);
-        border-radius: 4px;
-        color: var(--text-secondary);
-    }
-
-    .stereo-label {
-        font-size: 0.65rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        padding: 2px 5px;
-        background: rgba(59, 130, 246, 0.15);
-        border-radius: 4px;
-        color: var(--accent-stereo);
-    }
-
-    .player-stereo {
-        border-left-color: var(--accent-stereo);
-    }
-
-    .icon-stereo svg {
-        color: var(--accent-stereo) !important;
-    }
-
-    .player-model {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        margin-top: 2px;
-    }
-
-    .channel-indicator {
-        display: inline-flex;
+    /* Add Profile Dialog */
+    .add-profile-dialog {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: none;
         align-items: center;
         justify-content: center;
-        width: 16px;
-        height: 16px;
-        background: var(--accent-stereo);
-        color: white;
-        font-size: 0.65rem;
-        font-weight: 700;
-        border-radius: 4px;
+        z-index: 1100;
+        padding: 20px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
     }
 
-    /* Player Actions */
-    .player-actions {
+    .add-profile-dialog.active {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-left: auto;
-    }
-
-    /* Volume Controls */
-    .volume-controls {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    /* Fixed Volume */
-    .fixed-volume {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: var(--text-muted);
-        font-size: 0.75rem;
-    }
-
-    .fixed-volume svg {
-        width: 16px;
-        height: 16px;
-        opacity: 0.6;
-    }
-
-    .volume-form {
-        display: inline-flex;
-    }
-
-    .btn-volume {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        height: 28px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-accent);
-        border-radius: 50%;
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: all var(--transition);
-    }
-
-    .btn-volume:hover {
-        background: var(--bg-card-hover);
-        color: var(--text-primary);
-        border-color: var(--text-muted);
-    }
-
-    .btn-volume:active {
-        transform: scale(0.95);
-    }
-
-    .btn-volume svg {
-        width: 14px;
-        height: 14px;
-    }
-
-    .btn-volume-up:hover {
-        border-color: var(--accent-group);
-        color: var(--accent-group);
-    }
-
-    .btn-volume-down:hover {
-        border-color: var(--accent-stereo);
-        color: var(--accent-stereo);
-    }
-
-    .volume-bar {
-        flex: 1;
-        max-width: 120px;
-        height: 4px;
-        background: var(--bg-secondary);
-        border-radius: 2px;
-        overflow: hidden;
-    }
-
-    .volume-fill {
-        height: 100%;
-        background: linear-gradient(90deg, var(--accent-group), #4ade80);
-        border-radius: 2px;
-        transition: width 0.3s ease;
-    }
-
-    /* Ungroup Button */
-    .btn-ungroup {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 24px;
-        background: transparent;
-        border: 1px solid transparent;
-        border-radius: var(--radius-sm);
-        color: var(--text-muted);
-        cursor: pointer;
-        transition: all var(--transition);
-        opacity: 0.4;
-        flex-shrink: 0;
-    }
-
-    .player-item:hover .btn-ungroup {
         opacity: 1;
     }
 
-    .btn-ungroup:hover {
-        background: rgba(239, 68, 68, 0.1);
-        border-color: var(--danger);
-        color: var(--danger);
-    }
-
-    .btn-ungroup svg {
-        width: 14px;
-        height: 14px;
-    }
-
-    /* Join Group Button & Dropdown */
-    .join-group-dropdown {
-        position: relative;
-    }
-
-    .btn-join {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 32px;
-        background: transparent;
-        border: 1px solid var(--border-accent);
-        border-radius: var(--radius-sm);
-        color: var(--text-muted);
-        cursor: pointer;
-        transition: all var(--transition);
-        flex-shrink: 0;
-    }
-
-    .btn-join:hover {
-        background: rgba(34, 197, 94, 0.1);
-        border-color: var(--accent-group);
-        color: var(--accent-group);
-    }
-
-    .btn-join svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    .join-dropdown-menu {
-        display: none;
-        position: absolute;
-        top: 100%;
-        right: 0;
-        margin-top: 6px;
+    .add-profile-modal {
         background: var(--bg-secondary);
+        border-radius: var(--radius-lg);
+        width: 100%;
+        max-width: 400px;
+        padding: 24px;
+        box-shadow: var(--shadow-modal);
+        animation: modalIn 0.25s ease;
+    }
+
+    .add-profile-header h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 20px;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 12px 14px;
+        background: var(--bg-card);
         border: 1px solid var(--border-accent);
         border-radius: var(--radius-md);
-        min-width: 180px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-        z-index: 1000;
-        overflow: hidden;
-    }
-
-    .join-group-dropdown:focus-within .join-dropdown-menu,
-    .join-group-dropdown:hover .join-dropdown-menu {
-        display: block;
-    }
-
-    .dropdown-header {
-        padding: 8px 12px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-muted);
-        border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .dropdown-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-        padding: 10px 12px;
-        background: none;
-        border: none;
         color: var(--text-primary);
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition: background var(--transition);
-        text-align: left;
+        font-size: 1rem;
+        transition: all var(--transition);
     }
 
-    .dropdown-item:hover {
-        background: rgba(34, 197, 94, 0.1);
+    .form-group input:focus {
+        outline: none;
+        border-color: var(--accent-qobuz);
+        box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.1);
     }
 
-    .dropdown-item-name {
-        font-weight: 500;
-    }
-
-    .dropdown-item-type {
-        font-size: 0.7rem;
+    .form-group input::placeholder {
         color: var(--text-muted);
-        text-transform: uppercase;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    .btn-secondary {
+        padding: 10px 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-accent);
+        border-radius: var(--radius-md);
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .btn-secondary:hover {
+        background: var(--bg-card-hover);
+        color: var(--text-primary);
+    }
+
+    .btn-primary {
+        padding: 10px 20px;
+        background: var(--accent-qobuz);
+        border: none;
+        border-radius: var(--radius-md);
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .btn-primary:hover {
+        background: #1ed760;
     }
 
     /* Mobile */
     @@media (max-width: 480px) {
-        .btn-refresh span,
-        .btn-qobuz span {
-            display: none;
+        .source-title {
+            font-size: 1.5rem;
         }
 
-        .btn-refresh,
-        .btn-qobuz {
-            padding: 8px;
-        }
-
-        .player-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .brand h1 {
-            font-size: 1.1rem;
-        }
-
-        .player-item:hover .btn-ungroup {
-            opacity: 1;
-        }
-
-        .btn-ungroup {
-            opacity: 0.7;
-        }
-
-        .player-volume-row {
-            padding-left: 46px;
-        }
-
-        .player-slave .player-volume-row {
-            padding-left: 70px;
-        }
-
-        .volume-bar {
-            max-width: 100px;
-        }
-    }
-
-    /* Now Playing Section */
-    .now-playing-section {
-        background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-lg);
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: var(--shadow-card);
-    }
-
-    .now-playing-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .now-playing-header h2 {
-        font-size: 1rem;
-        font-weight: 600;
-        margin: 0;
-        color: var(--text-primary);
-    }
-
-    .np-player-name {
-        font-size: 0.8rem;
-        color: var(--accent-group);
-        font-weight: 500;
-        background: rgba(34, 197, 94, 0.1);
-        padding: 4px 10px;
-        border-radius: 20px;
-    }
-
-    .now-playing-content {
-        display: flex;
-        gap: 20px;
-        align-items: flex-start;
-    }
-
-    .np-artwork {
-        flex-shrink: 0;
-        width: 120px;
-        height: 120px;
-        background: var(--bg-secondary);
-        border-radius: var(--radius-md);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-    }
-
-    .np-artwork svg {
-        width: 48px;
-        height: 48px;
-        color: var(--text-muted);
-        opacity: 0.5;
-    }
-
-    .np-artwork img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .np-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .np-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .np-artist {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        margin-bottom: 2px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .np-album {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        margin-bottom: 12px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .np-progress {
-        margin-bottom: 16px;
-    }
-
-    .np-progress-bar {
-        width: 100%;
-        height: 4px;
-        background: var(--bg-secondary);
-        border-radius: 2px;
-        overflow: hidden;
-        margin-bottom: 6px;
-    }
-
-    .np-progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, var(--accent-group), #4ade80);
-        border-radius: 2px;
-        transition: width 0.3s ease;
-    }
-
-    .np-time {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        font-variant-numeric: tabular-nums;
-    }
-
-    .np-controls {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
-    }
-
-    .np-control-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-accent);
-        border-radius: 50%;
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: all var(--transition);
-    }
-
-    .np-control-btn:hover {
-        background: var(--bg-card-hover);
-        color: var(--text-primary);
-        border-color: var(--text-muted);
-    }
-
-    .np-control-btn:active {
-        transform: scale(0.95);
-    }
-
-    .np-control-btn svg {
-        width: 20px;
-        height: 20px;
-    }
-
-    .np-control-main {
-        width: 52px;
-        height: 52px;
-        background: var(--accent-group);
-        border-color: var(--accent-group);
-        color: white;
-    }
-
-    .np-control-main:hover {
-        background: #16a34a;
-        border-color: #16a34a;
-        color: white;
-    }
-
-    .np-control-main svg {
-        width: 26px;
-        height: 26px;
-    }
-
-    .np-service {
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    /* Selected player card */
-    .player-card {
-        cursor: pointer;
-    }
-
-    .player-card.selected {
-        border-color: var(--accent-group);
-        box-shadow: 0 0 0 1px var(--accent-group), var(--shadow-card);
-    }
-
-    /* Mobile Now Playing */
-    @@media (max-width: 480px) {
-        .now-playing-content {
+        .source-grid {
             flex-direction: column;
             align-items: center;
-            text-align: center;
         }
 
-        .np-artwork {
-            width: 160px;
-            height: 160px;
-        }
-
-        .np-info {
+        .source-card {
             width: 100%;
+            max-width: 200px;
         }
 
-        .np-controls {
-            justify-content: center;
+        .user-grid {
+            grid-template-columns: repeat(2, 1fr);
         }
 
-        .np-time {
-            padding: 0 10px;
+        .user-avatar {
+            width: 56px;
+            height: 56px;
+            font-size: 1.25rem;
         }
     }
 
-    /* Light mode support */
+    /* Light mode */
     @@media (prefers-color-scheme: light) {
         :root {
             --bg-primary: #f8f9fa;
@@ -1447,270 +615,196 @@
             --text-primary: #18181b;
             --text-secondary: #52525b;
             --text-muted: #a1a1aa;
-            --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-modal: 0 25px 50px rgba(0, 0, 0, 0.15);
         }
 
-        .volume-bar {
-            background: #e4e4e7;
-        }
-
-        .player-icon {
-            background: #f4f4f5;
-        }
-
-        .master-label {
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        .loading-overlay {
-            background: rgba(248, 249, 250, 0.9);
+        .user-overlay,
+        .add-profile-dialog {
+            background: rgba(0, 0, 0, 0.5);
         }
     }
 </style>
 
 <script>
-    async function adjustVolume(button, delta) {
-        const container = button.closest('.volume-controls');
-        const playerIp = container.dataset.playerIp;
-        const playerPort = container.dataset.playerPort;
-        let currentVolume = parseInt(container.dataset.volume) || 0;
+    // State
+    let selectedSource = null;
 
-        // Calculate new volume
-        let newVolume = Math.max(0, Math.min(100, currentVolume + delta));
-
-        // Optimistic UI update
-        container.dataset.volume = newVolume;
-        const volumeFill = container.querySelector('.volume-fill');
-        if (volumeFill) {
-            volumeFill.style.width = newVolume + '%';
-        }
-
-        // Disable buttons temporarily
-        const buttons = container.querySelectorAll('.btn-volume');
-        buttons.forEach(btn => btn.disabled = true);
-
-        try {
-            const formData = new FormData();
-            formData.append('playerIp', playerIp);
-            formData.append('playerPort', playerPort);
-            formData.append('volume', newVolume);
-
-            const response = await fetch('?handler=Volume', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: formData
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Update with actual volume from server
-                container.dataset.volume = data.volume;
-                if (volumeFill) {
-                    volumeFill.style.width = data.volume + '%';
-                }
-            }
-        } catch (error) {
-            console.error('Volume adjustment failed:', error);
-            // Revert on error
-            container.dataset.volume = currentVolume;
-            if (volumeFill) {
-                volumeFill.style.width = currentVolume + '%';
-            }
-        } finally {
-            buttons.forEach(btn => btn.disabled = false);
-        }
-    }
-
-    // Loading overlay functions
-    const loadingOverlay = document.getElementById('loading-overlay');
-
-    function showLoading() {
-        loadingOverlay.style.display = 'flex';
-        // Trigger reflow for animation
-        loadingOverlay.offsetHeight;
-        loadingOverlay.classList.add('active');
-    }
-
-    function hideLoading() {
-        loadingOverlay.classList.remove('active');
-        setTimeout(() => {
-            loadingOverlay.style.display = 'none';
-        }, 200);
-    }
-
-    // Show loading on form submissions (except volume AJAX)
+    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
-        // Add loading to all forms except volume forms
-        document.querySelectorAll('form').forEach(form => {
-            // Skip forms that are handled via AJAX (volume controls are buttons, not forms now)
-            if (!form.classList.contains('volume-form')) {
-                form.addEventListener('submit', function() {
-                    showLoading();
-                });
-            }
-        });
+        // Initialize profile manager and perform migration
+        UserProfileManager.initialize();
 
-        // Also show loading when clicking refresh button
-        const refreshBtn = document.querySelector('.btn-refresh');
-        if (refreshBtn) {
-            refreshBtn.closest('form').addEventListener('submit', function() {
-                showLoading();
-            });
+        // Check if there are any profiles
+        const profiles = UserProfileManager.getAllProfiles();
+        if (profiles.length === 0) {
+            // No profiles - show add profile dialog directly
+            showAddProfileDialog();
         }
     });
 
-    // Hide loading when page is fully loaded (in case of back/forward navigation)
-    window.addEventListener('pageshow', function(event) {
-        if (event.persisted) {
-            hideLoading();
-        }
-    });
+    // Select a music source
+    function selectSource(source) {
+        selectedSource = source;
+        showUserOverlay();
+    }
 
-    // Now Playing functionality
-    let selectedPlayerIp = null;
-    let selectedPlayerPort = null;
-    let selectedPlayerName = null;
-    let playbackRefreshInterval = null;
+    // Show user selection overlay
+    function showUserOverlay() {
+        const overlay = document.getElementById('user-overlay');
+        renderUserGrid();
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
 
-    function selectPlayer(cardElement) {
-        // Don't select if clicking on a button or form
-        if (event.target.closest('button') || event.target.closest('form') || event.target.closest('.join-dropdown-menu')) {
+    // Close user selection overlay
+    function closeUserOverlay() {
+        const overlay = document.getElementById('user-overlay');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+        selectedSource = null;
+    }
+
+    // Render user grid
+    function renderUserGrid() {
+        const grid = document.getElementById('user-grid');
+        const profiles = UserProfileManager.getAllProfiles();
+        const activeProfileId = UserProfileManager.getActiveProfileId();
+
+        if (profiles.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Profile erstellt</div>';
             return;
         }
 
-        const ip = cardElement.dataset.playerIp;
-        const port = cardElement.dataset.playerPort;
-        const name = cardElement.dataset.playerName;
+        grid.innerHTML = profiles.map(profile => {
+            const initial = UserProfileManager.getProfileInitial(profile.name);
+            const color = UserProfileManager.getProfileColor(profile.id);
+            const hasQobuz = profile.qobuz && profile.qobuz.userId;
+            const isActive = profile.id === activeProfileId;
 
-        if (!ip || !port) return;
-
-        // Update selection
-        document.querySelectorAll('.player-card').forEach(c => c.classList.remove('selected'));
-        cardElement.classList.add('selected');
-
-        selectedPlayerIp = ip;
-        selectedPlayerPort = port;
-        selectedPlayerName = name;
-
-        // Show now playing section
-        document.getElementById('now-playing').style.display = 'block';
-        document.getElementById('np-player-name').textContent = name;
-
-        // Fetch playback status
-        fetchPlaybackStatus();
-
-        // Start auto-refresh
-        if (playbackRefreshInterval) {
-            clearInterval(playbackRefreshInterval);
-        }
-        playbackRefreshInterval = setInterval(fetchPlaybackStatus, 2000);
+            return `
+                <div class="user-card ${isActive ? 'selected' : ''}" onclick="selectUser('${profile.id}')">
+                    <div class="user-avatar" style="background: ${color}">${initial}</div>
+                    <span class="user-name">${escapeHtml(profile.name)}</span>
+                    ${hasQobuz ? `
+                        <span class="user-status">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                            Login
+                        </span>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
     }
 
-    async function fetchPlaybackStatus() {
-        if (!selectedPlayerIp || !selectedPlayerPort) return;
+    // Select a user profile
+    function selectUser(profileId) {
+        // Set the profile as active
+        UserProfileManager.setActiveProfileId(profileId);
 
-        try {
-            const response = await fetch(`?handler=PlaybackStatus&playerIp=${selectedPlayerIp}&playerPort=${selectedPlayerPort}`);
-            const data = await response.json();
+        // Get the profile to check if Qobuz is logged in
+        const profile = UserProfileManager.getProfileById(profileId);
 
-            if (data.success) {
-                updateNowPlaying(data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch playback status:', error);
+        // Save the source before closing (closeUserOverlay resets selectedSource)
+        const source = selectedSource;
+
+        // Close overlay
+        closeUserOverlay();
+
+        // Navigate to Qobuz page
+        if (source === 'qobuz') {
+            window.location.href = '/Qobuz';
         }
     }
 
-    function updateNowPlaying(data) {
-        // Update title, artist, album
-        document.getElementById('np-title').textContent = data.title || 'Kein Titel';
-        document.getElementById('np-artist').textContent = data.artist || '';
-        document.getElementById('np-album').textContent = data.album || '';
+    // Show add profile dialog
+    function showAddProfileDialog() {
+        const dialog = document.getElementById('add-profile-dialog');
+        dialog.classList.add('active');
+        document.body.style.overflow = 'hidden';
 
-        // Update artwork
-        const artworkContainer = document.getElementById('np-artwork');
-        if (data.imageUrl) {
-            artworkContainer.innerHTML = `<img src="${data.imageUrl}" alt="Album Art" onerror="this.parentElement.innerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><circle cx=\\'12\\' cy=\\'12\\' r=\\'10\\'/><circle cx=\\'12\\' cy=\\'12\\' r=\\'3\\'/></svg>'">`;
+        // Focus input
+        setTimeout(() => {
+            document.getElementById('profile-name').focus();
+        }, 100);
+    }
+
+    // Close add profile dialog
+    function closeAddProfileDialog() {
+        const dialog = document.getElementById('add-profile-dialog');
+        dialog.classList.remove('active');
+        document.getElementById('profile-name').value = '';
+
+        // Restore body scroll only if user overlay is not active
+        const userOverlay = document.getElementById('user-overlay');
+        if (!userOverlay.classList.contains('active')) {
+            document.body.style.overflow = '';
+        }
+    }
+
+    // Create new profile
+    function createProfile(event) {
+        event.preventDefault();
+
+        const nameInput = document.getElementById('profile-name');
+        const name = nameInput.value.trim();
+
+        if (!name) return;
+
+        // Create the profile
+        const newProfile = UserProfileManager.createProfile(name);
+
+        // Set as active
+        UserProfileManager.setActiveProfileId(newProfile.id);
+
+        // Close dialog
+        closeAddProfileDialog();
+
+        // If user overlay is open, refresh the grid
+        const userOverlay = document.getElementById('user-overlay');
+        if (userOverlay.classList.contains('active')) {
+            renderUserGrid();
         } else {
-            artworkContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>`;
-        }
-
-        // Update progress and track buttons (hide for radio/streams without duration)
-        const progressSection = document.getElementById('np-progress');
-        const trackButtons = document.querySelectorAll('.np-track-btn');
-        const hasTrackInfo = data.totalSeconds && data.totalSeconds > 0;
-
-        if (hasTrackInfo) {
-            progressSection.style.display = 'block';
-            trackButtons.forEach(btn => btn.style.display = 'flex');
-            document.getElementById('np-progress-fill').style.width = `${data.progressPercent || 0}%`;
-            document.getElementById('np-current-time').textContent = data.formattedPosition || '0:00';
-            document.getElementById('np-total-time').textContent = data.formattedDuration || '0:00';
-        } else {
-            progressSection.style.display = 'none';
-            trackButtons.forEach(btn => btn.style.display = 'none');
-        }
-
-        // Update play/pause button
-        const iconPlay = document.getElementById('icon-play');
-        const iconPause = document.getElementById('icon-pause');
-        if (data.isPlaying) {
-            iconPlay.style.display = 'none';
-            iconPause.style.display = 'block';
-        } else {
-            iconPlay.style.display = 'block';
-            iconPause.style.display = 'none';
-        }
-
-        // Update service
-        document.getElementById('np-service').textContent = data.service || '';
-    }
-
-    async function controlPlayback(action) {
-        if (!selectedPlayerIp || !selectedPlayerPort) return;
-
-        try {
-            const formData = new FormData();
-            formData.append('playerIp', selectedPlayerIp);
-            formData.append('playerPort', selectedPlayerPort);
-
-            const response = await fetch(`?handler=${action}`, {
-                method: 'POST',
-                headers: {
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: formData
-            });
-
-            if (response.ok) {
-                // Fetch updated status after a short delay
-                setTimeout(fetchPlaybackStatus, 200);
-            }
-        } catch (error) {
-            console.error(`Playback control failed (${action}):`, error);
+            // If this was the first profile, go ahead and select a source
+            showUserOverlay();
         }
     }
 
-    // Set up playback control buttons
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('btn-play-pause')?.addEventListener('click', function() {
-            const iconPlay = document.getElementById('icon-play');
-            if (iconPlay.style.display !== 'none') {
-                controlPlayback('Play');
-            } else {
-                controlPlayback('Pause');
+    // Escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Close overlays on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const addDialog = document.getElementById('add-profile-dialog');
+            const userOverlay = document.getElementById('user-overlay');
+
+            if (addDialog.classList.contains('active')) {
+                closeAddProfileDialog();
+            } else if (userOverlay.classList.contains('active')) {
+                closeUserOverlay();
             }
-        });
+        }
+    });
 
-        document.getElementById('btn-prev')?.addEventListener('click', function() {
-            controlPlayback('PreviousTrack');
-        });
+    // Close user overlay when clicking outside
+    document.getElementById('user-overlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeUserOverlay();
+        }
+    });
 
-        document.getElementById('btn-next')?.addEventListener('click', function() {
-            controlPlayback('NextTrack');
-        });
+    // Close add profile dialog when clicking outside
+    document.getElementById('add-profile-dialog').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAddProfileDialog();
+        }
     });
 </script>

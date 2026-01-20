@@ -2,35 +2,115 @@
 @model QobuzModel
 @{
     ViewData["Title"] = "Qobuz";
+    ViewData["ShowHamburgerMenu"] = true;
+    ViewData["CurrentPage"] = "Qobuz";
 }
 
 <div class="qobuz-app">
     <!-- Header -->
     <header class="app-header">
         <div class="header-content">
-            <a href="/" class="back-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-            </a>
-            <div class="brand">
-                <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 6v6l4 2"/>
-                </svg>
-                <h1>Qobuz</h1>
-            </div>
-            <div id="user-menu" class="user-menu" style="display: none;">
-                <button type="button" class="btn-logout" onclick="logout()" title="Abmelden">
+            <div class="header-left">
+                <button type="button" class="hamburger-btn" onclick="toggleMenu()" aria-label="Menu">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
                     </svg>
                 </button>
+                <div class="brand">
+                    <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <h1>Qobuz</h1>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div id="user-menu" class="user-menu" style="display: none;">
+                    <button type="button" class="btn-logout" onclick="logout()" title="Abmelden">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="profile-indicator" onclick="toggleMenu()">
+                    <span id="header-profile-initial" class="profile-initial">?</span>
+                </div>
             </div>
         </div>
     </header>
+
+    <!-- Hamburger Menu Overlay -->
+    <div id="menu-overlay" class="menu-overlay" onclick="closeMenu()"></div>
+
+    <!-- Hamburger Menu Panel -->
+    <nav id="menu-panel" class="menu-panel">
+        <div class="menu-header">
+            <div class="menu-profile" onclick="showProfileSwitcher()">
+                <div class="menu-profile-avatar" id="menu-profile-avatar">?</div>
+                <div class="menu-profile-info">
+                    <span class="menu-profile-name" id="menu-profile-name">Profil</span>
+                    <span class="menu-profile-switch">Profil wechseln</span>
+                </div>
+                <svg class="menu-profile-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                </svg>
+            </div>
+        </div>
+        <div class="menu-items">
+            <a href="/Qobuz" class="menu-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>Qobuz</span>
+            </a>
+            <a href="/Players" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
+                </svg>
+                <span>Players</span>
+            </a>
+        </div>
+        <div class="menu-footer">
+            <a href="/" class="menu-item menu-item-home">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span>Quellen</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Profile Switcher Modal -->
+    <div id="profile-switcher-overlay" class="profile-switcher-overlay" onclick="closeProfileSwitcher(event)">
+        <div class="profile-switcher-modal" onclick="event.stopPropagation()">
+            <div class="profile-switcher-header">
+                <h3>Profil wechseln</h3>
+                <button type="button" class="btn-close-modal" onclick="closeProfileSwitcher()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="profile-switcher-list" id="profile-switcher-list">
+                <!-- Profiles will be rendered here -->
+            </div>
+            <button type="button" class="btn-add-profile" onclick="createNewProfile()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Neues Profil erstellen</span>
+            </button>
+        </div>
+    </div>
 
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
@@ -313,26 +393,63 @@
         margin: 0 auto;
     }
 
-    .back-link {
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .hamburger-btn {
         display: flex;
         align-items: center;
         justify-content: center;
         width: 36px;
         height: 36px;
+        background: transparent;
+        border: none;
         color: var(--text-secondary);
-        text-decoration: none;
+        cursor: pointer;
         border-radius: var(--radius-sm);
         transition: all var(--transition);
     }
 
-    .back-link:hover {
-        color: var(--text-primary);
+    .hamburger-btn:hover {
         background: var(--bg-card);
+        color: var(--text-primary);
     }
 
-    .back-link svg {
-        width: 20px;
-        height: 20px;
+    .hamburger-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .profile-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: var(--accent-qobuz);
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .profile-indicator:hover {
+        transform: scale(1.05);
+    }
+
+    .profile-initial {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: white;
+        text-transform: uppercase;
     }
 
     .brand {
@@ -1498,12 +1615,10 @@
     }
 </style>
 
+<script src="~/js/user-profiles.js"></script>
+<script src="~/js/hamburger-menu.js"></script>
 <script>
-    // LocalStorage keys
-    const STORAGE_USER_ID = 'qobuz_user_id';
-    const STORAGE_AUTH_TOKEN = 'qobuz_auth_token';
-    const STORAGE_USER_NAME = 'qobuz_user_name';
-    const STORAGE_USER_AVATAR = 'qobuz_user_avatar';
+    // Global player selection storage key (not per-profile)
     const STORAGE_SELECTED_PLAYER = 'qobuz_selected_player';
 
     // DOM elements
@@ -1528,6 +1643,34 @@
     let audioPlayer = null;
     let isPlaying = false;
 
+    // Get active profile Qobuz credentials
+    function getQobuzCredentials() {
+        const activeProfile = UserProfileManager.getActiveProfile();
+        if (!activeProfile || !activeProfile.qobuz) return null;
+        return activeProfile.qobuz;
+    }
+
+    // Save Qobuz credentials to active profile
+    function saveQobuzCredentials(data) {
+        const activeProfileId = UserProfileManager.getActiveProfileId();
+        if (!activeProfileId) return;
+
+        UserProfileManager.updateQobuzCredentials(activeProfileId, {
+            userId: data.userId,
+            authToken: data.authToken,
+            displayName: data.displayName || null,
+            avatar: data.avatar || null
+        });
+    }
+
+    // Clear Qobuz credentials from active profile
+    function clearQobuzCredentials() {
+        const activeProfileId = UserProfileManager.getActiveProfileId();
+        if (!activeProfileId) return;
+
+        UserProfileManager.clearQobuzCredentials(activeProfileId);
+    }
+
     // Show/hide loading
     function showLoading() {
         loadingOverlay.classList.add('active');
@@ -1548,8 +1691,14 @@
 
     // Check for existing session on page load
     document.addEventListener('DOMContentLoaded', async function() {
-        const userId = localStorage.getItem(STORAGE_USER_ID);
-        const authToken = localStorage.getItem(STORAGE_AUTH_TOKEN);
+        // Initialize profile manager
+        UserProfileManager.initialize();
+        updateProfileDisplayQobuz();
+
+        // Get credentials from active profile
+        const creds = getQobuzCredentials();
+        const userId = creds?.userId;
+        const authToken = creds?.authToken;
 
         // Initialize audio player
         audioPlayer = new Audio();
@@ -1564,23 +1713,54 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Update stored data
-                    localStorage.setItem(STORAGE_USER_NAME, data.displayName || '');
-                    localStorage.setItem(STORAGE_USER_AVATAR, data.avatar || '');
+                    // Update stored data in profile
+                    saveQobuzCredentials({
+                        userId: data.userId,
+                        authToken: data.authToken,
+                        displayName: data.displayName,
+                        avatar: data.avatar
+                    });
 
                     showLoggedInState(data);
                     await loadPlaylists();
                 } else {
-                    // Token invalid, clear storage
-                    clearSession();
+                    // Token invalid, clear from profile
+                    clearQobuzCredentials();
                 }
             } catch (error) {
                 console.error('Token verification failed:', error);
-                clearSession();
+                clearQobuzCredentials();
             }
             hideLoading();
         }
     });
+
+    // Update profile display in header and menu (Qobuz-specific)
+    function updateProfileDisplayQobuz() {
+        const activeProfile = UserProfileManager.getActiveProfile();
+        if (!activeProfile) return;
+
+        const initial = UserProfileManager.getProfileInitial(activeProfile.name);
+        const color = UserProfileManager.getProfileColor(activeProfile.id);
+
+        // Update header indicator
+        const headerInitial = document.getElementById('header-profile-initial');
+        if (headerInitial) {
+            headerInitial.textContent = initial;
+            headerInitial.parentElement.style.background = color;
+        }
+
+        // Update menu profile display
+        const menuAvatar = document.getElementById('menu-profile-avatar');
+        const menuName = document.getElementById('menu-profile-name');
+        if (menuAvatar) {
+            menuAvatar.textContent = initial;
+            menuAvatar.style.background = color;
+        }
+        if (menuName) {
+            menuName.textContent = activeProfile.name;
+        }
+    }
 
     // Login form submission
     document.getElementById('login-form').addEventListener('submit', async function(e) {
@@ -1607,11 +1787,13 @@
             const data = await response.json();
 
             if (data.success) {
-                // Store session data
-                localStorage.setItem(STORAGE_USER_ID, data.userId);
-                localStorage.setItem(STORAGE_AUTH_TOKEN, data.authToken);
-                localStorage.setItem(STORAGE_USER_NAME, data.displayName || '');
-                localStorage.setItem(STORAGE_USER_AVATAR, data.avatar || '');
+                // Store session data in active profile
+                saveQobuzCredentials({
+                    userId: data.userId,
+                    authToken: data.authToken,
+                    displayName: data.displayName,
+                    avatar: data.avatar
+                });
 
                 showLoggedInState(data);
                 await loadPlaylists();
@@ -1646,8 +1828,9 @@
 
     // Load playlists
     async function loadPlaylists() {
-        const userId = localStorage.getItem(STORAGE_USER_ID);
-        const authToken = localStorage.getItem(STORAGE_AUTH_TOKEN);
+        const creds = getQobuzCredentials();
+        const userId = creds?.userId;
+        const authToken = creds?.authToken;
 
         if (!userId || !authToken) return;
 
@@ -1707,7 +1890,8 @@
 
     // Select playlist - load and show tracks
     async function selectPlaylist(playlistId) {
-        const authToken = localStorage.getItem(STORAGE_AUTH_TOKEN);
+        const creds = getQobuzCredentials();
+        const authToken = creds?.authToken;
         if (!authToken) return;
 
         showLoading();
@@ -1813,7 +1997,8 @@
         if (index < 0 || index >= currentTracks.length) return;
 
         const track = currentTracks[index];
-        const authToken = localStorage.getItem(STORAGE_AUTH_TOKEN);
+        const creds = getQobuzCredentials();
+        const authToken = creds?.authToken;
 
         if (!track.isStreamable) {
             showError('Dieser Titel ist nicht streambar');
@@ -2174,12 +2359,9 @@
         document.getElementById('playlists-grid').innerHTML = '';
     }
 
-    // Clear session data
+    // Clear session data (from active profile)
     function clearSession() {
-        localStorage.removeItem(STORAGE_USER_ID);
-        localStorage.removeItem(STORAGE_AUTH_TOKEN);
-        localStorage.removeItem(STORAGE_USER_NAME);
-        localStorage.removeItem(STORAGE_USER_AVATAR);
+        clearQobuzCredentials();
     }
 
     // Escape HTML

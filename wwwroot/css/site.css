@@ -8,17 +8,26 @@ html {
   }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
 html {
   position: relative;
   min-height: 100%;
+  background: #0a0a0b;
 }
 
 body {
-  margin-bottom: 60px;
+  margin: 0;
+  padding: 0;
+  background: #0a0a0b;
+}
+
+@media (prefers-color-scheme: light) {
+  html, body {
+    background: #f8f9fa;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
