@@ -1919,6 +1919,11 @@
         // Use global audio player (persists across page navigation)
         audioPlayer = window.GlobalPlayer?.getAudioPlayer() || new Audio();
 
+        // Add event listeners for progress updates
+        audioPlayer.addEventListener('timeupdate', updateProgress);
+        audioPlayer.addEventListener('ended', playNext);
+        audioPlayer.addEventListener('loadedmetadata', updateTotalTime);
+
         // Register playback callbacks with GlobalPlayer
         if (window.GlobalPlayer) {
             window.GlobalPlayer.registerPlaybackCallbacks({

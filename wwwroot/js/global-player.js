@@ -7,6 +7,7 @@
     // Constants
     const STORAGE_SELECTED_PLAYER = 'bluesound_selected_player';
     const STORAGE_STREAM_QUALITY = 'qobuz_stream_quality';
+    const STORAGE_PLAYBACK_STATE = 'global_playback_state';
 
     // State
     let globalSelectedPlayer = { type: 'browser', name: 'Dieses Gerät' };
@@ -40,6 +41,70 @@
     let currentPlaylist = [];
     let currentTrackIndex = -1;
 
+    // ==================== Playback State Persistence ====================
+
+    function savePlaybackState() {
+        if (!globalAudioPlayer || !globalAudioPlayer.src || globalSelectedPlayer.type !== 'browser') {
+            return;
+        }
+
+        const state = {
+            src: globalAudioPlayer.src,
+            currentTime: globalAudioPlayer.currentTime,
+            wasPlaying: globalIsPlaying,
+            track: globalCurrentTrack,
+            timestamp: Date.now()
+        };
+
+        try {
+            sessionStorage.setItem(STORAGE_PLAYBACK_STATE, JSON.stringify(state));
+        } catch (e) {
+            console.error('Failed to save playback state:', e);
+        }
+    }
+
+    function restorePlaybackState() {
+        if (!globalAudioPlayer || globalSelectedPlayer.type !== 'browser') {
+            return;
+        }
+
+        try {
+            const saved = sessionStorage.getItem(STORAGE_PLAYBACK_STATE);
+            if (!saved) return;
+
+            const state = JSON.parse(saved);
+
+            // Only restore if saved recently (within last 30 seconds)
+            if (Date.now() - state.timestamp > 30000) {
+                sessionStorage.removeItem(STORAGE_PLAYBACK_STATE);
+                return;
+            }
+
+            // Restore track info
+            if (state.track) {
+                setCurrentTrackInfo(state.track);
+            }
+
+            // Restore audio
+            if (state.src) {
+                globalAudioPlayer.src = state.src;
+                globalAudioPlayer.currentTime = state.currentTime || 0;
+
+                if (state.wasPlaying) {
+                    globalAudioPlayer.play().catch(e => {
+                        // Autoplay might be blocked, that's okay
+                        console.log('Autoplay prevented:', e);
+                    });
+                }
+            }
+
+            // Clear the saved state
+            sessionStorage.removeItem(STORAGE_PLAYBACK_STATE);
+        } catch (e) {
+            console.error('Failed to restore playback state:', e);
+        }
+    }
+
     // ==================== Initialization ====================
 
     function initGlobalPlayer() {
@@ -72,6 +137,9 @@
         // Load stream quality
         loadStreamQuality();
 
+        // Restore playback state from previous page
+        restorePlaybackState();
+
         // Check if user is logged in (has profile)
         if (hasActiveProfile()) {
             // Check current playback status
@@ -89,6 +157,9 @@
 
         // Setup progress bar click-to-seek
         setupProgressBarSeek();
+
+        // Save playback state before page unload
+        window.addEventListener('beforeunload', savePlaybackState);
     }
 
     // ==================== Global Audio Player Events ====================
