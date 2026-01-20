@@ -283,6 +283,55 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
+    /// Get personalized recommendations for the user
+    /// </summary>
+    public async Task<IActionResult> OnGetRecommendationsAsync(string authToken, int limit = 50)
+    {
+        _logger.LogInformation("Fetching recommendations");
+
+        var result = await _qobuzService.GetRecommendationsAsync(authToken, limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            albums = result.Albums.Select(a => new
+            {
+                id = a.Id,
+                title = a.Title,
+                artistName = a.Artist?.Name,
+                coverUrl = a.CoverUrl,
+                tracksCount = a.TracksCount,
+                duration = a.Duration,
+                typeLabel = a.TypeLabel,
+                type = "album"
+            }),
+            playlists = result.Playlists.Select(p => new
+            {
+                id = p.Id,
+                name = p.Name,
+                description = p.Description,
+                tracksCount = p.TracksCount,
+                coverUrl = p.CoverUrl,
+                ownerName = p.Owner?.Name,
+                type = "playlist"
+            }),
+            tracks = result.Tracks.Select(t => new
+            {
+                id = t.Id,
+                title = t.Title,
+                artistName = t.Performer?.Name,
+                albumTitle = t.Album?.Title,
+                albumId = t.Album?.Id,
+                coverUrl = t.Album?.CoverUrl,
+                duration = t.Duration,
+                formattedDuration = t.FormattedDuration,
+                isHiRes = t.IsHiRes,
+                type = "track"
+            })
+        });
+    }
+
+    /// <summary>
     /// Get album with tracks
     /// </summary>
     public async Task<IActionResult> OnGetAlbumTracksAsync(string albumId, string authToken)

@@ -506,3 +506,46 @@ public class QobuzSearchResult
     public List<QobuzPlaylist> Playlists { get; set; } = new();
     public List<QobuzTrack> Tracks { get; set; } = new();
 }
+
+/// <summary>
+/// Response from userRecommendation/get endpoint
+/// </summary>
+public class QobuzRecommendationsResponse
+{
+    [JsonPropertyName("albums")]
+    public QobuzAlbumsContainer? Albums { get; set; }
+
+    [JsonPropertyName("playlists")]
+    public QobuzPlaylistsContainer? Playlists { get; set; }
+
+    [JsonPropertyName("tracks")]
+    public QobuzTracksContainer? Tracks { get; set; }
+}
+
+/// <summary>
+/// Combined recommendations result
+/// </summary>
+public class QobuzRecommendationsResult
+{
+    public List<QobuzAlbum> Albums { get; set; } = new();
+    public List<QobuzPlaylist> Playlists { get; set; } = new();
+    public List<QobuzTrack> Tracks { get; set; } = new();
+}
+
+/// <summary>
+/// Response from favorite/getUserFavorites?type=albums
+/// </summary>
+public class QobuzFavoriteAlbumsResponse
+{
+    [JsonPropertyName("albums")]
+    public QobuzAlbumsContainer? Albums { get; set; }
+}
+
+/// <summary>
+/// Response from favorite/getUserFavorites?type=tracks
+/// </summary>
+public class QobuzFavoriteTracksResponse
+{
+    [JsonPropertyName("tracks")]
+    public QobuzTracksContainer? Tracks { get; set; }
+}

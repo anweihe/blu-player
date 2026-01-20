@@ -63,6 +63,11 @@ public interface IQobuzApiService
     Task<QobuzSearchResult> SearchAsync(string query, int limit = 20);
 
     /// <summary>
+    /// Get personalized recommendations for the user
+    /// </summary>
+    Task<QobuzRecommendationsResult> GetRecommendationsAsync(string authToken, int limit = 50);
+
+    /// <summary>
     /// Check if app credentials are available
     /// </summary>
     bool HasAppCredentials { get; }
@@ -908,6 +913,73 @@ public class QobuzApiService : IQobuzApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Search failed for query: {Query}", query);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Get personalized recommendations for the user (uses favorite albums as basis)
+    /// </summary>
+    public async Task<QobuzRecommendationsResult> GetRecommendationsAsync(string authToken, int limit = 50)
+    {
+        var result = new QobuzRecommendationsResult();
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get recommendations: app credentials not available");
+                return result;
+            }
+
+            // Get user's favorite albums as "recommendations"
+            var albumsUrl = $"{QobuzApiBase}/favorite/getUserFavorites" +
+                      $"?type=albums" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}" +
+                      $"&user_auth_token={authToken}";
+
+            _logger.LogDebug("Fetching favorite albums for recommendations");
+
+            var albumsResponse = await _httpClient.GetAsync(albumsUrl);
+            if (albumsResponse.IsSuccessStatusCode)
+            {
+                var albumsContent = await albumsResponse.Content.ReadAsStringAsync();
+                var favAlbums = JsonSerializer.Deserialize<QobuzFavoriteAlbumsResponse>(albumsContent);
+                if (favAlbums?.Albums?.Items != null)
+                {
+                    result.Albums = favAlbums.Albums.Items;
+                }
+            }
+
+            // Get user's favorite tracks
+            var tracksUrl = $"{QobuzApiBase}/favorite/getUserFavorites" +
+                      $"?type=tracks" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}" +
+                      $"&user_auth_token={authToken}";
+
+            _logger.LogDebug("Fetching favorite tracks for recommendations");
+
+            var tracksResponse = await _httpClient.GetAsync(tracksUrl);
+            if (tracksResponse.IsSuccessStatusCode)
+            {
+                var tracksContent = await tracksResponse.Content.ReadAsStringAsync();
+                var favTracks = JsonSerializer.Deserialize<QobuzFavoriteTracksResponse>(tracksContent);
+                if (favTracks?.Tracks?.Items != null)
+                {
+                    result.Tracks = favTracks.Tracks.Items;
+                }
+            }
+
+            _logger.LogInformation("Retrieved favorites: {Albums} albums, {Tracks} tracks",
+                result.Albums.Count, result.Tracks.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get recommendations/favorites");
         }
 
         return result;
