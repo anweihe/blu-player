@@ -11,7 +11,7 @@
 
 .fab-container {
   position: fixed;
-  bottom: calc(68px + env(safe-area-inset-bottom));
+  bottom: calc(84px + env(safe-area-inset-bottom)); /* 68px footer + 16px gap */
   right: 16px;
   z-index: 450;
 }
