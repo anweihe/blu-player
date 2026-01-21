@@ -411,9 +411,16 @@
     }
 
     function updatePlayerDisplay() {
-        const nameEl = document.getElementById('global-selected-player-name');
-        if (nameEl) {
-            nameEl.textContent = globalSelectedPlayer.name;
+        // Update footer player name
+        const footerPlayerName = document.getElementById('global-np-player-name-text');
+        if (footerPlayerName) {
+            footerPlayerName.textContent = globalSelectedPlayer.name;
+        }
+
+        // Update popup player name
+        const popupPlayerName = document.getElementById('global-popup-player-name');
+        if (popupPlayerName) {
+            popupPlayerName.textContent = globalSelectedPlayer.name;
         }
     }
 

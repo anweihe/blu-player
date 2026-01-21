@@ -140,6 +140,29 @@ main[role="main"] {
   text-overflow: ellipsis;
 }
 
+.global-np-player-name {
+  font-size: 0.7rem;
+  color: var(--np-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.global-np-player-name svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.global-np-player-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .global-np-controls {
   display: flex;
   align-items: center;
@@ -304,7 +327,7 @@ main[role="main"] {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
-  z-index: 1000;
+  z-index: 1200;
   display: flex;
   align-items: center;
   justify-content: center;

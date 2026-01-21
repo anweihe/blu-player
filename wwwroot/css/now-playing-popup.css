@@ -484,6 +484,57 @@
   white-space: nowrap;
 }
 
+/* Player Selector in Popup */
+.global-np-popup-player-selector {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.global-popup-player-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--np-sheet-surface);
+  border: 1px solid var(--np-sheet-border);
+  border-radius: 20px;
+  color: var(--np-sheet-text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.global-popup-player-btn:hover {
+  background: var(--np-sheet-surface-hover);
+  color: var(--np-sheet-text);
+}
+
+.global-popup-player-btn:active {
+  transform: scale(0.98);
+}
+
+.global-popup-player-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.global-popup-player-btn svg.chevron {
+  width: 16px;
+  height: 16px;
+  opacity: 0.5;
+}
+
+.global-popup-player-btn span {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ==================== Queue Panel ==================== */
 
 .global-np-queue-panel {
