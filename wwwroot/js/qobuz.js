@@ -35,6 +35,10 @@
     let currentSourceId = null;
     let currentSourceName = null;
 
+    // Native Qobuz playback tracking
+    // When true, the Bluesound player manages the queue itself
+    let usingNativeQobuzPlayback = false;
+
     // Progress animation state
     let progressAnimationFrame = null;
     let lastKnownPosition = 0;
@@ -1188,6 +1192,9 @@
         // Stop Bluesound status polling if active
         stopBluesoundStatusPolling();
 
+        // Not using native Qobuz playback
+        usingNativeQobuzPlayback = false;
+
         const streamQuality = getStreamQuality();
         const response = await fetch(`/Qobuz?handler=TrackStreamUrl&trackId=${track.id}&authToken=${encodeURIComponent(authToken)}&formatId=${streamQuality}`);
         const data = await response.json();
@@ -1215,6 +1222,8 @@
     }
 
     // Play track on Bluesound player
+    // Uses native Qobuz integration when playing from album/playlist context
+    // Falls back to stream URL for single tracks (search results)
     async function playOnBluesound(track, index, authToken) {
         // Pause browser playback if active
         if (audioPlayer.src) {
@@ -1222,41 +1231,95 @@
         }
 
         const selectedPlayer = getSelectedPlayer();
-        const streamQuality = getStreamQuality();
 
-        const response = await fetch('?handler=PlayOnBluesound', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-            },
-            body: JSON.stringify({
+        // Check if we can use native Qobuz integration
+        // Native integration works when we have album or playlist context
+        const canUseNative = currentSourceType && currentSourceId &&
+            (currentSourceType === 'album' || currentSourceType === 'playlist');
+
+        let response;
+        let data;
+
+        if (canUseNative) {
+            // Use native BluOS Qobuz integration
+            // The player manages the queue itself - works even when browser is in background
+            console.log(`Using native Qobuz integration: ${currentSourceType} ${currentSourceId}, track index ${index}`);
+
+            const requestBody = {
                 ip: selectedPlayer.ip,
                 port: selectedPlayer.port || 11000,
-                trackId: track.id,
-                authToken: authToken,
-                formatId: streamQuality,
-                title: track.title,
-                artist: track.artistName,
-                album: track.albumTitle,
-                imageUrl: track.albumCover
-            })
-        });
+                sourceType: currentSourceType,
+                sourceId: currentSourceId,
+                trackIndex: index
+            };
 
-        const data = await response.json();
+            if (currentSourceType === 'album') {
+                requestBody.albumId = currentSourceId;
+            } else if (currentSourceType === 'playlist') {
+                requestBody.playlistId = parseInt(currentSourceId, 10);
+                requestBody.trackId = track.id;
+            }
+
+            response = await fetch('?handler=PlayNativeOnBluesound', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            data = await response.json();
+        } else {
+            // Fall back to stream URL for single tracks (search results)
+            console.log('Using stream URL fallback for single track');
+
+            const streamQuality = getStreamQuality();
+
+            response = await fetch('?handler=PlayOnBluesound', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                    ip: selectedPlayer.ip,
+                    port: selectedPlayer.port || 11000,
+                    trackId: track.id,
+                    authToken: authToken,
+                    formatId: streamQuality,
+                    title: track.title,
+                    artist: track.artistName,
+                    album: track.albumTitle,
+                    imageUrl: track.albumCover
+                })
+            });
+
+            data = await response.json();
+        }
 
         if (data.success) {
             currentTrackIndex = index;
             isPlaying = true;
 
-            // Save queue to database
+            // Track whether we're using native Qobuz playback
+            usingNativeQobuzPlayback = !!data.native;
+
+            // Save queue to database (still useful for UI state)
             await saveQueueToDb(index);
 
             updateNowPlaying(track);
             updateTrackHighlight();
 
-            // Start polling for Bluesound status
+            // Start polling for Bluesound status (for progress display)
+            // For native playback, we don't need to poll for auto-advance -
+            // the player handles that itself
             startBluesoundStatusPolling();
+
+            // Log if using native mode
+            if (data.native) {
+                console.log('Native Qobuz playback started - player manages queue');
+            }
         } else {
             showError(data.error || 'Wiedergabe auf Bluesound fehlgeschlagen');
         }
@@ -1422,9 +1485,17 @@
 
         // Check if playback stopped (track ended)
         if (status.state === 'stop' && wasPlaying) {
-            stopBluesoundStatusPolling();
-            // Track might have ended, try to play next
-            playNext();
+            // For native Qobuz playback, don't call playNext() -
+            // the player manages the queue itself
+            if (usingNativeQobuzPlayback) {
+                console.log('Native playback stopped - player handles queue automatically');
+                // Just stop polling, the player will continue with next track
+                stopBluesoundStatusPolling();
+            } else {
+                stopBluesoundStatusPolling();
+                // Track might have ended, try to play next (stream URL mode)
+                playNext();
+            }
         }
     }
 

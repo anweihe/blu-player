@@ -20,6 +20,16 @@ public interface IBluesoundApiService
     Task<bool> NextTrackAsync(string ipAddress, int port);
     Task<bool> PreviousTrackAsync(string ipAddress, int port);
     Task<bool> PlayUrlAsync(string ipAddress, int port, string streamUrl, string? title = null, string? artist = null, string? album = null, string? imageUrl = null);
+
+    /// <summary>
+    /// Play a Qobuz album natively on the player using the built-in Qobuz integration
+    /// </summary>
+    Task<bool> PlayQobuzAlbumAsync(string ipAddress, int port, string albumId, int? trackIndex = null);
+
+    /// <summary>
+    /// Play a Qobuz playlist natively on the player using the built-in Qobuz integration
+    /// </summary>
+    Task<bool> PlayQobuzPlaylistAsync(string ipAddress, int port, long playlistId, int trackIndex, long trackId);
 }
 
 public class BluesoundApiService : IBluesoundApiService
@@ -292,6 +302,113 @@ public class BluesoundApiService : IBluesoundApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to play URL on {IpAddress}:{Port}", ipAddress, port);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Plays a Qobuz album natively using the BluOS built-in Qobuz integration.
+    /// The player manages the queue itself - no browser polling needed.
+    /// </summary>
+    public async Task<bool> PlayQobuzAlbumAsync(string ipAddress, int port, string albumId, int? trackIndex = null)
+    {
+        try
+        {
+            // Build the native BluOS Qobuz URL
+            // Format: /Add?playnow=1&service=Qobuz&albumid={ALBUM_ID}
+            // With trackindex: /Add?playnow=1&service=Qobuz&albumid={ALBUM_ID}&trackindex={INDEX}
+            var queryParams = new List<string>
+            {
+                "playnow=1",
+                "service=Qobuz",
+                $"albumid={Uri.EscapeDataString(albumId)}"
+            };
+
+            if (trackIndex.HasValue)
+            {
+                queryParams.Add($"trackindex={trackIndex.Value}");
+            }
+
+            var url = $"http://{ipAddress}:{port}/Add?{string.Join("&", queryParams)}";
+            _logger.LogInformation("Playing Qobuz album {AlbumId} natively on {IpAddress}:{Port} (trackIndex: {TrackIndex})",
+                albumId, ipAddress, port, trackIndex);
+
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            // Add headers that the native app uses
+            request.Headers.Add("x-sovi-ui-schema-version", "6");
+            request.Headers.Add("x-sovi-schema-version", "34");
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to play Qobuz album on {IpAddress}:{Port}. Status: {Status}, Response: {Response}",
+                    ipAddress, port, response.StatusCode, content);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully started Qobuz album {AlbumId} on {IpAddress}", albumId, ipAddress);
+            }
+
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to play Qobuz album {AlbumId} on {IpAddress}:{Port}", albumId, ipAddress, port);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Plays a Qobuz playlist natively using the BluOS built-in Qobuz integration.
+    /// The player manages the queue itself - no browser polling needed.
+    /// </summary>
+    public async Task<bool> PlayQobuzPlaylistAsync(string ipAddress, int port, long playlistId, int trackIndex, long trackId)
+    {
+        try
+        {
+            // Build the native BluOS Qobuz URL for playlist playback
+            // Format: /Add?playnow=1&service=Qobuz&playlistid={PLAYLIST_ID}&listindex={INDEX}&file=Qobuz:{TRACK_ID}
+            var queryParams = new List<string>
+            {
+                "playnow=1",
+                "service=Qobuz",
+                $"playlistid={playlistId}",
+                $"listindex={trackIndex}",
+                $"file=Qobuz:{trackId}",
+                "cursor=last",
+                "nextlist=1",
+                "where=last"
+            };
+
+            var url = $"http://{ipAddress}:{port}/Add?{string.Join("&", queryParams)}";
+            _logger.LogInformation("Playing Qobuz playlist {PlaylistId} track {TrackId} (index {TrackIndex}) natively on {IpAddress}:{Port}",
+                playlistId, trackId, trackIndex, ipAddress, port);
+
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            // Add headers that the native app uses
+            request.Headers.Add("x-sovi-ui-schema-version", "6");
+            request.Headers.Add("x-sovi-schema-version", "34");
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to play Qobuz playlist on {IpAddress}:{Port}. Status: {Status}, Response: {Response}",
+                    ipAddress, port, response.StatusCode, content);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully started Qobuz playlist {PlaylistId} on {IpAddress}", playlistId, ipAddress);
+            }
+
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to play Qobuz playlist {PlaylistId} on {IpAddress}:{Port}", playlistId, ipAddress, port);
             return false;
         }
     }

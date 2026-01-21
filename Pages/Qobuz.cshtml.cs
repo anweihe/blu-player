@@ -571,6 +571,63 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
+    /// Play a Qobuz album or playlist natively on a Bluesound player.
+    /// Uses the built-in BluOS Qobuz integration - the player manages the queue itself.
+    /// </summary>
+    public async Task<IActionResult> OnPostPlayNativeOnBluesoundAsync(
+        [FromBody] PlayNativeOnBluesoundRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Ip))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende IP-Adresse" });
+        }
+
+        _logger.LogInformation("Native Qobuz playback on {Ip}:{Port} - Type: {Type}, Id: {Id}, TrackIndex: {TrackIndex}",
+            request.Ip, request.Port, request.SourceType, request.SourceId, request.TrackIndex);
+
+        bool success;
+
+        if (request.SourceType == "album")
+        {
+            if (string.IsNullOrEmpty(request.AlbumId))
+            {
+                return new JsonResult(new { success = false, error = "Fehlende Album-ID" });
+            }
+
+            success = await _bluesoundService.PlayQobuzAlbumAsync(
+                request.Ip,
+                request.Port,
+                request.AlbumId,
+                request.TrackIndex);
+        }
+        else if (request.SourceType == "playlist")
+        {
+            if (request.PlaylistId == null || request.TrackId == null)
+            {
+                return new JsonResult(new { success = false, error = "Fehlende Playlist-ID oder Track-ID" });
+            }
+
+            success = await _bluesoundService.PlayQobuzPlaylistAsync(
+                request.Ip,
+                request.Port,
+                request.PlaylistId.Value,
+                request.TrackIndex ?? 0,
+                request.TrackId.Value);
+        }
+        else
+        {
+            return new JsonResult(new { success = false, error = "Unbekannter Quelltyp" });
+        }
+
+        if (!success)
+        {
+            return new JsonResult(new { success = false, error = "Native Wiedergabe auf Player fehlgeschlagen" });
+        }
+
+        return new JsonResult(new { success = true, native = true });
+    }
+
+    /// <summary>
     /// Control playback on a Bluesound player (play/pause/stop)
     /// </summary>
     public async Task<IActionResult> OnPostBluesoundControlAsync(
@@ -655,4 +712,44 @@ public class BluesoundControlRequest
     public string Ip { get; set; } = string.Empty;
     public int Port { get; set; } = 11000;
     public string Action { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request model for native Qobuz playback on a Bluesound player.
+/// Uses the built-in BluOS Qobuz integration.
+/// </summary>
+public class PlayNativeOnBluesoundRequest
+{
+    public string Ip { get; set; } = string.Empty;
+    public int Port { get; set; } = 11000;
+
+    /// <summary>
+    /// Type of source: "album" or "playlist"
+    /// </summary>
+    public string SourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Source ID (album ID or playlist ID as string)
+    /// </summary>
+    public string? SourceId { get; set; }
+
+    /// <summary>
+    /// Album ID (for album playback)
+    /// </summary>
+    public string? AlbumId { get; set; }
+
+    /// <summary>
+    /// Playlist ID (for playlist playback)
+    /// </summary>
+    public long? PlaylistId { get; set; }
+
+    /// <summary>
+    /// Track ID within playlist (required for playlist playback)
+    /// </summary>
+    public long? TrackId { get; set; }
+
+    /// <summary>
+    /// Index of track to start from (0-based)
+    /// </summary>
+    public int? TrackIndex { get; set; }
 }
