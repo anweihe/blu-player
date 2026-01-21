@@ -1,0 +1,286 @@
+/* ==================== Floating Action Button (FAB) ==================== */
+/* Material Design 3 inspired FAB with expandable menu */
+
+/* Color definitions for services */
+:root {
+  --fab-color-player: #a1a1aa;
+  --fab-color-qobuz: #1db954;
+  --fab-color-tunein: #f97316;
+  --fab-color-radioparadise: #10b981;
+}
+
+.fab-container {
+  position: fixed;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  right: 16px;
+  z-index: 450;
+}
+
+/* Overlay to close FAB when clicking outside */
+.fab-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.fab-container.open .fab-overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Main FAB Button - positioned at the bottom of container */
+.fab-main {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--np-accent, #1db954);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 3px 5px -1px rgba(0, 0, 0, 0.2),
+    0 6px 10px 0 rgba(0, 0, 0, 0.14),
+    0 1px 18px 0 rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 2;
+}
+
+.fab-main:hover {
+  box-shadow:
+    0 5px 5px -3px rgba(0, 0, 0, 0.2),
+    0 8px 10px 1px rgba(0, 0, 0, 0.14),
+    0 3px 14px 2px rgba(0, 0, 0, 0.12);
+}
+
+.fab-main:active {
+  transform: scale(0.95);
+}
+
+/* Plus Icon */
+.fab-plus-icon {
+  width: 24px;
+  height: 24px;
+  color: white;
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.fab-container.open .fab-plus-icon {
+  transform: rotate(45deg);
+}
+
+/* Mini FABs Container - positioned ABOVE the main FAB */
+.fab-actions {
+  position: absolute;
+  bottom: 68px; /* 56px FAB height + 12px gap */
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
+}
+
+/* Extended Mini FAB with label */
+.fab-mini {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  padding: 0 16px 0 12px;
+  border-radius: 14px;
+  background: var(--np-bg-secondary, #161618);
+  border: 1px solid var(--np-border, rgba(255, 255, 255, 0.08));
+  color: var(--np-text, #f4f4f5);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.3) translateY(20px);
+  transition:
+    opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+    transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+    background 0.15s ease,
+    border-color 0.15s ease;
+  box-shadow:
+    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+    0 4px 5px 0 rgba(0, 0, 0, 0.14),
+    0 1px 10px 0 rgba(0, 0, 0, 0.12);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fab-mini:hover {
+  background: var(--np-bg, #111113);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.fab-mini:active {
+  transform: scale(0.97) translateY(0) !important;
+}
+
+/* FAB Icon */
+.fab-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Individual service colors */
+.fab-mini[data-action="player-selector"] .fab-icon {
+  color: var(--fab-color-player);
+}
+
+.fab-mini[data-action="qobuz"] .fab-icon {
+  color: var(--fab-color-qobuz);
+}
+
+.fab-mini[data-action="radio-paradise"] .fab-icon {
+  color: var(--fab-color-radioparadise);
+}
+
+.fab-mini[data-action="tunein"] .fab-icon {
+  color: var(--fab-color-tunein);
+}
+
+/* Hover effects with individual colors */
+.fab-mini[data-action="player-selector"]:hover {
+  border-color: var(--fab-color-player);
+}
+
+.fab-mini[data-action="qobuz"]:hover {
+  border-color: var(--fab-color-qobuz);
+}
+
+.fab-mini[data-action="radio-paradise"]:hover {
+  border-color: var(--fab-color-radioparadise);
+}
+
+.fab-mini[data-action="tunein"]:hover {
+  border-color: var(--fab-color-tunein);
+}
+
+/* FAB Label */
+.fab-label {
+  flex-shrink: 0;
+}
+
+/* Open state - staggered animation */
+.fab-container.open .fab-actions {
+  pointer-events: auto;
+}
+
+.fab-container.open .fab-mini {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* Staggered delays - Player (4th) appears first (nearest to FAB), TuneIn (1st) last */
+.fab-container.open .fab-mini:nth-child(4) {
+  transition-delay: 0ms;
+}
+
+.fab-container.open .fab-mini:nth-child(3) {
+  transition-delay: 50ms;
+}
+
+.fab-container.open .fab-mini:nth-child(2) {
+  transition-delay: 100ms;
+}
+
+.fab-container.open .fab-mini:nth-child(1) {
+  transition-delay: 150ms;
+}
+
+/* Reverse delay when closing - TuneIn closes first, Player last */
+.fab-container:not(.open) .fab-mini:nth-child(1) {
+  transition-delay: 0ms;
+}
+
+.fab-container:not(.open) .fab-mini:nth-child(2) {
+  transition-delay: 30ms;
+}
+
+.fab-container:not(.open) .fab-mini:nth-child(3) {
+  transition-delay: 60ms;
+}
+
+.fab-container:not(.open) .fab-mini:nth-child(4) {
+  transition-delay: 90ms;
+}
+
+/* Light mode support */
+@media (prefers-color-scheme: light) {
+  .fab-overlay {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .fab-mini {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #18181b;
+    box-shadow:
+      0 2px 8px -2px rgba(0, 0, 0, 0.15),
+      0 4px 12px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .fab-mini:hover {
+    background: #f8f9fa;
+  }
+
+  .fab-main {
+    box-shadow:
+      0 3px 8px -2px rgba(0, 0, 0, 0.2),
+      0 6px 12px 0 rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* Tablet and larger screens - position FAB a bit further from edge */
+@media (min-width: 768px) {
+  .fab-container {
+    right: 24px;
+  }
+}
+
+/* Smaller FAB on very small heights (landscape phones) */
+@media (max-height: 400px) {
+  .fab-container {
+    bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+
+  .fab-actions {
+    bottom: 60px;
+  }
+
+  .fab-main {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+  }
+
+  .fab-plus-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .fab-mini {
+    height: 40px;
+    padding: 0 14px 0 10px;
+    font-size: 13px;
+  }
+
+  .fab-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
