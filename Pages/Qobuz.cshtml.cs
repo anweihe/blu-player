@@ -589,16 +589,17 @@ public class QobuzModel : PageModel
 
         if (request.SourceType == "album")
         {
-            if (string.IsNullOrEmpty(request.AlbumId))
+            if (string.IsNullOrEmpty(request.AlbumId) || request.TrackId == null)
             {
-                return new JsonResult(new { success = false, error = "Fehlende Album-ID" });
+                return new JsonResult(new { success = false, error = "Fehlende Album-ID oder Track-ID" });
             }
 
             success = await _bluesoundService.PlayQobuzAlbumAsync(
                 request.Ip,
                 request.Port,
                 request.AlbumId,
-                request.TrackIndex);
+                request.TrackIndex ?? 0,
+                request.TrackId.Value);
         }
         else if (request.SourceType == "playlist")
         {

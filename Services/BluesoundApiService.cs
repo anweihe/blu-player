@@ -24,7 +24,7 @@ public interface IBluesoundApiService
     /// <summary>
     /// Play a Qobuz album natively on the player using the built-in Qobuz integration
     /// </summary>
-    Task<bool> PlayQobuzAlbumAsync(string ipAddress, int port, string albumId, int? trackIndex = null);
+    Task<bool> PlayQobuzAlbumAsync(string ipAddress, int port, string albumId, int trackIndex, long trackId);
 
     /// <summary>
     /// Play a Qobuz playlist natively on the player using the built-in Qobuz integration
@@ -329,29 +329,26 @@ public class BluesoundApiService : IBluesoundApiService
     /// <summary>
     /// Plays a Qobuz album natively using the BluOS built-in Qobuz integration.
     /// The player manages the queue itself - no browser polling needed.
+    /// Uses /ui/prf endpoint format for proper queue auto-fill.
     /// </summary>
-    public async Task<bool> PlayQobuzAlbumAsync(string ipAddress, int port, string albumId, int? trackIndex = null)
+    public async Task<bool> PlayQobuzAlbumAsync(string ipAddress, int port, string albumId, int trackIndex, long trackId)
     {
         try
         {
-            // Build the native BluOS Qobuz URL
-            // Format: /Add?playnow=1&service=Qobuz&albumid={ALBUM_ID}
-            // With trackindex: /Add?playnow=1&service=Qobuz&albumid={ALBUM_ID}&trackindex={INDEX}
-            var queryParams = new List<string>
-            {
-                "playnow=1",
-                "service=Qobuz",
-                $"albumid={Uri.EscapeDataString(albumId)}"
-            };
+            // Build the native BluOS Qobuz URL using /ui/prf format
+            // Format: /ui/prf?a={encoded_params}&t=1&u={encoded_add_url}
 
-            if (trackIndex.HasValue)
-            {
-                queryParams.Add($"trackindex={trackIndex.Value}");
-            }
+            // 'a' parameter: album context and playback settings
+            // Order: albumid, cursor, listindex, nextlist, playnow, service, where, withArtists
+            var aParams = $"albumid={albumId}&cursor=last&listindex={trackIndex}&nextlist=1&playnow=1&service=Qobuz&where=last&withArtists=1";
 
-            var url = $"http://{ipAddress}:{port}/Add?{string.Join("&", queryParams)}";
-            _logger.LogInformation("Playing Qobuz album {AlbumId} natively on {IpAddress}:{Port} (trackIndex: {TrackIndex})",
-                albumId, ipAddress, port, trackIndex);
+            // 'u' parameter: the Add command with specific track
+            var uParam = $"/Add?playnow=1&file=Qobuz:{trackId}";
+
+            var url = $"http://{ipAddress}:{port}/ui/prf?a={Uri.EscapeDataString(aParams)}&t=1&u={Uri.EscapeDataString(uParam)}";
+
+            _logger.LogInformation("Playing Qobuz album {AlbumId} track {TrackId} (index {TrackIndex}) natively on {IpAddress}:{Port}",
+                albumId, trackId, trackIndex, ipAddress, port);
 
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             // Add headers that the native app uses
@@ -384,26 +381,24 @@ public class BluesoundApiService : IBluesoundApiService
     /// <summary>
     /// Plays a Qobuz playlist natively using the BluOS built-in Qobuz integration.
     /// The player manages the queue itself - no browser polling needed.
+    /// Uses /ui/prf endpoint format for proper queue auto-fill.
     /// </summary>
     public async Task<bool> PlayQobuzPlaylistAsync(string ipAddress, int port, long playlistId, int trackIndex, long trackId)
     {
         try
         {
-            // Build the native BluOS Qobuz URL for playlist playback
-            // Format: /Add?playnow=1&service=Qobuz&playlistid={PLAYLIST_ID}&listindex={INDEX}&file=Qobuz:{TRACK_ID}
-            var queryParams = new List<string>
-            {
-                "playnow=1",
-                "service=Qobuz",
-                $"playlistid={playlistId}",
-                $"listindex={trackIndex}",
-                $"file=Qobuz:{trackId}",
-                "cursor=last",
-                "nextlist=1",
-                "where=last"
-            };
+            // Build the native BluOS Qobuz URL using /ui/prf format
+            // Format: /ui/prf?a={encoded_params}&t=1&u={encoded_add_url}
 
-            var url = $"http://{ipAddress}:{port}/Add?{string.Join("&", queryParams)}";
+            // 'a' parameter: playlist context and playback settings
+            // Order: cursor, listindex, nextlist, playlistid, playnow, service, where
+            var aParams = $"cursor=last&listindex={trackIndex}&nextlist=1&playlistid={playlistId}&playnow=1&service=Qobuz&where=last";
+
+            // 'u' parameter: the Add command with specific track
+            var uParam = $"/Add?playnow=1&file=Qobuz:{trackId}";
+
+            var url = $"http://{ipAddress}:{port}/ui/prf?a={Uri.EscapeDataString(aParams)}&t=1&u={Uri.EscapeDataString(uParam)}";
+
             _logger.LogInformation("Playing Qobuz playlist {PlaylistId} track {TrackId} (index {TrackIndex}) natively on {IpAddress}:{Port}",
                 playlistId, trackId, trackIndex, ipAddress, port);
 

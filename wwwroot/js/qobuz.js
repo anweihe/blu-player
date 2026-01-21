@@ -1359,6 +1359,7 @@
 
             if (currentSourceType === 'album') {
                 requestBody.albumId = currentSourceId;
+                requestBody.trackId = track.id; // Required for /ui/prf format
             } else if (currentSourceType === 'playlist') {
                 requestBody.playlistId = parseInt(currentSourceId, 10);
                 requestBody.trackId = track.id;
