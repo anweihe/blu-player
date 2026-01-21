@@ -43,6 +43,7 @@
     // Queue state
     let currentQueue = null; // { sourceType, sourceId, sourceName, currentIndex, tracks }
     let onPlayQueueTrack = null; // Callback for playing a queue track
+    let onQueueTrackChanged = null; // Callback for when queue track changes (just UI update, no playback)
 
     // Pending navigation state (for cross-page "Go to Album/Playlist" feature)
     // Stored in sessionStorage to survive page navigation
@@ -807,10 +808,7 @@
         // Update quality buttons
         updateQualityButtons();
 
-        // Load and render queue first (sets currentQueue)
-        await loadAndRenderQueue();
-
-        // Then update go-to-source button (now currentQueue is available)
+        // Update go-to-source button (uses existing currentQueue if available)
         updateGotoSourceButton();
 
         popup.style.display = 'flex';
@@ -834,13 +832,27 @@
 
         if (!queueSection || !queueList) return;
 
-        // If we have a current queue in memory, use it
+        // Show skeleton while loading
+        showQueueSkeleton();
+        queueSection.style.display = 'block';
+
+        // For Bluesound players, fetch queue directly from the player
+        if (globalSelectedPlayer.type === 'bluesound' && globalSelectedPlayer.ip) {
+            const queue = await fetchBluesoundQueue();
+            if (queue && queue.tracks && queue.tracks.length > 0) {
+                currentQueue = queue;
+                renderQueueInPopup(queue);
+                return;
+            }
+        }
+
+        // If we have a current queue in memory, use it (for browser playback)
         if (currentQueue && currentQueue.tracks && currentQueue.tracks.length > 0) {
             renderQueueInPopup(currentQueue);
             return;
         }
 
-        // Otherwise, try to load from server
+        // Otherwise, try to load from server (database queue)
         try {
             const activeProfileId = await SettingsApi.getActiveProfileId();
             if (!activeProfileId) {
@@ -858,6 +870,66 @@
         } catch (error) {
             console.error('Failed to load queue:', error);
             queueSection.style.display = 'none';
+        }
+    }
+
+    // Show skeleton loader while loading queue
+    function showQueueSkeleton() {
+        const queueList = document.getElementById('global-queue-list');
+        if (!queueList) return;
+
+        queueList.innerHTML = Array(8).fill(0).map(() => `
+            <div class="global-queue-item skeleton">
+                <div class="global-queue-item-position skeleton-box"></div>
+                <div class="global-queue-item-cover skeleton-box"></div>
+                <div class="global-queue-item-info">
+                    <div class="skeleton-text" style="width: 70%"></div>
+                    <div class="skeleton-text" style="width: 50%"></div>
+                </div>
+                <div class="skeleton-text" style="width: 40px"></div>
+            </div>
+        `).join('');
+    }
+
+    // Fetch queue directly from Bluesound player
+    async function fetchBluesoundQueue() {
+        if (globalSelectedPlayer.type !== 'bluesound' || !globalSelectedPlayer.ip) {
+            return null;
+        }
+
+        try {
+            const ip = globalSelectedPlayer.ip || globalSelectedPlayer.ipAddress;
+            const port = globalSelectedPlayer.port || 11000;
+            const response = await fetch(`/Qobuz?handler=BluesoundQueue&ip=${ip}&port=${port}`);
+            const data = await response.json();
+
+            // Debug logging for currentIndex issue
+            console.log('Bluesound Queue Response:', data);
+            console.log('currentIndex from server:', data.currentIndex, 'total items:', data.items?.length);
+
+            if (!data.success) {
+                console.error('Failed to fetch Bluesound queue:', data.error);
+                return null;
+            }
+
+            return {
+                sourceType: 'bluesound',
+                sourceId: data.queueId,
+                sourceName: 'Bluesound Queue',
+                currentIndex: data.currentIndex ?? 0,
+                tracks: data.items.map(item => ({
+                    title: item.title,
+                    artistName: item.artist,
+                    albumTitle: item.album,
+                    albumCover: item.imageUrl,
+                    formattedDuration: item.duration,
+                    qualityLabel: item.quality?.toUpperCase(),
+                    queueId: item.queueId // Bluesound queue ID for /Play?id=X
+                }))
+            };
+        } catch (error) {
+            console.error('Error fetching Bluesound queue:', error);
+            return null;
         }
     }
 
@@ -937,7 +1009,7 @@
     }
 
     // Play a track from the queue at the given index
-    window.playQueueTrackAtIndex = function(index) {
+    window.playQueueTrackAtIndex = async function(index) {
         if (!currentQueue || !currentQueue.tracks || index < 0 || index >= currentQueue.tracks.length) {
             return;
         }
@@ -945,7 +1017,107 @@
         // Update queue index
         currentQueue.currentIndex = index;
 
-        // Use page callback if available
+        // For Bluesound players with Bluesound queue, play directly on the player
+        if (globalSelectedPlayer.type === 'bluesound' &&
+            globalSelectedPlayer.ip &&
+            currentQueue.sourceType === 'bluesound') {
+            try {
+                const ip = globalSelectedPlayer.ip || globalSelectedPlayer.ipAddress;
+                const port = globalSelectedPlayer.port || 11000;
+                const track = currentQueue.tracks[index];
+
+                // Use the Bluesound queue ID if available, otherwise fall back to index
+                const playId = track.queueId ?? index;
+                console.log('Playing Bluesound queue item:', { index, queueId: track.queueId, playId });
+
+                // Call Bluesound /Play?id=X endpoint via backend
+                await fetch('/Qobuz?handler=BluesoundControl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        ip: ip,
+                        port: port,
+                        action: `play_id_${playId}`
+                    })
+                });
+
+                // Update Now Playing Bar with new track info
+                if (track) {
+                    globalCurrentTrack = {
+                        title: track.title,
+                        artist: track.artistName,
+                        album: track.albumTitle,
+                        imageUrl: track.albumCover
+                    };
+
+                    // Update main bar
+                    document.getElementById('global-np-title').textContent = track.title || 'Unbekannt';
+                    document.getElementById('global-np-artist').textContent = track.artistName || '-';
+
+                    const cover = document.getElementById('global-np-cover');
+                    const placeholder = document.getElementById('global-np-cover-placeholder');
+                    if (track.albumCover) {
+                        cover.src = track.albumCover;
+                        cover.style.display = 'block';
+                        placeholder.style.display = 'none';
+                    } else {
+                        cover.style.display = 'none';
+                        placeholder.style.display = 'flex';
+                    }
+
+                    // Update popup if open
+                    if (popup && popup.style.display === 'flex') {
+                        document.getElementById('global-popup-title').textContent = track.title || 'Unbekannt';
+                        document.getElementById('global-popup-artist').textContent = track.artistName || '-';
+                        document.getElementById('global-popup-album').textContent = track.albumTitle || '';
+
+                        const popupCover = document.getElementById('global-popup-cover');
+                        const popupPlaceholder = document.getElementById('global-popup-cover-placeholder');
+                        if (track.albumCover) {
+                            popupCover.src = track.albumCover;
+                            popupCover.style.display = 'block';
+                            popupPlaceholder.style.display = 'none';
+                        } else {
+                            popupCover.style.display = 'none';
+                            popupPlaceholder.style.display = 'flex';
+                        }
+                    }
+
+                    lastTrackTitle = track.title;
+                }
+
+                // Set playing state and start status polling
+                globalIsPlaying = true;
+                updatePlayPauseButtons();
+                startStatusPolling();
+
+                // Re-render the queue to show the new current track
+                renderQueueInPopup(currentQueue);
+
+                // Notify page about track change (just UI update, doesn't restart playback)
+                if (onQueueTrackChanged && track) {
+                    onQueueTrackChanged(track);
+                }
+
+                // Reload queue from Bluesound after a short delay to get the correct current track
+                setTimeout(async () => {
+                    const updatedQueue = await fetchBluesoundQueue();
+                    if (updatedQueue) {
+                        currentQueue = updatedQueue;
+                        renderQueueInPopup(currentQueue);
+                    }
+                }, 500);
+
+                return;
+            } catch (error) {
+                console.error('Failed to play queue track on Bluesound:', error);
+            }
+        }
+
+        // Use page callback if available (for browser playback or Qobuz native playback)
         if (onPlayQueueTrack) {
             onPlayQueueTrack(index);
         }
@@ -953,8 +1125,10 @@
         // Re-render the queue to show the new current track
         renderQueueInPopup(currentQueue);
 
-        // Update queue index in database
-        updateQueueIndexInDb(index);
+        // Update queue index in database (only for non-Bluesound queues)
+        if (currentQueue.sourceType !== 'bluesound') {
+            updateQueueIndexInDb(index);
+        }
     };
 
     async function updateQueueIndexInDb(index) {
@@ -1460,6 +1634,14 @@
         // Unregister queue callback
         unregisterQueueCallback: () => {
             onPlayQueueTrack = null;
+        },
+        // Register callback for when queue track changes (UI update only, no playback restart)
+        registerQueueTrackChangedCallback: (callback) => {
+            onQueueTrackChanged = callback;
+        },
+        // Unregister queue track changed callback
+        unregisterQueueTrackChangedCallback: () => {
+            onQueueTrackChanged = null;
         },
         // ==================== Pending Navigation API ====================
         // Execute pending navigation (for cross-page "Go to Album/Playlist")

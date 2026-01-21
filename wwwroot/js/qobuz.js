@@ -285,6 +285,25 @@
                     await playTrack(index);
                 }
             });
+
+            // Register callback for when a track is played from the Bluesound queue
+            // This only updates the UI highlight without restarting playback
+            window.GlobalPlayer.registerQueueTrackChangedCallback((track) => {
+                if (!track || !currentTracks.length) return;
+
+                // Find the track in currentTracks by title match
+                const foundIndex = currentTracks.findIndex(t =>
+                    t.title === track.title ||
+                    t.title === track.artistName // Sometimes title and artist are swapped in queue
+                );
+
+                if (foundIndex >= 0) {
+                    currentTrackIndex = foundIndex;
+                    isPlaying = true;
+                    updateTrackHighlight();
+                    console.log('Queue track changed - updated highlight to index:', foundIndex, track.title);
+                }
+            });
         }
 
         // Setup login form for new DOM elements

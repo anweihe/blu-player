@@ -99,12 +99,9 @@
         });
 
         // Load queue when switching to queue tab
-        if (tabName === 'queue' && window.GlobalPlayer) {
-            // Trigger queue render if available
-            const queue = window.GlobalPlayer.getQueue();
-            if (queue && window.renderQueueInPopup) {
-                window.renderQueueInPopup(queue);
-            }
+        if (tabName === 'queue' && window.loadAndRenderQueue) {
+            // Fetch queue from Bluesound player (or memory for browser playback)
+            window.loadAndRenderQueue();
         }
     };
 
@@ -156,11 +153,6 @@
         // Update quality buttons
         if (window.updateQualityButtons) {
             window.updateQualityButtons();
-        }
-
-        // Load queue
-        if (window.loadAndRenderQueue) {
-            await window.loadAndRenderQueue();
         }
 
         // Show popup

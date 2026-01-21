@@ -653,6 +653,58 @@
   opacity: 0.3;
 }
 
+/* ==================== Queue Skeleton Loading ==================== */
+
+.global-queue-item.skeleton {
+  pointer-events: none;
+}
+
+.skeleton-box {
+  background: linear-gradient(90deg,
+    var(--np-sheet-surface) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    var(--np-sheet-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.global-queue-item.skeleton .global-queue-item-position {
+  width: 24px;
+  height: 16px;
+}
+
+.global-queue-item.skeleton .global-queue-item-cover {
+  background: var(--np-sheet-surface);
+  animation: skeleton-shimmer 1.5s infinite;
+  background: linear-gradient(90deg,
+    var(--np-sheet-surface) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    var(--np-sheet-surface) 75%);
+  background-size: 200% 100%;
+}
+
+.skeleton-text {
+  height: 14px;
+  background: linear-gradient(90deg,
+    var(--np-sheet-surface) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    var(--np-sheet-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 /* ==================== Desktop Styles ==================== */
 
 @media (min-width: 640px) {

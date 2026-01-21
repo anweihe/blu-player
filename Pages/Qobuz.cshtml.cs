@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using BluesoundWeb.Models;
 using BluesoundWeb.Services;
+using System.Xml.Linq;
 
 namespace BluesoundWeb.Pages;
 
@@ -11,17 +12,20 @@ public class QobuzModel : PageModel
     private readonly IBluesoundPlayerService _playerService;
     private readonly IBluesoundApiService _bluesoundService;
     private readonly ILogger<QobuzModel> _logger;
+    private readonly HttpClient _httpClient;
 
     public QobuzModel(
         IQobuzApiService qobuzService,
         IBluesoundPlayerService playerService,
         IBluesoundApiService bluesoundService,
-        ILogger<QobuzModel> logger)
+        ILogger<QobuzModel> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _qobuzService = qobuzService;
         _playerService = playerService;
         _bluesoundService = bluesoundService;
         _logger = logger;
+        _httpClient = httpClientFactory.CreateClient();
     }
 
     // Bound properties for the form
@@ -641,17 +645,54 @@ public class QobuzModel : PageModel
 
         _logger.LogInformation("Bluesound control: {Action} on {Ip}:{Port}", request.Action, request.Ip, request.Port);
 
-        bool success = request.Action.ToLower() switch
+        var action = request.Action.ToLower();
+        bool success;
+
+        // Handle play_id_X action for playing a specific queue item
+        if (action.StartsWith("play_id_"))
         {
-            "play" => await _playerService.PlayAsync(request.Ip, request.Port),
-            "pause" => await _playerService.PauseAsync(request.Ip, request.Port),
-            "stop" => await _playerService.StopAsync(request.Ip, request.Port),
-            "next" => await _playerService.NextTrackAsync(request.Ip, request.Port),
-            "previous" => await _playerService.PreviousTrackAsync(request.Ip, request.Port),
-            _ => false
-        };
+            var idPart = action.Substring("play_id_".Length);
+            if (int.TryParse(idPart, out var queueIndex))
+            {
+                success = await PlayQueueItemAsync(request.Ip, request.Port, queueIndex);
+            }
+            else
+            {
+                return new JsonResult(new { success = false, error = "Ungültiger Queue-Index" });
+            }
+        }
+        else
+        {
+            success = action switch
+            {
+                "play" => await _playerService.PlayAsync(request.Ip, request.Port),
+                "pause" => await _playerService.PauseAsync(request.Ip, request.Port),
+                "stop" => await _playerService.StopAsync(request.Ip, request.Port),
+                "next" => await _playerService.NextTrackAsync(request.Ip, request.Port),
+                "previous" => await _playerService.PreviousTrackAsync(request.Ip, request.Port),
+                _ => false
+            };
+        }
 
         return new JsonResult(new { success });
+    }
+
+    /// <summary>
+    /// Play a specific item from the Bluesound queue by index
+    /// </summary>
+    private async Task<bool> PlayQueueItemAsync(string ip, int port, int queueIndex)
+    {
+        try
+        {
+            var url = $"http://{ip}:{port}/Play?id={queueIndex}";
+            var response = await _httpClient.GetAsync(url);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to play queue item {Index} on {Ip}:{Port}", queueIndex, ip, port);
+            return false;
+        }
     }
 
     /// <summary>
@@ -764,6 +805,136 @@ public class QobuzModel : PageModel
         27 => "UHD",
         _ => "UHD" // Default to highest quality
     };
+
+    /// <summary>
+    /// Get queue directly from a Bluesound player via /ui/Queue endpoint
+    /// </summary>
+    public async Task<IActionResult> OnGetBluesoundQueueAsync(string ip, int port = 11000)
+    {
+        if (string.IsNullOrEmpty(ip))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende IP-Adresse" });
+        }
+
+        _logger.LogInformation("Fetching queue from Bluesound player {Ip}:{Port}", ip, port);
+
+        try
+        {
+            // First, get the current song ID from /Status to know which track is playing
+            string? currentSongId = null;
+            try
+            {
+                var statusUrl = $"http://{ip}:{port}/Status";
+                var statusXml = await _httpClient.GetStringAsync(statusUrl);
+                var statusDoc = XDocument.Parse(statusXml);
+                currentSongId = statusDoc.Root?.Element("song")?.Value;
+                _logger.LogInformation("Current song ID from Status: {SongId}", currentSongId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get current song ID from Status endpoint");
+            }
+
+            var allItems = new List<BluesoundQueueItem>();
+            int offset = 0;
+            int total = 0;
+            string? queueId = null;
+            int? currentTrackIndex = null;
+
+            do
+            {
+                var url = $"http://{ip}:{port}/ui/Queue?offset={offset}";
+                var xml = await _httpClient.GetStringAsync(url);
+                var doc = XDocument.Parse(xml);
+                var queue = doc.Element("queue");
+
+                if (queue == null)
+                {
+                    return new JsonResult(new { success = false, error = "Ungültiges Queue-Format" });
+                }
+
+                total = int.Parse(queue.Attribute("total")?.Value ?? "0");
+                queueId = queue.Attribute("id")?.Value;
+
+                foreach (var item in queue.Elements("item"))
+                {
+                    var idx = allItems.Count;
+
+                    // The nowPlayingMatch element contains a "value" attribute with the queue position
+                    // Compare it with the current song ID from /Status to find the playing track
+                    var nowPlayingMatch = item.Element("nowPlayingMatch");
+                    var matchValue = nowPlayingMatch?.Attribute("value")?.Value;
+                    if (matchValue != null && matchValue == currentSongId)
+                    {
+                        _logger.LogInformation("Found current track at index {Index} (matchValue={MatchValue})", idx, matchValue);
+                        currentTrackIndex = idx;
+                    }
+
+                    // Get the queue ID from nowPlayingMatch value (used for /Play?id=X)
+                    var queueItemId = nowPlayingMatch?.Attribute("value")?.Value;
+
+                    allItems.Add(new BluesoundQueueItem
+                    {
+                        Index = idx,
+                        QueueId = queueItemId,
+                        Title = item.Attribute("title")?.Value,
+                        Artist = item.Attribute("subTitle")?.Value,
+                        Album = item.Attribute("subSubTitle")?.Value,
+                        Duration = item.Attribute("duration")?.Value,
+                        Quality = item.Attribute("quality")?.Value,
+                        ImageUrl = ConvertToAbsoluteUrl(ip, port, item.Attribute("image")?.Value)
+                    });
+                }
+
+                offset = allItems.Count;
+            } while (offset < total);
+
+            // Debug: Log the final currentTrackIndex
+            _logger.LogInformation("Queue fetched: {Total} items, currentTrackIndex={Index}", total, currentTrackIndex);
+
+            return new JsonResult(new
+            {
+                success = true,
+                queueId,
+                total,
+                currentIndex = currentTrackIndex,
+                items = allItems.Select(i => new
+                {
+                    index = i.Index,
+                    queueId = i.QueueId,
+                    title = i.Title,
+                    artist = i.Artist,
+                    album = i.Album,
+                    duration = i.Duration,
+                    quality = i.Quality,
+                    imageUrl = i.ImageUrl
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch queue from Bluesound player {Ip}:{Port}", ip, port);
+            return new JsonResult(new { success = false, error = "Queue konnte nicht abgerufen werden" });
+        }
+    }
+
+    /// <summary>
+    /// Converts a relative image URL to an absolute URL pointing to the Bluesound player
+    /// </summary>
+    private static string? ConvertToAbsoluteUrl(string ip, int port, string? relativeUrl)
+    {
+        if (string.IsNullOrEmpty(relativeUrl))
+            return null;
+
+        if (relativeUrl.StartsWith("http://") || relativeUrl.StartsWith("https://"))
+            return relativeUrl;
+
+        // Handle relative paths like /Artwork?...
+        if (relativeUrl.StartsWith("/"))
+            return $"http://{ip}:{port}{relativeUrl}";
+
+        return $"http://{ip}:{port}/{relativeUrl}";
+    }
 }
 
 /// <summary>
@@ -830,4 +1001,22 @@ public class PlayNativeOnBluesoundRequest
     /// Index of track to start from (0-based)
     /// </summary>
     public int? TrackIndex { get; set; }
+}
+
+/// <summary>
+/// Represents a track item in the Bluesound player queue
+/// </summary>
+public class BluesoundQueueItem
+{
+    public int Index { get; set; }
+    /// <summary>
+    /// The Bluesound queue ID for this item (used for /Play?id=X)
+    /// </summary>
+    public string? QueueId { get; set; }
+    public string? Title { get; set; }
+    public string? Artist { get; set; }
+    public string? Album { get; set; }
+    public string? Duration { get; set; }
+    public string? Quality { get; set; }
+    public string? ImageUrl { get; set; }
 }
