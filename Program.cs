@@ -34,6 +34,9 @@ builder.Services.AddScoped<ISettingsService, SettingsService>();
 // Register Queue service
 builder.Services.AddScoped<IQueueService, QueueService>();
 
+// Register StoredPlayer service for database persistence
+builder.Services.AddScoped<IStoredPlayerService, StoredPlayerService>();
+
 // Register Bluesound services
 builder.Services.AddHttpClient<IBluesoundApiService, BluesoundApiService>();
 builder.Services.AddScoped<IPlayerDiscoveryService, PlayerDiscoveryService>();

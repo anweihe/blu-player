@@ -15,6 +15,7 @@ public class BluesoundDbContext : DbContext
     public DbSet<GlobalSettings> GlobalSettings { get; set; } = null!;
     public DbSet<PlaybackQueue> PlaybackQueues { get; set; } = null!;
     public DbSet<QueueTrack> QueueTracks { get; set; } = null!;
+    public DbSet<StoredPlayer> StoredPlayers { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -101,6 +102,19 @@ public class BluesoundDbContext : DbContext
                   .WithMany(q => q.Tracks)
                   .HasForeignKey(e => e.PlaybackQueueId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // StoredPlayer configuration (for caching discovered players)
+        modelBuilder.Entity<StoredPlayer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.IpAddress).IsUnique();
+            entity.HasIndex(e => e.MacAddress);
+            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.MacAddress).HasMaxLength(50);
+            entity.Property(e => e.ModelName).HasMaxLength(200);
+            entity.Property(e => e.Brand).HasMaxLength(100);
         });
     }
 }

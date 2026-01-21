@@ -10,17 +10,20 @@ public class PlayersModel : PageModel
     private readonly IPlayerDiscoveryService _discoveryService;
     private readonly IBluesoundApiService _apiService;
     private readonly IPlayerCacheService _playerCache;
+    private readonly IStoredPlayerService _storedPlayerService;
     private readonly ILogger<PlayersModel> _logger;
 
     public PlayersModel(
         IPlayerDiscoveryService discoveryService,
         IBluesoundApiService apiService,
         IPlayerCacheService playerCache,
+        IStoredPlayerService storedPlayerService,
         ILogger<PlayersModel> logger)
     {
         _discoveryService = discoveryService;
         _apiService = apiService;
         _playerCache = playerCache;
+        _storedPlayerService = storedPlayerService;
         _logger = logger;
     }
 
@@ -45,7 +48,9 @@ public class PlayersModel : PageModel
     }
 
     /// <summary>
-    /// AJAX endpoint for discovering players
+    /// AJAX endpoint for discovering players.
+    /// refresh=true: Full mDNS discovery, saves to database
+    /// refresh=false: Uses stored players from DB if available, otherwise mDNS
     /// </summary>
     public async Task<IActionResult> OnGetDiscoverAsync(bool refresh = false)
     {
@@ -53,20 +58,56 @@ public class PlayersModel : PageModel
         {
             List<BluesoundPlayer> players;
 
-            // Use cache if available and not forcing refresh (cache valid for 30 seconds)
-            if (!refresh && _playerCache.HasRecentCache(TimeSpan.FromSeconds(30)))
+            if (refresh)
             {
-                players = _playerCache.GetCachedPlayers();
-                _logger.LogInformation("Using {Count} cached players", players.Count);
-            }
-            else
-            {
-                _logger.LogInformation("Starting full mDNS player discovery...");
+                // Full mDNS discovery requested
+                _logger.LogInformation("Starting full mDNS player discovery (refresh requested)...");
                 players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
                 _logger.LogInformation("Discovery complete. Found {Count} players.", players.Count);
 
-                // Cache the discovered players
+                // Save discovered players to database
+                await _storedPlayerService.SaveDiscoveredPlayersAsync(players);
+
+                // Update memory cache
                 _playerCache.SetCachedPlayers(players);
+            }
+            else
+            {
+                // Use memory cache if recent (within 30 seconds)
+                if (_playerCache.HasRecentCache(TimeSpan.FromSeconds(30)))
+                {
+                    players = _playerCache.GetCachedPlayers();
+                    _logger.LogInformation("Using {Count} cached players from memory", players.Count);
+                }
+                else
+                {
+                    // Check if we have stored players in the database
+                    var hasStoredPlayers = await _storedPlayerService.HasStoredPlayersAsync();
+
+                    if (hasStoredPlayers)
+                    {
+                        // Query stored player IPs directly (fast path)
+                        _logger.LogInformation("Querying stored players from database...");
+                        players = await QueryStoredPlayersAsync();
+                        _logger.LogInformation("Quick query complete. Found {Count} online players.", players.Count);
+
+                        // Update memory cache
+                        _playerCache.SetCachedPlayers(players);
+                    }
+                    else
+                    {
+                        // No stored players - do full mDNS discovery
+                        _logger.LogInformation("No stored players in database, starting mDNS discovery...");
+                        players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
+                        _logger.LogInformation("Discovery complete. Found {Count} players.", players.Count);
+
+                        // Save to database for next time
+                        await _storedPlayerService.SaveDiscoveredPlayersAsync(players);
+
+                        // Update memory cache
+                        _playerCache.SetCachedPlayers(players);
+                    }
+                }
             }
 
             var groups = OrganizeIntoGroups(players);
@@ -119,6 +160,42 @@ public class PlayersModel : PageModel
                 error = $"Fehler bei der Suche nach Playern: {ex.Message}"
             });
         }
+    }
+
+    /// <summary>
+    /// Query stored players directly by their IPs (fast, ~0.5s instead of ~3s mDNS)
+    /// </summary>
+    private async Task<List<BluesoundPlayer>> QueryStoredPlayersAsync()
+    {
+        var storedPlayers = await _storedPlayerService.GetAllStoredPlayersAsync();
+        var players = new List<BluesoundPlayer>();
+
+        // Query all stored players in parallel
+        var tasks = storedPlayers.Select(async sp =>
+        {
+            try
+            {
+                var player = await _apiService.GetPlayerStatusAsync(sp.IpAddress, sp.Port);
+                if (player != null)
+                {
+                    await _storedPlayerService.MarkPlayerOnlineAsync(sp.IpAddress);
+                    return player;
+                }
+                else
+                {
+                    await _storedPlayerService.MarkPlayerOfflineAsync(sp.IpAddress);
+                    return null;
+                }
+            }
+            catch
+            {
+                await _storedPlayerService.MarkPlayerOfflineAsync(sp.IpAddress);
+                return null;
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        return results.Where(p => p != null).Cast<BluesoundPlayer>().ToList();
     }
 
     public async Task<IActionResult> OnPostRefreshAsync()

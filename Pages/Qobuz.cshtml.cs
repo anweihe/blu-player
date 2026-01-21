@@ -11,6 +11,7 @@ public class QobuzModel : PageModel
     private readonly IPlayerDiscoveryService _discoveryService;
     private readonly IBluesoundApiService _bluesoundService;
     private readonly IPlayerCacheService _playerCache;
+    private readonly IStoredPlayerService _storedPlayerService;
     private readonly ILogger<QobuzModel> _logger;
 
     public QobuzModel(
@@ -18,12 +19,14 @@ public class QobuzModel : PageModel
         IPlayerDiscoveryService discoveryService,
         IBluesoundApiService bluesoundService,
         IPlayerCacheService playerCache,
+        IStoredPlayerService storedPlayerService,
         ILogger<QobuzModel> logger)
     {
         _qobuzService = qobuzService;
         _discoveryService = discoveryService;
         _bluesoundService = bluesoundService;
         _playerCache = playerCache;
+        _storedPlayerService = storedPlayerService;
         _logger = logger;
     }
 
@@ -443,12 +446,14 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
-    /// Get available Bluesound players (grouped like on home page)
+    /// Get available Bluesound players (grouped like on home page).
+    /// Uses stored players from DB when available for faster response.
     /// </summary>
-    public async Task<IActionResult> OnGetPlayersAsync(bool refresh = false)
+    public async Task<IActionResult> OnGetPlayersAsync(bool refresh = false, bool refreshStatus = false)
     {
         // Use shared cache if recent (within 60 seconds) and not forcing refresh
-        if (!refresh && _playerCache.HasRecentCache(TimeSpan.FromSeconds(60)))
+        // refreshStatus=true skips cache but doesn't trigger mDNS discovery (fast status refresh)
+        if (!refresh && !refreshStatus && _playerCache.HasRecentCache(TimeSpan.FromSeconds(60)))
         {
             var cachedPlayers = _playerCache.GetCachedPlayers();
             _logger.LogInformation("Using {Count} cached players from shared cache", cachedPlayers.Count);
@@ -460,17 +465,46 @@ public class QobuzModel : PageModel
             });
         }
 
-        _logger.LogInformation("Discovering Bluesound players...");
-
         try
         {
-            // Discover players on the network
-            var players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
+            List<BluesoundPlayer> players;
+
+            if (refresh)
+            {
+                // Full mDNS discovery requested
+                _logger.LogInformation("Discovering Bluesound players (refresh requested)...");
+                players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
+                _logger.LogInformation("Discovered {Count} Bluesound players", players.Count);
+
+                // Save to database
+                await _storedPlayerService.SaveDiscoveredPlayersAsync(players);
+            }
+            else
+            {
+                // Check if we have stored players in the database
+                var hasStoredPlayers = await _storedPlayerService.HasStoredPlayersAsync();
+
+                if (hasStoredPlayers)
+                {
+                    // Query stored player IPs directly (fast path)
+                    _logger.LogInformation("Querying stored players from database...");
+                    players = await QueryStoredPlayersAsync();
+                    _logger.LogInformation("Quick query complete. Found {Count} online players.", players.Count);
+                }
+                else
+                {
+                    // No stored players - do full mDNS discovery
+                    _logger.LogInformation("No stored players, discovering Bluesound players...");
+                    players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
+                    _logger.LogInformation("Discovered {Count} Bluesound players", players.Count);
+
+                    // Save to database for next time
+                    await _storedPlayerService.SaveDiscoveredPlayersAsync(players);
+                }
+            }
 
             // Update shared cache
             _playerCache.SetCachedPlayers(players);
-
-            _logger.LogInformation("Discovered {Count} Bluesound players", players.Count);
 
             return new JsonResult(new
             {
@@ -488,6 +522,45 @@ public class QobuzModel : PageModel
                 players = GetGroupedPlayersForSelector(_playerCache.GetCachedPlayers())
             });
         }
+    }
+
+    /// <summary>
+    /// Query stored players directly by their IPs (fast, ~0.5s instead of ~3s mDNS)
+    /// </summary>
+    private async Task<List<BluesoundPlayer>> QueryStoredPlayersAsync()
+    {
+        var storedPlayers = await _storedPlayerService.GetAllStoredPlayersAsync();
+
+        // Query all stored players in parallel (HTTP requests only, no DB access)
+        var tasks = storedPlayers.Select(async sp =>
+        {
+            try
+            {
+                var player = await _bluesoundService.GetPlayerStatusAsync(sp.IpAddress, sp.Port);
+                return (sp.IpAddress, Player: player, IsOnline: player != null);
+            }
+            catch
+            {
+                return (sp.IpAddress, Player: (BluesoundPlayer?)null, IsOnline: false);
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+
+        // Update DB sequentially to avoid DbContext concurrency issues
+        foreach (var result in results)
+        {
+            if (result.IsOnline)
+            {
+                await _storedPlayerService.MarkPlayerOnlineAsync(result.IpAddress);
+            }
+            else
+            {
+                await _storedPlayerService.MarkPlayerOfflineAsync(result.IpAddress);
+            }
+        }
+
+        return results.Where(r => r.Player != null).Select(r => r.Player!).ToList();
     }
 
     /// <summary>

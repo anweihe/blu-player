@@ -1011,7 +1011,7 @@
 
         // Load players
         try {
-            const response = await fetch('/Qobuz?handler=Players');
+            const response = await fetch('/Qobuz?handler=Players&refreshStatus=true');
             const data = await response.json();
 
             if (data.success) {
