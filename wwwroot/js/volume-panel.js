@@ -305,7 +305,7 @@ class VolumePanel {
                 const action = btn.dataset.action;
                 const ip = btn.dataset.ip;
                 const port = btn.dataset.port;
-                const delta = action === 'increase' ? 5 : -5;
+                const delta = action === 'increase' ? 2 : -2;
                 this.adjustVolume(ip, port, delta);
             });
         });

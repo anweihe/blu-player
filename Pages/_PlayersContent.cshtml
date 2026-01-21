@@ -1825,11 +1825,11 @@
                 <span>Fixed Volume</span>
                </div>`
             : `<div class="volume-controls" data-player-ip="${player.ipAddress}" data-player-port="${player.port}" data-volume="${player.volume}">
-                <button type="button" class="btn-volume btn-volume-down" title="Leiser" onclick="adjustVolume(this, -5)">
+                <button type="button" class="btn-volume btn-volume-down" title="Leiser" onclick="adjustVolume(this, -2)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
                 <div class="volume-bar"><div class="volume-fill" style="width: ${Math.max(0, Math.min(100, player.volume))}%"></div></div>
-                <button type="button" class="btn-volume btn-volume-up" title="Lauter" onclick="adjustVolume(this, 5)">
+                <button type="button" class="btn-volume btn-volume-up" title="Lauter" onclick="adjustVolume(this, 2)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
                </div>`;
