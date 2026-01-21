@@ -686,6 +686,83 @@ public class QobuzModel : PageModel
             }
         });
     }
+
+    /// <summary>
+    /// Get the Qobuz streaming quality setting from a Bluesound player
+    /// </summary>
+    public async Task<IActionResult> OnGetBluesoundQobuzQualityAsync(string playerIp)
+    {
+        if (string.IsNullOrEmpty(playerIp))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende IP-Adresse" });
+        }
+
+        _logger.LogInformation("Getting Qobuz quality from Bluesound player {Ip}", playerIp);
+
+        var quality = await _bluesoundService.GetQobuzQualityAsync(playerIp);
+
+        if (quality == null)
+        {
+            return new JsonResult(new { success = false, error = "Qualitätseinstellung konnte nicht abgerufen werden" });
+        }
+
+        var formatId = MapBluesoundToFormatId(quality);
+
+        return new JsonResult(new
+        {
+            success = true,
+            quality,
+            formatId
+        });
+    }
+
+    /// <summary>
+    /// Set the Qobuz streaming quality on a Bluesound player
+    /// </summary>
+    public async Task<IActionResult> OnPostSetBluesoundQobuzQualityAsync(string playerIp, int formatId, int port = 11000)
+    {
+        if (string.IsNullOrEmpty(playerIp))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende IP-Adresse" });
+        }
+
+        var quality = MapFormatIdToBluesound(formatId);
+        _logger.LogInformation("Setting Qobuz quality to {Quality} (formatId={FormatId}) on Bluesound player {Ip}:{Port}",
+            quality, formatId, playerIp, port);
+
+        var success = await _bluesoundService.SetQobuzQualityAsync(playerIp, quality);
+
+        if (!success)
+        {
+            return new JsonResult(new { success = false, error = "Qualitätseinstellung konnte nicht gesetzt werden" });
+        }
+
+        return new JsonResult(new { success = true, quality, formatId });
+    }
+
+    /// <summary>
+    /// Maps BluOS quality string to Qobuz format ID
+    /// </summary>
+    private static int MapBluesoundToFormatId(string quality) => quality switch
+    {
+        "MP3" => 5,
+        "CD" => 6,
+        "HD" => 7,
+        "UHD" => 27,
+        _ => 27 // Default to highest quality
+    };
+
+    /// <summary>
+    /// Maps Qobuz format ID to BluOS quality string
+    /// </summary>
+    private static string MapFormatIdToBluesound(int formatId) => formatId switch
+    {
+        5 => "MP3",
+        6 => "CD",
+        7 => "HD",
+        27 => "UHD",
+        _ => "UHD" // Default to highest quality
+    };
 }
 
 /// <summary>

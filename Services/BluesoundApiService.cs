@@ -30,6 +30,18 @@ public interface IBluesoundApiService
     /// Play a Qobuz playlist natively on the player using the built-in Qobuz integration
     /// </summary>
     Task<bool> PlayQobuzPlaylistAsync(string ipAddress, int port, long playlistId, int trackIndex, long trackId);
+
+    /// <summary>
+    /// Get the current Qobuz streaming quality setting from the player
+    /// </summary>
+    /// <returns>Quality string: "MP3", "CD", "HD", or "UHD"</returns>
+    Task<string?> GetQobuzQualityAsync(string ipAddress);
+
+    /// <summary>
+    /// Set the Qobuz streaming quality on the player
+    /// </summary>
+    /// <param name="quality">Quality string: "MP3", "CD", "HD", or "UHD"</param>
+    Task<bool> SetQobuzQualityAsync(string ipAddress, string quality);
 }
 
 public class BluesoundApiService : IBluesoundApiService
@@ -409,6 +421,100 @@ public class BluesoundApiService : IBluesoundApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to play Qobuz playlist {PlaylistId} on {IpAddress}:{Port}", playlistId, ipAddress, port);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Get the current Qobuz streaming quality setting from the player.
+    /// Parses HTML response from /credentials endpoint.
+    /// </summary>
+    public async Task<string?> GetQobuzQualityAsync(string ipAddress)
+    {
+        try
+        {
+            var url = $"http://{ipAddress}/credentials?service=Qobuz&noheader=1&schemaVersion=35";
+            _logger.LogDebug("Fetching Qobuz quality from {Url}", url);
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            // Parse HTML to find the checked radio button with name="quality"
+            // The HTML contains radio buttons like: <input type="radio" name="quality" value="CD" checked>
+            // We need to find which one has the "checked" attribute
+            var qualityValues = new[] { "MP3", "CD", "HD", "UHD" };
+
+            foreach (var quality in qualityValues)
+            {
+                // Look for patterns like: value="CD" checked or value="CD"  checked
+                // The checked attribute can appear after the value
+                var pattern1 = $"name=\"quality\"[^>]*value=\"{quality}\"[^>]*checked";
+                var pattern2 = $"value=\"{quality}\"[^>]*name=\"quality\"[^>]*checked";
+
+                if (System.Text.RegularExpressions.Regex.IsMatch(response, pattern1, System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
+                    System.Text.RegularExpressions.Regex.IsMatch(response, pattern2, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                {
+                    _logger.LogInformation("Qobuz quality on {IpAddress}: {Quality}", ipAddress, quality);
+                    return quality;
+                }
+            }
+
+            _logger.LogWarning("Could not find Qobuz quality setting in response from {IpAddress}", ipAddress);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get Qobuz quality from {IpAddress}", ipAddress);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Set the Qobuz streaming quality on the player.
+    /// Posts form data to /credentials endpoint.
+    /// </summary>
+    public async Task<bool> SetQobuzQualityAsync(string ipAddress, string quality)
+    {
+        try
+        {
+            var url = $"http://{ipAddress}/credentials";
+            _logger.LogInformation("Setting Qobuz quality to {Quality} on {IpAddress}", quality, ipAddress);
+
+            var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["service"] = "Qobuz",
+                ["quality"] = quality,
+                ["update"] = "Aktualisieren"
+            });
+
+            // Disable automatic redirect following to check the Location header
+            using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(5) };
+
+            var response = await client.PostAsync(url, content);
+
+            // Check for 303 See Other with message=Updated in Location header
+            if (response.StatusCode == System.Net.HttpStatusCode.RedirectMethod ||
+                response.StatusCode == System.Net.HttpStatusCode.Redirect)
+            {
+                var location = response.Headers.Location?.ToString() ?? "";
+                var success = location.Contains("message=Updated");
+                _logger.LogInformation("Qobuz quality set result: {Success} (Location: {Location})", success, location);
+                return success;
+            }
+
+            // Also accept 200 OK as success
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Qobuz quality set successfully on {IpAddress}", ipAddress);
+                return true;
+            }
+
+            _logger.LogWarning("Unexpected response when setting Qobuz quality: {StatusCode}", response.StatusCode);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set Qobuz quality on {IpAddress}", ipAddress);
             return false;
         }
     }

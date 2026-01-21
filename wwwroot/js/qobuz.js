@@ -56,6 +56,67 @@
         return window.GlobalPlayer?.getStreamQuality() || 27;
     }
 
+    // Sync Qobuz quality from Bluesound player on page load
+    async function syncBluesoundQobuzQuality() {
+        const selectedPlayer = getSelectedPlayer();
+        if (selectedPlayer?.type !== 'bluesound' || !selectedPlayer.ip) {
+            console.log('syncBluesoundQobuzQuality: Not a Bluesound player, skipping sync');
+            return;
+        }
+
+        console.log('syncBluesoundQobuzQuality: Syncing quality from Bluesound player', selectedPlayer.ip);
+
+        try {
+            const response = await fetch(`/Qobuz?handler=BluesoundQobuzQuality&playerIp=${encodeURIComponent(selectedPlayer.ip)}&port=${selectedPlayer.port || 11000}`);
+            const data = await response.json();
+
+            if (data.success && data.formatId) {
+                console.log('syncBluesoundQobuzQuality: Got quality from player:', data.quality, '(formatId:', data.formatId, ')');
+
+                // Update GlobalPlayer UI with the quality from the Bluesound player
+                if (window.GlobalPlayer && window.GlobalPlayer.setQuality) {
+                    window.GlobalPlayer.setQuality(data.formatId);
+                }
+            } else {
+                console.warn('syncBluesoundQobuzQuality: Failed to get quality from player:', data.error);
+            }
+        } catch (error) {
+            console.error('syncBluesoundQobuzQuality: Error fetching quality:', error);
+        }
+    }
+
+    // Set Qobuz quality on Bluesound player when changed in UI
+    async function setBluesoundQobuzQuality(formatId) {
+        const selectedPlayer = getSelectedPlayer();
+        if (selectedPlayer?.type !== 'bluesound' || !selectedPlayer.ip) {
+            return true; // Not a Bluesound player, nothing to do
+        }
+
+        console.log('setBluesoundQobuzQuality: Setting quality on Bluesound player', selectedPlayer.ip, 'to formatId:', formatId);
+
+        try {
+            const response = await fetch(`/Qobuz?handler=SetBluesoundQobuzQuality&playerIp=${encodeURIComponent(selectedPlayer.ip)}&formatId=${formatId}&port=${selectedPlayer.port || 11000}`, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('setBluesoundQobuzQuality: Quality set successfully:', data.quality);
+                return true;
+            } else {
+                console.error('setBluesoundQobuzQuality: Failed to set quality:', data.error);
+                return false;
+            }
+        } catch (error) {
+            console.error('setBluesoundQobuzQuality: Error setting quality:', error);
+            return false;
+        }
+    }
+
     // Get active profile Qobuz credentials
     async function getQobuzCredentials() {
         const activeProfile = await UserProfileManager.getActiveProfile();
@@ -251,6 +312,9 @@
 
                     showLoggedInState(data);
                     await loadPlaylists();
+
+                    // Sync Qobuz quality setting from Bluesound player (if selected)
+                    await syncBluesoundQobuzQuality();
                 } else {
                     // Token invalid, clear from profile
                     console.warn('initQobuz: Token verification failed:', data.error);
@@ -1695,6 +1759,27 @@
         currentTrackInfo = track;
         lastTrackTitle = track.title;
 
+        // Reset progress tracking for new track
+        lastKnownPosition = 0;
+        lastKnownTotal = 0;
+        lastStatusTime = Date.now();
+
+        // Reset progress UI elements
+        const progressFill = document.getElementById('global-progress-fill');
+        const currentTime = document.getElementById('global-current-time');
+        const totalTime = document.getElementById('global-total-time');
+        if (progressFill) progressFill.style.width = '0%';
+        if (currentTime) currentTime.textContent = '0:00';
+        if (totalTime) totalTime.textContent = '0:00';
+
+        // Also reset popup progress if open
+        const popupProgressFill = document.getElementById('global-popup-progress-fill');
+        const popupCurrentTime = document.getElementById('global-popup-current-time');
+        const popupTotalTime = document.getElementById('global-popup-total-time');
+        if (popupProgressFill) popupProgressFill.style.width = '0%';
+        if (popupCurrentTime) popupCurrentTime.textContent = '0:00';
+        if (popupTotalTime) popupTotalTime.textContent = '0:00';
+
         // Update GlobalPlayer
         if (window.GlobalPlayer) {
             window.GlobalPlayer.setCurrentTrack({
@@ -1718,6 +1803,12 @@
     // This function is called when GlobalPlayer quality changes and we need to restart current track
     window.onGlobalQualityChange = async function(formatId) {
         const selectedPlayer = getSelectedPlayer();
+
+        // Sync quality setting to Bluesound player if selected
+        if (selectedPlayer?.type === 'bluesound' && selectedPlayer.ip) {
+            await setBluesoundQobuzQuality(formatId);
+        }
+
         // If something is playing, restart with new quality
         if (currentTrackInfo && (isPlaying || audioPlayer.currentTime > 0)) {
             const currentTime = selectedPlayer.type === 'browser' ? audioPlayer.currentTime : null;
