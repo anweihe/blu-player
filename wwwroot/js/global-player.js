@@ -44,6 +44,11 @@
     let currentQueue = null; // { sourceType, sourceId, sourceName, currentIndex, tracks }
     let onPlayQueueTrack = null; // Callback for playing a queue track
 
+    // Pending navigation state (for cross-page "Go to Album/Playlist" feature)
+    // Stored in sessionStorage to survive page navigation
+    const STORAGE_PENDING_NAVIGATION = 'global_pending_navigation';
+    let pendingNavigation = null; // { type: 'album'|'playlist', id: string, trackIndex: number }
+
     // ==================== Playback State Persistence ====================
 
     function savePlaybackState() {
@@ -158,6 +163,9 @@
 
         // Setup progress bar click-to-seek
         setupProgressBarSeek();
+
+        // Setup go-to-source button
+        initGotoSourceButton();
 
         // Save playback state before page unload
         window.addEventListener('beforeunload', savePlaybackState);
@@ -670,7 +678,8 @@
             const response = await fetch('/Qobuz?handler=BluesoundControl', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                 },
                 body: JSON.stringify({
                     ip: globalSelectedPlayer.ip,
@@ -678,6 +687,11 @@
                     action: action
                 })
             });
+
+            if (!response.ok) {
+                console.error('Bluesound control failed:', response.status, response.statusText);
+                return false;
+            }
 
             const data = await response.json();
             return data.success;
@@ -793,8 +807,11 @@
         // Update quality buttons
         updateQualityButtons();
 
-        // Load and render queue
+        // Load and render queue first (sets currentQueue)
         await loadAndRenderQueue();
+
+        // Then update go-to-source button (now currentQueue is available)
+        updateGotoSourceButton();
 
         popup.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -948,6 +965,106 @@
             }
         } catch (error) {
             console.error('Failed to update queue index:', error);
+        }
+    }
+
+    // ==================== Go to Source Button ====================
+
+    function updateGotoSourceButton() {
+        const gotoSourceBtn = document.getElementById('global-popup-goto-source');
+        if (!gotoSourceBtn) return;
+
+        if (!currentQueue || !currentQueue.sourceId) {
+            gotoSourceBtn.style.display = 'none';
+            return;
+        }
+
+        gotoSourceBtn.style.display = 'flex';
+
+        // Update title based on source type
+        if (currentQueue.sourceType === 'playlist') {
+            gotoSourceBtn.title = 'Playlist anzeigen';
+        } else {
+            gotoSourceBtn.title = 'Album anzeigen';
+        }
+    }
+
+    function handleGotoSourceClick() {
+        if (!currentQueue?.sourceId) return;
+
+        // Close popup first
+        closeGlobalNowPlayingPopup();
+
+        // Save navigation intent
+        pendingNavigation = {
+            type: currentQueue.sourceType,
+            id: currentQueue.sourceId,
+            trackIndex: currentQueue.currentIndex || 0
+        };
+
+        // Check if actually on Qobuz page (not just if functions exist - they might be loaded globally)
+        const isOnQobuzPage = window.location.pathname.toLowerCase() === '/qobuz';
+        if (isOnQobuzPage && (typeof window.selectPlaylist === 'function' || typeof window.selectAlbum === 'function')) {
+            executePendingNavigation();
+        } else {
+            // Save to sessionStorage for cross-page navigation (survives page reload)
+            try {
+                sessionStorage.setItem(STORAGE_PENDING_NAVIGATION, JSON.stringify(pendingNavigation));
+            } catch (e) {
+                console.error('Failed to save pending navigation:', e);
+            }
+            // Navigate to Qobuz page - pending navigation will be executed on load
+            window.location.href = '/Qobuz';
+        }
+    }
+
+    // Execute pending navigation (called after page load or immediately if already on Qobuz)
+    function executePendingNavigation() {
+        // Check memory first, then sessionStorage
+        let nav = pendingNavigation;
+        if (!nav) {
+            try {
+                const stored = sessionStorage.getItem(STORAGE_PENDING_NAVIGATION);
+                if (stored) {
+                    nav = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error('Failed to read pending navigation:', e);
+            }
+        }
+
+        if (!nav) return;
+
+        // Clear both memory and sessionStorage
+        pendingNavigation = null;
+        try {
+            sessionStorage.removeItem(STORAGE_PENDING_NAVIGATION);
+        } catch (e) { /* ignore */ }
+
+        const { type, id, trackIndex } = nav;
+
+        if (type === 'playlist' && typeof window.selectPlaylist === 'function') {
+            window.selectPlaylist(parseInt(id, 10), trackIndex);
+        } else if (type === 'album' && typeof window.selectAlbum === 'function') {
+            window.selectAlbum(id, trackIndex);
+        }
+    }
+
+    // Check if there's a pending navigation (in memory or sessionStorage)
+    function hasPendingNavigation() {
+        if (pendingNavigation) return true;
+        try {
+            return !!sessionStorage.getItem(STORAGE_PENDING_NAVIGATION);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Initialize go-to-source button click handler
+    function initGotoSourceButton() {
+        const gotoSourceBtn = document.getElementById('global-popup-goto-source');
+        if (gotoSourceBtn) {
+            gotoSourceBtn.addEventListener('click', handleGotoSourceClick);
         }
     }
 
@@ -1311,6 +1428,8 @@
         // Set the current queue (called by Qobuz page when starting playback)
         setQueue: (queue) => {
             currentQueue = queue;
+            // Update go-to-source button
+            updateGotoSourceButton();
             // Update the popup if it's open
             if (popup && popup.style.display === 'flex') {
                 renderQueueInPopup(queue);
@@ -1341,7 +1460,12 @@
         // Unregister queue callback
         unregisterQueueCallback: () => {
             onPlayQueueTrack = null;
-        }
+        },
+        // ==================== Pending Navigation API ====================
+        // Execute pending navigation (for cross-page "Go to Album/Playlist")
+        executePendingNavigation: executePendingNavigation,
+        // Check if there's a pending navigation (in memory or sessionStorage)
+        hasPendingNavigation: hasPendingNavigation
     };
 
     // Initialize when DOM is ready

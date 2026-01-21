@@ -166,7 +166,15 @@ public class BluesoundApiService : IBluesoundApiService
             _logger.LogDebug("Fetching Status from {Url}", url);
 
             var response = await _httpClient.GetStringAsync(url);
-            return ParsePlaybackStatus(response);
+            var status = ParsePlaybackStatus(response);
+
+            // Convert relative image URL to absolute URL pointing to the Bluesound player
+            if (status != null && !string.IsNullOrEmpty(status.ImageUrl) && status.ImageUrl.StartsWith("/"))
+            {
+                status.ImageUrl = $"http://{ipAddress}:{port}{status.ImageUrl}";
+            }
+
+            return status;
         }
         catch (Exception ex)
         {

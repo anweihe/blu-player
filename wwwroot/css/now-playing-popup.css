@@ -313,6 +313,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Playback Controls Row - Wrapper with button on right */
+.global-np-popup-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  padding: 0;
+}
+
 /* Playback Controls */
 .global-np-popup-controls {
   display: flex;
@@ -320,6 +330,38 @@
   justify-content: center;
   gap: 20px;
   padding: 8px 0;
+}
+
+/* Go-to-Source Button - positioned right */
+.global-np-goto-source-btn {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--np-sheet-surface);
+  border: none;
+  border-radius: 50%;
+  color: var(--np-sheet-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.global-np-goto-source-btn:hover {
+  background: var(--np-sheet-accent-glow);
+  color: var(--np-sheet-accent);
+}
+
+.global-np-goto-source-btn:active {
+  transform: scale(0.95);
+}
+
+.global-np-goto-source-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 .global-popup-btn {

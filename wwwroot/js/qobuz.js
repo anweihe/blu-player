@@ -315,6 +315,15 @@
 
                     // Sync Qobuz quality setting from Bluesound player (if selected)
                     await syncBluesoundQobuzQuality();
+
+                    // Check for pending navigation (from "Go to Album/Playlist" button on other pages)
+                    // Only execute after login is verified and playlists are loaded
+                    if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.hasPendingNavigation()) {
+                        // Small delay to ensure DOM is fully ready
+                        setTimeout(() => {
+                            GlobalPlayer.executePendingNavigation();
+                        }, 150);
+                    }
                 } else {
                     // Token invalid, clear from profile
                     console.warn('initQobuz: Token verification failed:', data.error);
@@ -331,6 +340,13 @@
             // No credentials - show login
             console.log('initQobuz: No credentials found, showing login form');
             showLoginState();
+
+            // Clear any pending navigation since user needs to login first
+            if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.hasPendingNavigation()) {
+                try {
+                    sessionStorage.removeItem('global_pending_navigation');
+                } catch (e) { /* ignore */ }
+            }
         }
     }
 
@@ -772,7 +788,8 @@
     }
 
     // Select album - load and show tracks
-    async function selectAlbum(albumId) {
+    // highlightTrackIndex: optional index of track to highlight and scroll to
+    async function selectAlbum(albumId, highlightTrackIndex = null) {
         const creds = await getQobuzCredentials();
         const authToken = creds?.authToken;
         if (!authToken) {
@@ -787,7 +804,7 @@
             const data = await response.json();
 
             if (data.success) {
-                showAlbumDetail(data.album, data.tracks);
+                showAlbumDetail(data.album, data.tracks, highlightTrackIndex);
             } else {
                 showError(data.error || 'Album konnte nicht geladen werden');
             }
@@ -800,7 +817,8 @@
     }
 
     // Show album detail view
-    function showAlbumDetail(album, tracks) {
+    // highlightTrackIndex: optional index of track to highlight and scroll to
+    function showAlbumDetail(album, tracks, highlightTrackIndex = null) {
         currentTracks = tracks || [];
 
         // Set source tracking for queue
@@ -832,15 +850,17 @@
             placeholder.style.display = 'flex';
         }
 
-        // Render tracks
-        renderTracks(tracks);
+        // Render tracks (with optional highlight)
+        renderTracks(tracks, highlightTrackIndex);
 
         // Show detail section, hide logged in section
         loggedInSection.style.display = 'none';
         playlistDetailSection.style.display = 'block';
 
-        // Scroll to top
-        window.scrollTo(0, 0);
+        // Scroll to top (unless highlighting a track)
+        if (highlightTrackIndex === null) {
+            window.scrollTo(0, 0);
+        }
     }
 
     // Load top playlists
@@ -1101,7 +1121,8 @@
     }
 
     // Select playlist - load and show tracks
-    async function selectPlaylist(playlistId) {
+    // highlightTrackIndex: optional index of track to highlight and scroll to
+    async function selectPlaylist(playlistId, highlightTrackIndex = null) {
         const creds = await getQobuzCredentials();
         const authToken = creds?.authToken;
         if (!authToken) return;
@@ -1113,7 +1134,7 @@
             const data = await response.json();
 
             if (data.success) {
-                showPlaylistDetail(data.playlist, data.tracks);
+                showPlaylistDetail(data.playlist, data.tracks, highlightTrackIndex);
             } else {
                 showError(data.error || 'Playlist konnte nicht geladen werden');
             }
@@ -1126,7 +1147,8 @@
     }
 
     // Show playlist detail view
-    function showPlaylistDetail(playlist, tracks) {
+    // highlightTrackIndex: optional index of track to highlight and scroll to
+    function showPlaylistDetail(playlist, tracks, highlightTrackIndex = null) {
         currentTracks = tracks || [];
 
         // Set source tracking for queue
@@ -1152,24 +1174,32 @@
             placeholder.style.display = 'flex';
         }
 
-        // Render tracks
-        renderTracks(tracks);
+        // Render tracks (with optional highlight)
+        renderTracks(tracks, highlightTrackIndex);
 
         // Show detail section, hide playlists
         loggedInSection.style.display = 'none';
         playlistDetailSection.style.display = 'block';
 
-        // Scroll to top
-        window.scrollTo(0, 0);
+        // Scroll to top (unless highlighting a track)
+        if (highlightTrackIndex === null) {
+            window.scrollTo(0, 0);
+        }
     }
 
     // Render tracks list
-    function renderTracks(tracks) {
+    // highlightTrackIndex: optional index of track to highlight and scroll to (for "Go to Album/Playlist" feature)
+    function renderTracks(tracks, highlightTrackIndex = null) {
         const tracksList = document.getElementById('tracks-list');
 
         if (!tracks || tracks.length === 0) {
             tracksList.innerHTML = '<div class="empty-state"><p>Diese Playlist enthält keine Titel.</p></div>';
             return;
+        }
+
+        // If highlightTrackIndex is provided, set it as current track for highlighting
+        if (highlightTrackIndex !== null && highlightTrackIndex >= 0 && highlightTrackIndex < tracks.length) {
+            currentTrackIndex = highlightTrackIndex;
         }
 
         tracksList.innerHTML = tracks.map((track, index) => `
@@ -1195,6 +1225,16 @@
                 <span class="track-duration">${track.formattedDuration}</span>
             </div>
         `).join('');
+
+        // Scroll to highlighted track after render
+        if (highlightTrackIndex !== null && highlightTrackIndex >= 0) {
+            setTimeout(() => {
+                const playingTrack = tracksList.querySelector('.track-item.playing');
+                if (playingTrack) {
+                    playingTrack.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
     }
 
     // Back to playlists
