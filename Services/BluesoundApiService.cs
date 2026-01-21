@@ -357,6 +357,7 @@ public class BluesoundApiService : IBluesoundApiService
             // Add headers that the native app uses
             request.Headers.Add("x-sovi-ui-schema-version", "6");
             request.Headers.Add("x-sovi-schema-version", "34");
+            request.Headers.Add("x-sovi-ui-autofill", "1"); // Auto-fill queue with album tracks
 
             var response = await _httpClient.SendAsync(request);
 
@@ -410,6 +411,7 @@ public class BluesoundApiService : IBluesoundApiService
             // Add headers that the native app uses
             request.Headers.Add("x-sovi-ui-schema-version", "6");
             request.Headers.Add("x-sovi-schema-version", "34");
+            request.Headers.Add("x-sovi-ui-autofill", "1"); // Auto-fill queue with playlist tracks
 
             var response = await _httpClient.SendAsync(request);
 
