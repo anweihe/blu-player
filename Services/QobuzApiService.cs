@@ -48,6 +48,11 @@ public interface IQobuzApiService
     Task<List<QobuzAlbum>> GetFeaturedAlbumsAsync(string type = "new-releases", int limit = 50);
 
     /// <summary>
+    /// Get most streamed albums from discover endpoint
+    /// </summary>
+    Task<List<QobuzAlbum>> GetMostStreamedAlbumsAsync(int limit = 50);
+
+    /// <summary>
     /// Get featured/editorial playlists from Qobuz
     /// </summary>
     Task<List<QobuzPlaylist>> GetFeaturedPlaylistsAsync(int limit = 50);
@@ -761,6 +766,106 @@ public class QobuzApiService : IQobuzApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get featured albums");
+        }
+
+        return albums;
+    }
+
+    /// <summary>
+    /// Get most streamed albums from discover/index endpoint
+    /// </summary>
+    public async Task<List<QobuzAlbum>> GetMostStreamedAlbumsAsync(int limit = 50)
+    {
+        var albums = new List<QobuzAlbum>();
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get most streamed albums: app credentials not available");
+                return albums;
+            }
+
+            var url = $"{QobuzApiBase}/discover/index" +
+                      $"?genre_ids=" +
+                      $"&app_id={credentials.AppId}";
+
+            _logger.LogDebug("Fetching most streamed albums from discover endpoint");
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get most streamed albums: {Status}", response.StatusCode);
+                return albums;
+            }
+
+            // Parse the JSON to find containers/most_streamed
+            using var doc = JsonDocument.Parse(responseContent);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("containers", out var containers))
+            {
+                foreach (var container in containers.EnumerateArray())
+                {
+                    if (container.TryGetProperty("id", out var idElement) &&
+                        idElement.GetString() == "most_streamed" &&
+                        container.TryGetProperty("albums", out var albumsElement) &&
+                        albumsElement.TryGetProperty("items", out var items))
+                    {
+                        foreach (var item in items.EnumerateArray())
+                        {
+                            try
+                            {
+                                var album = new QobuzAlbum
+                                {
+                                    Id = item.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
+                                    Title = item.TryGetProperty("title", out var title) ? title.GetString() ?? "" : ""
+                                };
+
+                                // Get artist info
+                                if (item.TryGetProperty("artist", out var artist))
+                                {
+                                    album.Artist = new QobuzArtist
+                                    {
+                                        Id = artist.TryGetProperty("id", out var artistId) ? artistId.GetInt64() : 0,
+                                        Name = artist.TryGetProperty("name", out var artistName) ? artistName.GetString() ?? "" : ""
+                                    };
+                                }
+
+                                // Get cover image
+                                if (item.TryGetProperty("image", out var image))
+                                {
+                                    album.Image = new QobuzImage
+                                    {
+                                        Small = image.TryGetProperty("small", out var small) ? small.GetString() : null,
+                                        Thumbnail = image.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null,
+                                        Large = image.TryGetProperty("large", out var large) ? large.GetString() : null
+                                    };
+                                }
+
+                                albums.Add(album);
+
+                                if (albums.Count >= limit)
+                                    break;
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to parse album item");
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} most streamed albums", albums.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get most streamed albums");
         }
 
         return albums;

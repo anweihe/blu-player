@@ -775,12 +775,12 @@
         hideLoading();
     }
 
-    // Load album charts (best sellers)
+    // Load album charts (most streamed)
     async function loadAlbumCharts() {
         showLoading();
 
         try {
-            const response = await fetch('?handler=FeaturedAlbums&type=best-sellers&limit=50');
+            const response = await fetch('?handler=MostStreamedAlbums&limit=50');
             const data = await response.json();
 
             if (data.success) {

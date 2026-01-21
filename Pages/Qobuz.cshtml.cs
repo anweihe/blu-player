@@ -223,6 +223,31 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
+    /// Get most streamed albums from Qobuz discover endpoint
+    /// </summary>
+    public async Task<IActionResult> OnGetMostStreamedAlbumsAsync(int limit = 50)
+    {
+        _logger.LogInformation("Fetching most streamed albums");
+
+        var albums = await _qobuzService.GetMostStreamedAlbumsAsync(limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            albums = albums.Select(a => new
+            {
+                id = a.Id,
+                title = a.Title,
+                artistName = a.Artist?.Name,
+                coverUrl = a.CoverUrl,
+                tracksCount = a.TracksCount,
+                duration = a.Duration,
+                releasedAt = a.ReleasedAt
+            })
+        });
+    }
+
+    /// <summary>
     /// Get featured/editorial playlists from Qobuz
     /// </summary>
     public async Task<IActionResult> OnGetFeaturedPlaylistsAsync(int limit = 50)
