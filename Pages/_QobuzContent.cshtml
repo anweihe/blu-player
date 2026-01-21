@@ -289,6 +289,14 @@
                     </svg>
                     <span>Neuheiten</span>
                 </button>
+                <button type="button" class="tab-btn" data-tab="album-charts" onclick="switchTab('album-charts')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10"/>
+                        <path d="M12 20V4"/>
+                        <path d="M6 20v-6"/>
+                    </svg>
+                    <span>Album-Charts</span>
+                </button>
                 <button type="button" class="tab-btn" data-tab="top-playlists" onclick="switchTab('top-playlists')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
@@ -353,6 +361,33 @@
                     </svg>
                     <h3>Keine Neuheiten</h3>
                     <p>Momentan keine neuen Alben verfügbar.</p>
+                </div>
+            </div>
+
+            <!-- Tab Content: Album Charts -->
+            <div id="tab-album-charts" class="tab-content">
+                <div class="section-header">
+                    <h2>Album-Charts</h2>
+                    <button type="button" class="btn-refresh" onclick="loadAlbumCharts()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="charts-grid" class="playlists-grid">
+                    <!-- Chart albums will be loaded here -->
+                </div>
+
+                <div id="charts-empty" class="empty-state" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M18 20V10"/>
+                        <path d="M12 20V4"/>
+                        <path d="M6 20v-6"/>
+                    </svg>
+                    <h3>Keine Charts</h3>
+                    <p>Momentan keine Album-Charts verfügbar.</p>
                 </div>
             </div>
 

@@ -970,6 +970,29 @@
         opacity: 0.5;
     }
 
+    /* Chart position badge */
+    .chart-position {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 8px;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .chart-position:nth-child(1) { background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%); }
+
     .playlist-info {
         padding: 12px;
     }

@@ -724,6 +724,7 @@
     // Tab switching
     let currentTab = 'my-playlists';
     let newReleasesLoaded = false;
+    let albumChartsLoaded = false;
     let topPlaylistsLoaded = false;
     let recommendationsLoaded = false;
 
@@ -743,6 +744,8 @@
         // Load content if needed
         if (tabId === 'new-releases' && !newReleasesLoaded) {
             loadNewReleases();
+        } else if (tabId === 'album-charts' && !albumChartsLoaded) {
+            loadAlbumCharts();
         } else if (tabId === 'top-playlists' && !topPlaylistsLoaded) {
             loadTopPlaylists();
         } else if (tabId === 'recommendations' && !recommendationsLoaded) {
@@ -770,6 +773,63 @@
         }
 
         hideLoading();
+    }
+
+    // Load album charts (best sellers)
+    async function loadAlbumCharts() {
+        showLoading();
+
+        try {
+            const response = await fetch('?handler=FeaturedAlbums&type=best-sellers&limit=50');
+            const data = await response.json();
+
+            if (data.success) {
+                renderChartAlbums(data.albums);
+                albumChartsLoaded = true;
+            } else {
+                showError('Album-Charts konnten nicht geladen werden');
+            }
+        } catch (error) {
+            console.error('Failed to load album charts:', error);
+            showError('Album-Charts konnten nicht geladen werden');
+        }
+
+        hideLoading();
+    }
+
+    // Render chart albums grid
+    function renderChartAlbums(albums) {
+        const grid = document.getElementById('charts-grid');
+        const emptyState = document.getElementById('charts-empty');
+
+        if (!albums || albums.length === 0) {
+            grid.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+
+        grid.innerHTML = albums.map((album, index) => `
+            <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+                <div class="playlist-cover">
+                    <span class="chart-position">${index + 1}</span>
+                    ${album.coverUrl
+                        ? `<img src="${album.coverUrl}" alt="${escapeHtml(album.title)}" loading="lazy">`
+                        : `<div class="playlist-cover-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                           </div>`
+                    }
+                </div>
+                <div class="playlist-info">
+                    <h3 class="playlist-name">${escapeHtml(album.title)}</h3>
+                    <div class="playlist-meta">${escapeHtml(album.artistName || 'Unbekannt')}</div>
+                </div>
+            </div>
+        `).join('');
     }
 
     // Render albums grid
@@ -2076,6 +2136,7 @@
     window.playAll = playAll;
     window.loadPlaylists = loadPlaylists;
     window.loadNewReleases = loadNewReleases;
+    window.loadAlbumCharts = loadAlbumCharts;
     window.loadTopPlaylists = loadTopPlaylists;
     window.loadRecommendations = loadRecommendations;
     window.clearSearch = clearSearch;
