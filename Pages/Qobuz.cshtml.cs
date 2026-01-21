@@ -8,25 +8,19 @@ namespace BluesoundWeb.Pages;
 public class QobuzModel : PageModel
 {
     private readonly IQobuzApiService _qobuzService;
-    private readonly IPlayerDiscoveryService _discoveryService;
+    private readonly IBluesoundPlayerService _playerService;
     private readonly IBluesoundApiService _bluesoundService;
-    private readonly IPlayerCacheService _playerCache;
-    private readonly IStoredPlayerService _storedPlayerService;
     private readonly ILogger<QobuzModel> _logger;
 
     public QobuzModel(
         IQobuzApiService qobuzService,
-        IPlayerDiscoveryService discoveryService,
+        IBluesoundPlayerService playerService,
         IBluesoundApiService bluesoundService,
-        IPlayerCacheService playerCache,
-        IStoredPlayerService storedPlayerService,
         ILogger<QobuzModel> logger)
     {
         _qobuzService = qobuzService;
-        _discoveryService = discoveryService;
+        _playerService = playerService;
         _bluesoundService = bluesoundService;
-        _playerCache = playerCache;
-        _storedPlayerService = storedPlayerService;
         _logger = logger;
     }
 
@@ -451,268 +445,89 @@ public class QobuzModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnGetPlayersAsync(bool refresh = false, bool refreshStatus = false)
     {
-        // Use shared cache if recent (within 60 seconds) and not forcing refresh
-        // refreshStatus=true skips cache but doesn't trigger mDNS discovery (fast status refresh)
-        if (!refresh && !refreshStatus && _playerCache.HasRecentCache(TimeSpan.FromSeconds(60)))
-        {
-            var cachedPlayers = _playerCache.GetCachedPlayers();
-            _logger.LogInformation("Using {Count} cached players from shared cache", cachedPlayers.Count);
-
-            return new JsonResult(new
-            {
-                success = true,
-                players = GetGroupedPlayersForSelector(cachedPlayers)
-            });
-        }
-
         try
         {
-            List<BluesoundPlayer> players;
+            // Discover players using the consolidated service
+            var players = await _playerService.DiscoverPlayersAsync(
+                forceRefresh: refresh,
+                skipCache: refreshStatus);
 
-            if (refresh)
-            {
-                // Full mDNS discovery requested
-                _logger.LogInformation("Discovering Bluesound players (refresh requested)...");
-                players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
-                _logger.LogInformation("Discovered {Count} Bluesound players", players.Count);
-
-                // Save to database
-                await _storedPlayerService.SaveDiscoveredPlayersAsync(players);
-            }
-            else
-            {
-                // Check if we have stored players in the database
-                var hasStoredPlayers = await _storedPlayerService.HasStoredPlayersAsync();
-
-                if (hasStoredPlayers)
-                {
-                    // Query stored player IPs directly (fast path)
-                    _logger.LogInformation("Querying stored players from database...");
-                    players = await QueryStoredPlayersAsync();
-                    _logger.LogInformation("Quick query complete. Found {Count} online players.", players.Count);
-                }
-                else
-                {
-                    // No stored players - do full mDNS discovery
-                    _logger.LogInformation("No stored players, discovering Bluesound players...");
-                    players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
-                    _logger.LogInformation("Discovered {Count} Bluesound players", players.Count);
-
-                    // Save to database for next time
-                    await _storedPlayerService.SaveDiscoveredPlayersAsync(players);
-                }
-            }
-
-            // Update shared cache
-            _playerCache.SetCachedPlayers(players);
+            // Get players formatted for the selector UI
+            var selectorItems = _playerService.GetPlayersForSelector(players);
 
             return new JsonResult(new
             {
                 success = true,
-                players = GetGroupedPlayersForSelector(players)
+                players = selectorItems.Select(p => new
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    ipAddress = p.IpAddress,
+                    port = p.Port,
+                    model = p.Model,
+                    brand = p.Brand,
+                    isGroup = p.IsGroup,
+                    memberCount = p.MemberCount,
+                    volume = p.Volume,
+                    isFixedVolume = p.IsFixedVolume,
+                    isStereoPaired = p.IsStereoPaired,
+                    channelMode = p.ChannelMode,
+                    members = p.Members.Select(m => new
+                    {
+                        ipAddress = m.IpAddress,
+                        port = m.Port,
+                        name = m.Name,
+                        brand = m.Brand,
+                        modelName = m.ModelName,
+                        volume = m.Volume,
+                        isFixedVolume = m.IsFixedVolume,
+                        isStereoPaired = m.IsStereoPaired,
+                        channelMode = m.ChannelMode
+                    })
+                })
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to discover players");
+
+            // Try to return cached players on error
+            var cachedPlayers = await _playerService.DiscoverPlayersAsync(forceRefresh: false, skipCache: false);
+            var selectorItems = _playerService.GetPlayersForSelector(cachedPlayers);
+
             return new JsonResult(new
             {
                 success = false,
                 error = "Player-Suche fehlgeschlagen",
-                players = GetGroupedPlayersForSelector(_playerCache.GetCachedPlayers())
-            });
-        }
-    }
-
-    /// <summary>
-    /// Query stored players directly by their IPs (fast, ~0.5s instead of ~3s mDNS)
-    /// </summary>
-    private async Task<List<BluesoundPlayer>> QueryStoredPlayersAsync()
-    {
-        var storedPlayers = await _storedPlayerService.GetAllStoredPlayersAsync();
-
-        // Query all stored players in parallel (HTTP requests only, no DB access)
-        var tasks = storedPlayers.Select(async sp =>
-        {
-            try
-            {
-                var player = await _bluesoundService.GetPlayerStatusAsync(sp.IpAddress, sp.Port);
-                return (sp.IpAddress, Player: player, IsOnline: player != null);
-            }
-            catch
-            {
-                return (sp.IpAddress, Player: (BluesoundPlayer?)null, IsOnline: false);
-            }
-        });
-
-        var results = await Task.WhenAll(tasks);
-
-        // Update DB sequentially to avoid DbContext concurrency issues
-        foreach (var result in results)
-        {
-            if (result.IsOnline)
-            {
-                await _storedPlayerService.MarkPlayerOnlineAsync(result.IpAddress);
-            }
-            else
-            {
-                await _storedPlayerService.MarkPlayerOfflineAsync(result.IpAddress);
-            }
-        }
-
-        return results.Where(r => r.Player != null).Select(r => r.Player!).ToList();
-    }
-
-    /// <summary>
-    /// Get players formatted for the player selector popup.
-    /// Groups are represented by their master player only.
-    /// </summary>
-    private static object GetGroupedPlayersForSelector(List<BluesoundPlayer> players)
-    {
-        var result = new List<object>();
-        var processedIds = new HashSet<string>();
-
-        // Filter out secondary stereo pair speakers
-        var visiblePlayers = players
-            .Where(p => !p.IsSecondaryStereoPairSpeaker)
-            .ToList();
-
-        // Mark secondary speakers as processed
-        foreach (var secondary in players.Where(p => p.IsSecondaryStereoPairSpeaker))
-        {
-            processedIds.Add(secondary.Id);
-        }
-
-        // First, process masters of groups - they represent the entire group
-        foreach (var player in visiblePlayers.Where(p => p.IsMaster && p.IsGrouped))
-        {
-            // Count members in this group
-            var memberCount = player.SlaveIps.Count;
-
-            // Also count slaves that reference this master
-            var masterIp = player.IpAddress;
-            var additionalSlaves = visiblePlayers.Count(p =>
-                !processedIds.Contains(p.Id) &&
-                p.Id != player.Id &&
-                p.IsGrouped &&
-                !p.IsMaster &&
-                p.MasterIp != null &&
-                p.MasterIp.Split(':')[0] == masterIp);
-
-            memberCount = Math.Max(memberCount, additionalSlaves);
-
-            // Collect group members for volume control
-            var groupMembers = new List<object>();
-
-            // Add slaves from SlaveIps
-            foreach (var slaveAddress in player.SlaveIps)
-            {
-                var slaveIp = slaveAddress.Split(':')[0];
-                var slave = visiblePlayers.FirstOrDefault(p => p.IpAddress == slaveIp);
-                if (slave != null)
+                players = selectorItems.Select(p => new
                 {
-                    groupMembers.Add(new
+                    id = p.Id,
+                    name = p.Name,
+                    ipAddress = p.IpAddress,
+                    port = p.Port,
+                    model = p.Model,
+                    brand = p.Brand,
+                    isGroup = p.IsGroup,
+                    memberCount = p.MemberCount,
+                    volume = p.Volume,
+                    isFixedVolume = p.IsFixedVolume,
+                    isStereoPaired = p.IsStereoPaired,
+                    channelMode = p.ChannelMode,
+                    members = p.Members.Select(m => new
                     {
-                        ipAddress = slave.IpAddress,
-                        port = slave.Port,
-                        name = slave.Name,
-                        brand = slave.Brand,
-                        modelName = slave.ModelName,
-                        volume = slave.Volume,
-                        isFixedVolume = slave.IsFixedVolume,
-                        isStereoPaired = slave.IsStereoPaired,
-                        channelMode = slave.ChannelMode
-                    });
-                    processedIds.Add(slave.Id);
-                }
-            }
-
-            // Add slaves that reference this master
-            foreach (var slave in visiblePlayers.Where(p =>
-                !processedIds.Contains(p.Id) &&
-                p.Id != player.Id &&
-                p.IsGrouped && !p.IsMaster && p.MasterIp != null &&
-                p.MasterIp.Split(':')[0] == masterIp))
-            {
-                groupMembers.Add(new
-                {
-                    ipAddress = slave.IpAddress,
-                    port = slave.Port,
-                    name = slave.Name,
-                    brand = slave.Brand,
-                    modelName = slave.ModelName,
-                    volume = slave.Volume,
-                    isFixedVolume = slave.IsFixedVolume,
-                    isStereoPaired = slave.IsStereoPaired,
-                    channelMode = slave.ChannelMode
-                });
-                processedIds.Add(slave.Id);
-            }
-
-            result.Add(new
-            {
-                id = player.Id,
-                name = player.Name, // Use player name, not group name
-                ipAddress = player.IpAddress,
-                port = player.Port,
-                model = player.IsStereoPaired ? "Stereo Pair" : player.ModelName,
-                brand = player.Brand,
-                isGroup = true,
-                memberCount = groupMembers.Count + 1, // +1 for the master itself
-                volume = player.Volume,
-                isFixedVolume = player.IsFixedVolume,
-                isStereoPaired = player.IsStereoPaired,
-                channelMode = player.ChannelMode,
-                members = groupMembers
-            });
-
-            processedIds.Add(player.Id);
-        }
-
-        // Add ungrouped players (singles and stereo pairs)
-        foreach (var player in visiblePlayers.Where(p => !processedIds.Contains(p.Id) && !p.IsGrouped))
-        {
-            result.Add(new
-            {
-                id = player.Id,
-                name = player.Name,
-                ipAddress = player.IpAddress,
-                port = player.Port,
-                model = player.IsStereoPaired ? "Stereo Pair" : player.ModelName,
-                brand = player.Brand,
-                isGroup = false,
-                memberCount = 1,
-                volume = player.Volume,
-                isFixedVolume = player.IsFixedVolume,
-                isStereoPaired = player.IsStereoPaired,
-                channelMode = player.ChannelMode,
-                members = new List<object>()
-            });
-            processedIds.Add(player.Id);
-        }
-
-        // Handle any remaining players (edge case)
-        foreach (var player in visiblePlayers.Where(p => !processedIds.Contains(p.Id)))
-        {
-            result.Add(new
-            {
-                id = player.Id,
-                name = player.Name,
-                ipAddress = player.IpAddress,
-                port = player.Port,
-                model = player.ModelName,
-                brand = player.Brand,
-                isGroup = false,
-                memberCount = 1,
-                volume = player.Volume,
-                isFixedVolume = player.IsFixedVolume,
-                isStereoPaired = player.IsStereoPaired,
-                channelMode = player.ChannelMode,
-                members = new List<object>()
+                        ipAddress = m.IpAddress,
+                        port = m.Port,
+                        name = m.Name,
+                        brand = m.Brand,
+                        modelName = m.ModelName,
+                        volume = m.Volume,
+                        isFixedVolume = m.IsFixedVolume,
+                        isStereoPaired = m.IsStereoPaired,
+                        channelMode = m.ChannelMode
+                    })
+                })
             });
         }
-
-        return result.OrderByDescending(p => ((dynamic)p).isGroup).ThenBy(p => ((dynamic)p).name);
     }
 
     /// <summary>
@@ -770,11 +585,11 @@ public class QobuzModel : PageModel
 
         bool success = request.Action.ToLower() switch
         {
-            "play" => await _bluesoundService.PlayAsync(request.Ip, request.Port),
-            "pause" => await _bluesoundService.PauseAsync(request.Ip, request.Port),
-            "stop" => await _bluesoundService.StopAsync(request.Ip, request.Port),
-            "next" => await _bluesoundService.NextTrackAsync(request.Ip, request.Port),
-            "previous" => await _bluesoundService.PreviousTrackAsync(request.Ip, request.Port),
+            "play" => await _playerService.PlayAsync(request.Ip, request.Port),
+            "pause" => await _playerService.PauseAsync(request.Ip, request.Port),
+            "stop" => await _playerService.StopAsync(request.Ip, request.Port),
+            "next" => await _playerService.NextTrackAsync(request.Ip, request.Port),
+            "previous" => await _playerService.PreviousTrackAsync(request.Ip, request.Port),
             _ => false
         };
 
@@ -791,7 +606,7 @@ public class QobuzModel : PageModel
             return new JsonResult(new { success = false, error = "Fehlende IP-Adresse" });
         }
 
-        var status = await _bluesoundService.GetPlaybackStatusAsync(ip, port);
+        var status = await _playerService.GetPlaybackStatusAsync(ip, port);
 
         if (status == null)
         {

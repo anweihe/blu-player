@@ -7,23 +7,17 @@ namespace BluesoundWeb.Pages;
 
 public class PlayersModel : PageModel
 {
-    private readonly IPlayerDiscoveryService _discoveryService;
+    private readonly IBluesoundPlayerService _playerService;
     private readonly IBluesoundApiService _apiService;
-    private readonly IPlayerCacheService _playerCache;
-    private readonly IStoredPlayerService _storedPlayerService;
     private readonly ILogger<PlayersModel> _logger;
 
     public PlayersModel(
-        IPlayerDiscoveryService discoveryService,
+        IBluesoundPlayerService playerService,
         IBluesoundApiService apiService,
-        IPlayerCacheService playerCache,
-        IStoredPlayerService storedPlayerService,
         ILogger<PlayersModel> logger)
     {
-        _discoveryService = discoveryService;
+        _playerService = playerService;
         _apiService = apiService;
-        _playerCache = playerCache;
-        _storedPlayerService = storedPlayerService;
         _logger = logger;
     }
 
@@ -56,61 +50,8 @@ public class PlayersModel : PageModel
     {
         try
         {
-            List<BluesoundPlayer> players;
-
-            if (refresh)
-            {
-                // Full mDNS discovery requested
-                _logger.LogInformation("Starting full mDNS player discovery (refresh requested)...");
-                players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
-                _logger.LogInformation("Discovery complete. Found {Count} players.", players.Count);
-
-                // Save discovered players to database
-                await _storedPlayerService.SaveDiscoveredPlayersAsync(players);
-
-                // Update memory cache
-                _playerCache.SetCachedPlayers(players);
-            }
-            else
-            {
-                // Use memory cache if recent (within 30 seconds)
-                if (_playerCache.HasRecentCache(TimeSpan.FromSeconds(30)))
-                {
-                    players = _playerCache.GetCachedPlayers();
-                    _logger.LogInformation("Using {Count} cached players from memory", players.Count);
-                }
-                else
-                {
-                    // Check if we have stored players in the database
-                    var hasStoredPlayers = await _storedPlayerService.HasStoredPlayersAsync();
-
-                    if (hasStoredPlayers)
-                    {
-                        // Query stored player IPs directly (fast path)
-                        _logger.LogInformation("Querying stored players from database...");
-                        players = await QueryStoredPlayersAsync();
-                        _logger.LogInformation("Quick query complete. Found {Count} online players.", players.Count);
-
-                        // Update memory cache
-                        _playerCache.SetCachedPlayers(players);
-                    }
-                    else
-                    {
-                        // No stored players - do full mDNS discovery
-                        _logger.LogInformation("No stored players in database, starting mDNS discovery...");
-                        players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
-                        _logger.LogInformation("Discovery complete. Found {Count} players.", players.Count);
-
-                        // Save to database for next time
-                        await _storedPlayerService.SaveDiscoveredPlayersAsync(players);
-
-                        // Update memory cache
-                        _playerCache.SetCachedPlayers(players);
-                    }
-                }
-            }
-
-            var groups = OrganizeIntoGroups(players);
+            var players = await _playerService.DiscoverPlayersAsync(forceRefresh: refresh);
+            var groups = _playerService.OrganizeIntoGroups(players);
 
             return new JsonResult(new
             {
@@ -162,46 +103,18 @@ public class PlayersModel : PageModel
         }
     }
 
-    /// <summary>
-    /// Query stored players directly by their IPs (fast, ~0.5s instead of ~3s mDNS)
-    /// </summary>
-    private async Task<List<BluesoundPlayer>> QueryStoredPlayersAsync()
-    {
-        var storedPlayers = await _storedPlayerService.GetAllStoredPlayersAsync();
-        var players = new List<BluesoundPlayer>();
-
-        // Query all stored players in parallel
-        var tasks = storedPlayers.Select(async sp =>
-        {
-            try
-            {
-                var player = await _apiService.GetPlayerStatusAsync(sp.IpAddress, sp.Port);
-                if (player != null)
-                {
-                    await _storedPlayerService.MarkPlayerOnlineAsync(sp.IpAddress);
-                    return player;
-                }
-                else
-                {
-                    await _storedPlayerService.MarkPlayerOfflineAsync(sp.IpAddress);
-                    return null;
-                }
-            }
-            catch
-            {
-                await _storedPlayerService.MarkPlayerOfflineAsync(sp.IpAddress);
-                return null;
-            }
-        });
-
-        var results = await Task.WhenAll(tasks);
-        return results.Where(p => p != null).Cast<BluesoundPlayer>().ToList();
-    }
-
     public async Task<IActionResult> OnPostRefreshAsync()
     {
-        // Full discovery on manual refresh
-        await DiscoverAndGroupPlayersAsync();
+        try
+        {
+            var players = await _playerService.DiscoverPlayersAsync(forceRefresh: true);
+            PlayerGroups = _playerService.OrganizeIntoGroups(players);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during player refresh");
+            ErrorMessage = $"Fehler bei der Suche nach Playern: {ex.Message}";
+        }
         return Page();
     }
 
@@ -223,7 +136,7 @@ public class PlayersModel : PageModel
 
         // Quick refresh of known players
         await Task.Delay(300);
-        await RefreshKnownPlayersAsync();
+        await RefreshAndOrganizePlayersAsync();
 
         return Page();
     }
@@ -244,7 +157,7 @@ public class PlayersModel : PageModel
         }
 
         await Task.Delay(300);
-        await RefreshKnownPlayersAsync();
+        await RefreshAndOrganizePlayersAsync();
 
         return Page();
     }
@@ -277,7 +190,7 @@ public class PlayersModel : PageModel
 
         // Wait for players to update, then quick refresh
         await Task.Delay(500);
-        await RefreshKnownPlayersAsync();
+        await RefreshAndOrganizePlayersAsync();
 
         return Page();
     }
@@ -298,7 +211,7 @@ public class PlayersModel : PageModel
         }
 
         await Task.Delay(300);
-        await RefreshKnownPlayersAsync();
+        await RefreshAndOrganizePlayersAsync();
 
         return Page();
     }
@@ -307,22 +220,22 @@ public class PlayersModel : PageModel
     {
         _logger.LogInformation("Setting volume to {Volume} on {PlayerIp}:{PlayerPort}", volume, playerIp, playerPort);
 
-        await _apiService.SetVolumeAsync(playerIp, playerPort, volume);
+        await _playerService.SetVolumeAsync(playerIp, volume, playerPort);
 
         // Return JSON with new volume for AJAX requests
         if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
         {
-            var player = await _apiService.GetPlayerStatusAsync(playerIp, playerPort);
-            return new JsonResult(new { success = true, volume = player?.Volume ?? volume });
+            var status = await _apiService.GetPlayerStatusAsync(playerIp, playerPort);
+            return new JsonResult(new { success = true, volume = status?.Volume ?? volume });
         }
 
-        await RefreshKnownPlayersAsync();
+        await RefreshAndOrganizePlayersAsync();
         return Page();
     }
 
     public async Task<IActionResult> OnGetPlaybackStatusAsync(string playerIp, int playerPort)
     {
-        var status = await _apiService.GetPlaybackStatusAsync(playerIp, playerPort);
+        var status = await _playerService.GetPlaybackStatusAsync(playerIp, playerPort);
         if (status == null)
         {
             return new JsonResult(new { success = false, error = "Could not get playback status" });
@@ -350,206 +263,52 @@ public class PlayersModel : PageModel
     public async Task<IActionResult> OnPostPlayAsync(string playerIp, int playerPort)
     {
         _logger.LogInformation("Play on {PlayerIp}:{PlayerPort}", playerIp, playerPort);
-        var success = await _apiService.PlayAsync(playerIp, playerPort);
+        var success = await _playerService.PlayAsync(playerIp, playerPort);
         return new JsonResult(new { success });
     }
 
     public async Task<IActionResult> OnPostPauseAsync(string playerIp, int playerPort)
     {
         _logger.LogInformation("Pause on {PlayerIp}:{PlayerPort}", playerIp, playerPort);
-        var success = await _apiService.PauseAsync(playerIp, playerPort);
+        var success = await _playerService.PauseAsync(playerIp, playerPort);
         return new JsonResult(new { success });
     }
 
     public async Task<IActionResult> OnPostStopAsync(string playerIp, int playerPort)
     {
         _logger.LogInformation("Stop on {PlayerIp}:{PlayerPort}", playerIp, playerPort);
-        var success = await _apiService.StopAsync(playerIp, playerPort);
+        var success = await _playerService.StopAsync(playerIp, playerPort);
         return new JsonResult(new { success });
     }
 
     public async Task<IActionResult> OnPostNextTrackAsync(string playerIp, int playerPort)
     {
         _logger.LogInformation("Next track on {PlayerIp}:{PlayerPort}", playerIp, playerPort);
-        var success = await _apiService.NextTrackAsync(playerIp, playerPort);
+        var success = await _playerService.NextTrackAsync(playerIp, playerPort);
         return new JsonResult(new { success });
     }
 
     public async Task<IActionResult> OnPostPreviousTrackAsync(string playerIp, int playerPort)
     {
         _logger.LogInformation("Previous track on {PlayerIp}:{PlayerPort}", playerIp, playerPort);
-        var success = await _apiService.PreviousTrackAsync(playerIp, playerPort);
+        var success = await _playerService.PreviousTrackAsync(playerIp, playerPort);
         return new JsonResult(new { success });
     }
 
     /// <summary>
-    /// Full mDNS discovery - used on first load and manual refresh
+    /// Helper to refresh known players and organize into groups for page display.
     /// </summary>
-    private async Task DiscoverAndGroupPlayersAsync()
+    private async Task RefreshAndOrganizePlayersAsync()
     {
         try
         {
-            _logger.LogInformation("Starting full mDNS player discovery...");
-
-            var players = await _discoveryService.DiscoverPlayersAsync(TimeSpan.FromSeconds(3));
-
-            _logger.LogInformation("Discovery complete. Found {Count} players.", players.Count);
-
-            // Cache the discovered players in the shared cache
-            _playerCache.SetCachedPlayers(players);
-
-            PlayerGroups = OrganizeIntoGroups(players);
+            var players = await _playerService.RefreshKnownPlayersAsync();
+            PlayerGroups = _playerService.OrganizeIntoGroups(players);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during player discovery");
-            ErrorMessage = $"Fehler bei der Suche nach Playern: {ex.Message}";
+            _logger.LogError(ex, "Error refreshing players");
+            ErrorMessage = $"Fehler beim Aktualisieren der Player: {ex.Message}";
         }
-    }
-
-    /// <summary>
-    /// Quick refresh - only queries known players directly without mDNS discovery
-    /// </summary>
-    private async Task RefreshKnownPlayersAsync()
-    {
-        var cachedPlayers = _playerCache.GetCachedPlayers();
-
-        if (cachedPlayers.Count == 0)
-        {
-            _logger.LogWarning("No known players cached, falling back to full discovery");
-            await DiscoverAndGroupPlayersAsync();
-            return;
-        }
-
-        var playersToQuery = cachedPlayers.Select(p => (p.IpAddress, p.Port)).ToList();
-
-        try
-        {
-            _logger.LogInformation("Quick refresh of {Count} known players...", playersToQuery.Count);
-
-            // Query all known players in parallel
-            var tasks = playersToQuery.Select(p => _apiService.GetPlayerStatusAsync(p.IpAddress, p.Port));
-            var results = await Task.WhenAll(tasks);
-
-            var players = results.Where(p => p != null).Cast<BluesoundPlayer>().ToList();
-
-            _logger.LogInformation("Quick refresh complete. Got status from {Count} players.", players.Count);
-
-            // Update the shared cache
-            _playerCache.SetCachedPlayers(players);
-
-            PlayerGroups = OrganizeIntoGroups(players);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during quick refresh, falling back to discovery");
-            await DiscoverAndGroupPlayersAsync();
-        }
-    }
-
-    private List<PlayerGroup> OrganizeIntoGroups(List<BluesoundPlayer> players)
-    {
-        var groups = new List<PlayerGroup>();
-        var processedIds = new HashSet<string>();
-
-        // Filter out secondary stereo pair speakers - they should not appear as separate entries
-        var visiblePlayers = players
-            .Where(p => !p.IsSecondaryStereoPairSpeaker)
-            .ToList();
-
-        _logger.LogInformation("Visible players: {Count}, Total players: {Total}",
-            visiblePlayers.Count, players.Count);
-
-        foreach (var p in visiblePlayers)
-        {
-            _logger.LogInformation("Player: {Name}, IP: {IP}, IsMaster: {IsMaster}, IsGrouped: {IsGrouped}, MasterIp: {MasterIp}, SlaveIps: [{SlaveIps}]",
-                p.Name, p.IpAddress, p.IsMaster, p.IsGrouped, p.MasterIp, string.Join(", ", p.SlaveIps));
-        }
-
-        // Mark secondary speakers as processed so they don't appear later
-        foreach (var secondary in players.Where(p => p.IsSecondaryStereoPairSpeaker))
-        {
-            processedIds.Add(secondary.Id);
-        }
-
-        // First, find all masters and create groups
-        foreach (var player in visiblePlayers.Where(p => p.IsMaster && p.IsGrouped))
-        {
-            var group = new PlayerGroup
-            {
-                Id = player.Id,
-                Name = player.Name,
-                Type = GroupType.MultiRoom,
-                Master = player
-            };
-
-            // Method 1: Find slaves via SlaveIps list from master
-            foreach (var slaveAddress in player.SlaveIps)
-            {
-                var slaveIp = slaveAddress.Split(':')[0];
-                var slave = visiblePlayers.FirstOrDefault(p => p.IpAddress == slaveIp);
-                if (slave != null && !processedIds.Contains(slave.Id))
-                {
-                    group.Members.Add(slave);
-                    processedIds.Add(slave.Id);
-                    _logger.LogInformation("Found slave via SlaveIps: {Name}", slave.Name);
-                }
-            }
-
-            // Method 2: Find slaves that have this master's IP as their MasterIp
-            var masterIpWithPort = $"{player.IpAddress}:{player.Port}";
-            var masterIpOnly = player.IpAddress;
-
-            foreach (var potentialSlave in visiblePlayers.Where(p =>
-                !processedIds.Contains(p.Id) &&
-                p.Id != player.Id &&
-                p.IsGrouped &&
-                !p.IsMaster &&
-                p.MasterIp != null))
-            {
-                var slaveMasterIp = potentialSlave.MasterIp!.Split(':')[0];
-                if (slaveMasterIp == masterIpOnly)
-                {
-                    group.Members.Add(potentialSlave);
-                    processedIds.Add(potentialSlave.Id);
-                    _logger.LogInformation("Found slave via MasterIp: {Name}", potentialSlave.Name);
-                }
-            }
-
-            processedIds.Add(player.Id);
-            groups.Add(group);
-
-            _logger.LogInformation("Created group '{Name}' with {MemberCount} members",
-                group.Name, group.Members.Count);
-        }
-
-        // Add ungrouped players as single-player groups
-        foreach (var player in visiblePlayers.Where(p => !processedIds.Contains(p.Id) && !p.IsGrouped))
-        {
-            var groupType = player.IsStereoPaired ? GroupType.StereoPair : GroupType.Single;
-            groups.Add(new PlayerGroup
-            {
-                Id = player.Id,
-                Name = player.Name,
-                Type = groupType,
-                Master = player
-            });
-            processedIds.Add(player.Id);
-        }
-
-        // Handle slaves that weren't found through their master (edge case)
-        foreach (var player in visiblePlayers.Where(p => !processedIds.Contains(p.Id)))
-        {
-            var groupType = player.IsStereoPaired ? GroupType.StereoPair : GroupType.Single;
-            groups.Add(new PlayerGroup
-            {
-                Id = player.Id,
-                Name = player.Name,
-                Type = groupType,
-                Master = player
-            });
-        }
-
-        return groups.OrderBy(g => g.Type).ThenBy(g => g.Name).ToList();
     }
 }

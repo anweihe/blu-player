@@ -41,6 +41,7 @@ builder.Services.AddScoped<IStoredPlayerService, StoredPlayerService>();
 builder.Services.AddHttpClient<IBluesoundApiService, BluesoundApiService>();
 builder.Services.AddScoped<IPlayerDiscoveryService, PlayerDiscoveryService>();
 builder.Services.AddSingleton<IPlayerCacheService, PlayerCacheService>();
+builder.Services.AddScoped<IBluesoundPlayerService, BluesoundPlayerService>();
 
 // Register Qobuz service
 builder.Services.AddHttpClient<IQobuzApiService, QobuzApiService>();
