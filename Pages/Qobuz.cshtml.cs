@@ -225,11 +225,11 @@ public class QobuzModel : PageModel
     /// <summary>
     /// Get most streamed albums from Qobuz discover endpoint
     /// </summary>
-    public async Task<IActionResult> OnGetMostStreamedAlbumsAsync(int limit = 50)
+    public async Task<IActionResult> OnGetMostStreamedAlbumsAsync(string? authToken = null, int limit = 50)
     {
         _logger.LogInformation("Fetching most streamed albums");
 
-        var albums = await _qobuzService.GetMostStreamedAlbumsAsync(limit);
+        var albums = await _qobuzService.GetMostStreamedAlbumsAsync(authToken, limit);
 
         return new JsonResult(new
         {

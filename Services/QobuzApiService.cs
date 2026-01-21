@@ -50,7 +50,7 @@ public interface IQobuzApiService
     /// <summary>
     /// Get most streamed albums from discover endpoint
     /// </summary>
-    Task<List<QobuzAlbum>> GetMostStreamedAlbumsAsync(int limit = 50);
+    Task<List<QobuzAlbum>> GetMostStreamedAlbumsAsync(string? authToken = null, int limit = 50);
 
     /// <summary>
     /// Get featured/editorial playlists from Qobuz
@@ -774,7 +774,7 @@ public class QobuzApiService : IQobuzApiService
     /// <summary>
     /// Get most streamed albums from discover/index endpoint
     /// </summary>
-    public async Task<List<QobuzAlbum>> GetMostStreamedAlbumsAsync(int limit = 50)
+    public async Task<List<QobuzAlbum>> GetMostStreamedAlbumsAsync(string? authToken = null, int limit = 50)
     {
         var albums = new List<QobuzAlbum>();
 
@@ -789,7 +789,8 @@ public class QobuzApiService : IQobuzApiService
 
             var url = $"{QobuzApiBase}/discover/index" +
                       $"?genre_ids=" +
-                      $"&app_id={credentials.AppId}";
+                      $"&app_id={credentials.AppId}" +
+                      (string.IsNullOrEmpty(authToken) ? "" : $"&user_auth_token={authToken}");
 
             _logger.LogDebug("Fetching most streamed albums from discover endpoint");
 

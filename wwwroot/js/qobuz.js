@@ -780,7 +780,9 @@
         showLoading();
 
         try {
-            const response = await fetch('?handler=MostStreamedAlbums&limit=50');
+            const creds = await getQobuzCredentials();
+            const authToken = creds?.authToken || '';
+            const response = await fetch(`?handler=MostStreamedAlbums&authToken=${encodeURIComponent(authToken)}&limit=50`);
             const data = await response.json();
 
             if (data.success) {
