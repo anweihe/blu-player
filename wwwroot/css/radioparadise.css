@@ -1,0 +1,948 @@
+/* CSS Variables - same as main app with Radio Paradise green accent */
+:root {
+    --bg-primary: #0a0a0b;
+    --bg-secondary: #111113;
+    --bg-card: #161618;
+    --bg-card-hover: #1c1c1f;
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-accent: rgba(255, 255, 255, 0.1);
+    --text-primary: #f4f4f5;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --accent-radioparadise: #10b981;
+    --accent-blue: #3b82f6;
+    --danger: #ef4444;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --transition: 0.15s ease;
+}
+
+/* Base */
+.radioparadise-app {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-primary);
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-x: hidden;
+}
+
+/* Header */
+.radioparadise-app .app-header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 max(16px, env(safe-area-inset-left));
+    padding-top: env(safe-area-inset-top);
+}
+
+.radioparadise-app .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.radioparadise-app .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.radioparadise-app .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition);
+}
+
+.radioparadise-app .hamburger-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.radioparadise-app .hamburger-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+.radioparadise-app .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.radioparadise-app .profile-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--accent-radioparadise);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.radioparadise-app .profile-indicator:hover {
+    transform: scale(1.05);
+}
+
+.radioparadise-app .profile-initial {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+}
+
+.radioparadise-app .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.radioparadise-app .brand-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--accent-radioparadise);
+}
+
+.radioparadise-app .brand h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+/* Menu Panel & Overlay */
+.radioparadise-app .menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.radioparadise-app .menu-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.radioparadise-app .menu-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    background: var(--bg-secondary);
+    z-index: 201;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+.radioparadise-app .menu-panel.active {
+    transform: translateX(0);
+}
+
+.radioparadise-app .menu-header {
+    padding: 20px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.radioparadise-app .menu-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.radioparadise-app .menu-profile:hover {
+    background: var(--bg-card-hover);
+}
+
+.radioparadise-app .menu-profile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    background: var(--accent-radioparadise);
+    flex-shrink: 0;
+}
+
+.radioparadise-app .menu-profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.radioparadise-app .menu-profile-name {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.radioparadise-app .menu-profile-switch {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--accent-radioparadise);
+    margin-top: 2px;
+}
+
+.radioparadise-app .menu-profile-arrow {
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.radioparadise-app .menu-items {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+.radioparadise-app .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all var(--transition);
+    margin-bottom: 4px;
+}
+
+.radioparadise-app .menu-item:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.radioparadise-app .menu-item.active {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent-radioparadise);
+}
+
+.radioparadise-app .menu-item svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.radioparadise-app .menu-footer {
+    padding: 12px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.radioparadise-app .menu-item-home {
+    margin-bottom: 0;
+}
+
+/* Profile Switcher Modal */
+.radioparadise-app .profile-switcher-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.radioparadise-app .profile-switcher-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.radioparadise-app .profile-switcher-modal {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 400px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    animation: modalIn 0.25s ease;
+}
+
+@keyframes modalIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.radioparadise-app .profile-switcher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.radioparadise-app .profile-switcher-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.radioparadise-app .btn-close-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition);
+}
+
+.radioparadise-app .btn-close-modal:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.radioparadise-app .btn-close-modal svg {
+    width: 20px;
+    height: 20px;
+}
+
+.radioparadise-app .profile-switcher-list {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radioparadise-app .profile-switcher-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.radioparadise-app .profile-switcher-item:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-accent);
+}
+
+.radioparadise-app .profile-switcher-item.active {
+    border-color: var(--accent-radioparadise);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.radioparadise-app .profile-switcher-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+}
+
+.radioparadise-app .profile-switcher-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.radioparadise-app .btn-add-profile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: none;
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.radioparadise-app .btn-add-profile:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.radioparadise-app .btn-add-profile svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Loading Overlay */
+.radioparadise-app .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 10, 11, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.radioparadise-app .loading-overlay.active {
+    display: flex;
+}
+
+.radioparadise-app .loading-spinner {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.radioparadise-app .spinner-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    animation: spin 1.2s linear infinite;
+}
+
+.radioparadise-app .spinner-ring:nth-child(1) {
+    width: 50px;
+    height: 50px;
+    border-top-color: var(--accent-radioparadise);
+}
+
+.radioparadise-app .spinner-ring:nth-child(2) {
+    width: 38px;
+    height: 38px;
+    border-right-color: var(--accent-blue);
+    animation-direction: reverse;
+}
+
+.radioparadise-app .spinner-ring:nth-child(3) {
+    width: 26px;
+    height: 26px;
+    border-bottom-color: var(--text-primary);
+}
+
+.radioparadise-app .loading-text {
+    position: absolute;
+    top: 70px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Alerts */
+.radioparadise-app .alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin: 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.radioparadise-app .alert svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.radioparadise-app .alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+/* Main Content */
+.radioparadise-app .main-content {
+    padding: 20px max(16px, env(safe-area-inset-left));
+    padding-bottom: calc(100px + max(20px, env(safe-area-inset-bottom)));
+    max-width: 1200px;
+    margin: 0 auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* No Player State */
+.radioparadise-app .no-player-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: -60px;
+}
+
+.radioparadise-app .no-player-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 48px 32px;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.radioparadise-app .no-player-icon {
+    width: 80px;
+    height: 80px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+
+.radioparadise-app .no-player-card h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 12px;
+}
+
+.radioparadise-app .no-player-card p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0 0 24px;
+    line-height: 1.5;
+}
+
+.radioparadise-app .btn-select-player {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 24px;
+    background: var(--accent-radioparadise);
+    border: none;
+    border-radius: var(--radius-md);
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.radioparadise-app .btn-select-player:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.radioparadise-app .btn-select-player svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Channels Section */
+.radioparadise-app .channels-section {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Hero Banner */
+.radioparadise-app .hero-banner {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    margin-bottom: 32px;
+}
+
+.radioparadise-app .hero-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.radioparadise-app .hero-icon {
+    width: 64px;
+    height: 64px;
+    color: var(--accent-radioparadise);
+    flex-shrink: 0;
+}
+
+.radioparadise-app .hero-text h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.02em;
+}
+
+.radioparadise-app .hero-text p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Sections Container */
+.radioparadise-app .sections-container {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+/* RP Section */
+.radioparadise-app .rp-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Section Header */
+.radioparadise-app .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 4px;
+}
+
+.radioparadise-app .section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+/* Quality Badge */
+.radioparadise-app .quality-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.radioparadise-app .quality-badge.mqa {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: white;
+}
+
+.radioparadise-app .quality-badge.cd {
+    background: var(--accent-radioparadise);
+    color: white;
+}
+
+/* Channel Grid */
+.radioparadise-app .channel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+/* Channel Card */
+.radioparadise-app .channel-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.radioparadise-app .channel-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent-radioparadise);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.radioparadise-app .channel-image {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    background: rgba(16, 185, 129, 0.1);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-radioparadise);
+    overflow: hidden;
+}
+
+.radioparadise-app .channel-image svg {
+    width: 32px;
+    height: 32px;
+}
+
+.radioparadise-app .channel-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.radioparadise-app .channel-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.radioparadise-app .channel-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.radioparadise-app .channel-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.radioparadise-app .btn-play-channel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: var(--accent-radioparadise);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    transition: all var(--transition);
+    flex-shrink: 0;
+}
+
+.radioparadise-app .btn-play-channel:hover {
+    background: #059669;
+    transform: scale(1.05);
+}
+
+.radioparadise-app .btn-play-channel svg {
+    width: 24px;
+    height: 24px;
+    margin-left: 2px;
+}
+
+/* Empty State */
+.radioparadise-app .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.radioparadise-app .empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+    color: var(--accent-radioparadise);
+}
+
+.radioparadise-app .empty-state h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: var(--text-primary);
+}
+
+.radioparadise-app .empty-state p {
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .radioparadise-app .main-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .radioparadise-app .no-player-section {
+        margin-bottom: -40px;
+    }
+
+    .radioparadise-app .no-player-card {
+        padding: 32px 24px;
+    }
+
+    .radioparadise-app .hero-banner {
+        padding: 24px 20px;
+    }
+
+    .radioparadise-app .hero-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+    }
+
+    .radioparadise-app .hero-icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .radioparadise-app .hero-text h2 {
+        font-size: 1.25rem;
+    }
+
+    .radioparadise-app .channel-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .radioparadise-app .channel-card {
+        padding: 12px;
+    }
+
+    .radioparadise-app .channel-image {
+        width: 52px;
+        height: 52px;
+    }
+
+    .radioparadise-app .channel-image svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .radioparadise-app .btn-play-channel {
+        width: 44px;
+        height: 44px;
+    }
+
+    .radioparadise-app .btn-play-channel svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .radioparadise-app .sections-container {
+        gap: 24px;
+    }
+
+    .radioparadise-app .section-header {
+        padding: 0;
+    }
+
+    .radioparadise-app .section-title {
+        font-size: 1rem;
+    }
+}
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg-primary: #f8f9fa;
+        --bg-secondary: #ffffff;
+        --bg-card: #ffffff;
+        --bg-card-hover: #f8f9fa;
+        --border-subtle: rgba(0, 0, 0, 0.06);
+        --border-accent: rgba(0, 0, 0, 0.1);
+        --text-primary: #18181b;
+        --text-secondary: #52525b;
+        --text-muted: #a1a1aa;
+        --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .radioparadise-app .loading-overlay {
+        background: rgba(248, 249, 250, 0.9);
+    }
+
+    .radioparadise-app .menu-overlay {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .radioparadise-app .hero-banner {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.03) 100%);
+    }
+}

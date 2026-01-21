@@ -42,6 +42,31 @@ public interface IBluesoundApiService
     /// </summary>
     /// <param name="quality">Quality string: "MP3", "CD", "HD", or "UHD"</param>
     Task<bool> SetQobuzQualityAsync(string ipAddress, string quality);
+
+    /// <summary>
+    /// Get the TuneIn main menu from the player
+    /// </summary>
+    Task<string?> GetTuneInMenuXmlAsync(string ipAddress, int port = 11000);
+
+    /// <summary>
+    /// Browse a TuneIn category or subcategory
+    /// </summary>
+    Task<string?> BrowseTuneInAsync(string ipAddress, int port, string uri);
+
+    /// <summary>
+    /// Play a TuneIn station on the player
+    /// </summary>
+    Task<bool> PlayTuneInStationAsync(string ipAddress, int port, string playUrl, string? title = null, string? imageUrl = null);
+
+    /// <summary>
+    /// Get the Radio Paradise menu from the player
+    /// </summary>
+    Task<string?> GetRadioParadiseMenuXmlAsync(string ipAddress, int port = 11000);
+
+    /// <summary>
+    /// Play a Radio Paradise station on the player
+    /// </summary>
+    Task<bool> PlayRadioParadiseStationAsync(string ipAddress, int port, string playUrl, string? title = null, string? imageUrl = null);
 }
 
 public class BluesoundApiService : IBluesoundApiService
@@ -661,6 +686,159 @@ public class BluesoundApiService : IBluesoundApiService
         {
             _logger.LogError(ex, "Failed to parse SyncStatus XML");
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Get the TuneIn main menu from the player's built-in TuneIn integration
+    /// </summary>
+    public async Task<string?> GetTuneInMenuXmlAsync(string ipAddress, int port = 11000)
+    {
+        try
+        {
+            var url = $"http://{ipAddress}:{port}/ui/browseMenuGroup?service=TuneIn";
+            _logger.LogDebug("Fetching TuneIn menu from {Url}", url);
+
+            var response = await _httpClient.GetStringAsync(url);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get TuneIn menu from {IpAddress}:{Port}", ipAddress, port);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Browse a TuneIn category or subcategory by following the action URI
+    /// </summary>
+    public async Task<string?> BrowseTuneInAsync(string ipAddress, int port, string uri)
+    {
+        try
+        {
+            // The uri should already include the path like /ui/browse?...
+            var url = $"http://{ipAddress}:{port}{uri}";
+            _logger.LogDebug("Browsing TuneIn at {Url}", url);
+
+            var response = await _httpClient.GetStringAsync(url);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to browse TuneIn at {Uri} on {IpAddress}:{Port}", uri, ipAddress, port);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Play a TuneIn station on the player.
+    /// The playUrl can be either:
+    /// - A TuneIn station URL (e.g., "TuneIn:s309526") which will be wrapped in /Play?url=
+    /// - A direct player URI from player-link action (e.g., "/Play?url=TuneIn%3As309526&...")
+    /// </summary>
+    public async Task<bool> PlayTuneInStationAsync(string ipAddress, int port, string playUrl, string? title = null, string? imageUrl = null)
+    {
+        try
+        {
+            string url;
+
+            // Check if playUrl is already a complete player URI (from player-link action)
+            if (playUrl.StartsWith("/Play?") || playUrl.StartsWith("/Play"))
+            {
+                // Direct player URI - just call it on the player
+                url = $"http://{ipAddress}:{port}{playUrl}";
+                _logger.LogInformation("Playing TuneIn via direct URI on {IpAddress}:{Port}: {Uri}", ipAddress, port, playUrl);
+            }
+            else
+            {
+                // Build the play URL with optional metadata
+                var queryParams = new List<string>
+                {
+                    $"url={Uri.EscapeDataString(playUrl)}"
+                };
+
+                if (!string.IsNullOrEmpty(title))
+                    queryParams.Add($"title1={Uri.EscapeDataString(title)}");
+                if (!string.IsNullOrEmpty(imageUrl))
+                    queryParams.Add($"image={Uri.EscapeDataString(imageUrl)}");
+
+                url = $"http://{ipAddress}:{port}/Play?{string.Join("&", queryParams)}";
+                _logger.LogInformation("Playing TuneIn station on {IpAddress}:{Port}: {Title}", ipAddress, port, title ?? playUrl);
+            }
+
+            var response = await _httpClient.GetAsync(url);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to play TuneIn station on {IpAddress}:{Port}", ipAddress, port);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Get the Radio Paradise menu from the player's built-in Radio Paradise integration
+    /// </summary>
+    public async Task<string?> GetRadioParadiseMenuXmlAsync(string ipAddress, int port = 11000)
+    {
+        try
+        {
+            var url = $"http://{ipAddress}:{port}/ui/browseMenuGroup?service=RadioParadise";
+            _logger.LogDebug("Fetching Radio Paradise menu from {Url}", url);
+
+            var response = await _httpClient.GetStringAsync(url);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get Radio Paradise menu from {IpAddress}:{Port}", ipAddress, port);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Play a Radio Paradise station on the player.
+    /// The playUrl can be either:
+    /// - A Radio Paradise station URL (e.g., "RadioParadise:0:20") which will be wrapped in /Play?url=
+    /// - A direct player URI from player-link action (e.g., "/Play?url=RadioParadise%3A0%3A20&...")
+    /// </summary>
+    public async Task<bool> PlayRadioParadiseStationAsync(string ipAddress, int port, string playUrl, string? title = null, string? imageUrl = null)
+    {
+        try
+        {
+            string url;
+
+            // Check if playUrl is already a complete player URI (from player-link action)
+            if (playUrl.StartsWith("/Play?") || playUrl.StartsWith("/Play"))
+            {
+                // Direct player URI - just call it on the player
+                url = $"http://{ipAddress}:{port}{playUrl}";
+                _logger.LogInformation("Playing Radio Paradise via direct URI on {IpAddress}:{Port}: {Uri}", ipAddress, port, playUrl);
+            }
+            else
+            {
+                // Build the play URL with optional metadata
+                var queryParams = new List<string>
+                {
+                    $"url={Uri.EscapeDataString(playUrl)}"
+                };
+
+                if (!string.IsNullOrEmpty(title))
+                    queryParams.Add($"title1={Uri.EscapeDataString(title)}");
+                if (!string.IsNullOrEmpty(imageUrl))
+                    queryParams.Add($"image={Uri.EscapeDataString(imageUrl)}");
+
+                url = $"http://{ipAddress}:{port}/Play?{string.Join("&", queryParams)}";
+                _logger.LogInformation("Playing Radio Paradise station on {IpAddress}:{Port}: {Title}", ipAddress, port, title ?? playUrl);
+            }
+
+            var response = await _httpClient.GetAsync(url);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to play Radio Paradise station on {IpAddress}:{Port}", ipAddress, port);
+            return false;
         }
     }
 }

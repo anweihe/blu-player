@@ -123,6 +123,10 @@
             initializeIndexPage();
         } else if (path === '/qobuz') {
             initializeQobuzPage();
+        } else if (path === '/tunein') {
+            initializeTuneInPage();
+        } else if (path === '/radioparadise') {
+            initializeRadioParadisePage();
         } else if (path === '/players') {
             initializePlayersPage();
         }
@@ -162,6 +166,50 @@
         setTimeout(() => {
             if (typeof window.initQobuz === 'function') {
                 window.initQobuz();
+            }
+        }, 0);
+    }
+
+    /**
+     * Initialize TuneIn page
+     * Note: Most initialization is handled by the page's own script via executeScripts()
+     */
+    function initializeTuneInPage() {
+        // Register cleanup function
+        currentPageCleanup = function() {
+            // Unregister playback callbacks
+            if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.unregisterPlaybackCallbacks) {
+                GlobalPlayer.unregisterPlaybackCallbacks();
+            }
+        };
+
+        // Call initTuneIn directly since external scripts may not re-execute on SPA navigation
+        // Use setTimeout to ensure DOM is fully ready and scripts have loaded
+        setTimeout(() => {
+            if (typeof window.initTuneIn === 'function') {
+                window.initTuneIn();
+            }
+        }, 0);
+    }
+
+    /**
+     * Initialize Radio Paradise page
+     * Note: Most initialization is handled by the page's own script via executeScripts()
+     */
+    function initializeRadioParadisePage() {
+        // Register cleanup function
+        currentPageCleanup = function() {
+            // Unregister playback callbacks
+            if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.unregisterPlaybackCallbacks) {
+                GlobalPlayer.unregisterPlaybackCallbacks();
+            }
+        };
+
+        // Call initRadioParadise directly since external scripts may not re-execute on SPA navigation
+        // Use setTimeout to ensure DOM is fully ready and scripts have loaded
+        setTimeout(() => {
+            if (typeof window.initRadioParadise === 'function') {
+                window.initRadioParadise();
             }
         }, 0);
     }

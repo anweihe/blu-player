@@ -34,7 +34,32 @@
                     <span class="source-desc">Hi-Res Streaming</span>
                 </button>
 
-                <!-- Future sources can be added here -->
+                <!-- TuneIn Source -->
+                <button type="button" class="source-card tunein-card" onclick="selectSource('tunein')">
+                    <div class="source-icon tunein-icon">
+                        <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5">
+                            <circle cx="50" cy="50" r="45"/>
+                            <path d="M30 50a20 20 0 0 1 40 0" stroke-width="4"/>
+                            <path d="M20 50a30 30 0 0 1 60 0" stroke-width="4"/>
+                            <circle cx="50" cy="50" r="5" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <span class="source-name">TuneIn</span>
+                    <span class="source-desc">Internet Radio</span>
+                </button>
+
+                <!-- Radio Paradise Source -->
+                <button type="button" class="source-card radioparadise-card" onclick="selectSource('radioparadise')">
+                    <div class="source-icon radioparadise-icon">
+                        <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5">
+                            <path d="M50 10L10 35l40 25 40-25-40-25z"/>
+                            <path d="M10 65l40 25 40-25"/>
+                            <path d="M10 50l40 25 40-25"/>
+                        </svg>
+                    </div>
+                    <span class="source-name">Radio Paradise</span>
+                    <span class="source-desc">Eclectic Mix</span>
+                </button>
             </div>
 
             <a href="/Players" class="players-link" onclick="navigateTo('/Players'); return false;">
@@ -107,6 +132,7 @@
         --text-secondary: #a1a1aa;
         --text-muted: #71717a;
         --accent-qobuz: #1db954;
+        --accent-tunein: #f97316;
         --accent-blue: #3b82f6;
         --radius-sm: 6px;
         --radius-md: 10px;
@@ -244,6 +270,32 @@
 
     .qobuz-icon {
         color: var(--accent-qobuz);
+    }
+
+    .tunein-icon {
+        color: var(--accent-tunein);
+        background: rgba(249, 115, 22, 0.1);
+    }
+
+    .tunein-card:hover {
+        border-color: var(--accent-tunein);
+    }
+
+    .tunein-card:hover .source-icon {
+        background: rgba(249, 115, 22, 0.15);
+    }
+
+    .radioparadise-icon {
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .radioparadise-card:hover {
+        border-color: #10b981;
+    }
+
+    .radioparadise-card:hover .source-icon {
+        background: rgba(16, 185, 129, 0.15);
     }
 
     .source-name {
@@ -642,6 +694,27 @@
 
     // Select a music source
     window.selectSource = async function(source) {
+        // TuneIn doesn't require user authentication, navigate directly
+        if (source === 'tunein') {
+            if (typeof navigateTo === 'function') {
+                navigateTo('/TuneIn');
+            } else {
+                window.location.href = '/TuneIn';
+            }
+            return;
+        }
+
+        // Radio Paradise doesn't require user authentication, navigate directly
+        if (source === 'radioparadise') {
+            if (typeof navigateTo === 'function') {
+                navigateTo('/RadioParadise');
+            } else {
+                window.location.href = '/RadioParadise';
+            }
+            return;
+        }
+
+        // For sources that require user profiles (like Qobuz), show the user overlay
         selectedSource = source;
         await window.showUserOverlay();
     };
