@@ -43,9 +43,14 @@ public interface IQobuzApiService
     Task<string?> GetTrackStreamUrlAsync(long trackId, string authToken, int formatId = 27);
 
     /// <summary>
-    /// Get featured/new release albums
+    /// Get featured/new release albums (old endpoint, no pagination)
     /// </summary>
     Task<List<QobuzAlbum>> GetFeaturedAlbumsAsync(string type = "new-releases", int limit = 50);
+
+    /// <summary>
+    /// Get new releases from discover endpoint with pagination
+    /// </summary>
+    Task<(List<QobuzAlbum> Albums, bool HasMore)> GetNewReleasesAsync(string? authToken = null, int offset = 0, int limit = 50);
 
     /// <summary>
     /// Get most streamed albums from discover endpoint with pagination
@@ -53,9 +58,14 @@ public interface IQobuzApiService
     Task<(List<QobuzAlbum> Albums, bool HasMore)> GetMostStreamedAlbumsAsync(string? authToken = null, int offset = 0, int limit = 50);
 
     /// <summary>
-    /// Get featured/editorial playlists from Qobuz
+    /// Get featured/editorial playlists from Qobuz (old endpoint, no pagination)
     /// </summary>
     Task<List<QobuzPlaylist>> GetFeaturedPlaylistsAsync(int limit = 50);
+
+    /// <summary>
+    /// Get discover playlists with pagination
+    /// </summary>
+    Task<(List<QobuzPlaylist> Playlists, bool HasMore)> GetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50);
 
     /// <summary>
     /// Get album with tracks
@@ -772,6 +782,119 @@ public class QobuzApiService : IQobuzApiService
     }
 
     /// <summary>
+    /// Get new releases from discover/newReleases endpoint with pagination
+    /// </summary>
+    public async Task<(List<QobuzAlbum> Albums, bool HasMore)> GetNewReleasesAsync(string? authToken = null, int offset = 0, int limit = 50)
+    {
+        var albums = new List<QobuzAlbum>();
+        var hasMore = false;
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get new releases: app credentials not available");
+                return (albums, hasMore);
+            }
+
+            var url = $"{QobuzApiBase}/discover/newReleases" +
+                      $"?genre_ids=" +
+                      $"&offset={offset}" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}" +
+                      (string.IsNullOrEmpty(authToken) ? "" : $"&user_auth_token={authToken}");
+
+            _logger.LogDebug("Fetching new releases from offset {Offset}", offset);
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get new releases: {Status}", response.StatusCode);
+                return (albums, hasMore);
+            }
+
+            // Parse the JSON: { has_more: bool, items: [...] }
+            using var doc = JsonDocument.Parse(responseContent);
+            var root = doc.RootElement;
+
+            hasMore = root.TryGetProperty("has_more", out var hasMoreElement) && hasMoreElement.GetBoolean();
+
+            if (root.TryGetProperty("items", out var items))
+            {
+                foreach (var item in items.EnumerateArray())
+                {
+                    try
+                    {
+                        var album = new QobuzAlbum
+                        {
+                            Id = item.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
+                            Title = item.TryGetProperty("title", out var title) ? title.GetString() ?? "" : ""
+                        };
+
+                        // Get artist info - API returns "artists" array
+                        if (item.TryGetProperty("artists", out var artists))
+                        {
+                            foreach (var artistItem in artists.EnumerateArray())
+                            {
+                                var isMainArtist = artistItem.TryGetProperty("roles", out var roles) &&
+                                    roles.EnumerateArray().Any(r => r.GetString() == "main-artist");
+
+                                if (isMainArtist || album.Artist == null)
+                                {
+                                    album.Artist = new QobuzArtist
+                                    {
+                                        Id = artistItem.TryGetProperty("id", out var artistId) ? artistId.GetInt64() : 0,
+                                        Name = artistItem.TryGetProperty("name", out var artistName) ? artistName.GetString() ?? "" : ""
+                                    };
+
+                                    if (isMainArtist) break;
+                                }
+                            }
+                        }
+                        else if (item.TryGetProperty("artist", out var artist))
+                        {
+                            album.Artist = new QobuzArtist
+                            {
+                                Id = artist.TryGetProperty("id", out var artistId) ? artistId.GetInt64() : 0,
+                                Name = artist.TryGetProperty("name", out var artistName) ? artistName.GetString() ?? "" : ""
+                            };
+                        }
+
+                        // Get cover image
+                        if (item.TryGetProperty("image", out var image))
+                        {
+                            album.Image = new QobuzImage
+                            {
+                                Small = image.TryGetProperty("small", out var small) ? small.GetString() : null,
+                                Thumbnail = image.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null,
+                                Large = image.TryGetProperty("large", out var large) ? large.GetString() : null
+                            };
+                        }
+
+                        albums.Add(album);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse album item");
+                    }
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} new releases (offset: {Offset}, hasMore: {HasMore})",
+                albums.Count, offset, hasMore);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get new releases");
+        }
+
+        return (albums, hasMore);
+    }
+
+    /// <summary>
     /// Get most streamed albums from discover/mostStreamed endpoint with pagination
     /// </summary>
     public async Task<(List<QobuzAlbum> Albums, bool HasMore)> GetMostStreamedAlbumsAsync(string? authToken = null, int offset = 0, int limit = 50)
@@ -932,6 +1055,113 @@ public class QobuzApiService : IQobuzApiService
         }
 
         return playlists;
+    }
+
+    /// <summary>
+    /// Get discover playlists with pagination (uses discover/playlists endpoint)
+    /// </summary>
+    public async Task<(List<QobuzPlaylist> Playlists, bool HasMore)> GetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50)
+    {
+        var playlists = new List<QobuzPlaylist>();
+        var hasMore = false;
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get discover playlists: app credentials not available");
+                return (playlists, hasMore);
+            }
+
+            var url = $"{QobuzApiBase}/discover/playlists" +
+                      $"?genre_ids=" +
+                      $"&tags=" +
+                      $"&offset={offset}" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}" +
+                      (string.IsNullOrEmpty(authToken) ? "" : $"&user_auth_token={authToken}");
+
+            _logger.LogDebug("Fetching discover playlists (offset: {Offset}, limit: {Limit})", offset, limit);
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get discover playlists: {Status}", response.StatusCode);
+                return (playlists, hasMore);
+            }
+
+            // Parse JSON response: { has_more: bool, items: [...] }
+            using var doc = JsonDocument.Parse(responseContent);
+            var root = doc.RootElement;
+
+            // Get has_more flag
+            hasMore = root.TryGetProperty("has_more", out var hasMoreElement) && hasMoreElement.GetBoolean();
+
+            // Get items array
+            if (root.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in items.EnumerateArray())
+                {
+                    var playlist = new QobuzPlaylist
+                    {
+                        Id = item.TryGetProperty("id", out var id) ? id.GetInt64() : 0,
+                        Name = item.TryGetProperty("name", out var name) ? name.GetString() ?? "" : "",
+                        Description = item.TryGetProperty("description", out var desc) ? desc.GetString() : null,
+                        TracksCount = item.TryGetProperty("tracks_count", out var tc) ? tc.GetInt32() : 0,
+                        Duration = item.TryGetProperty("duration", out var dur) ? dur.GetInt32() : 0,
+                        IsPublic = item.TryGetProperty("is_public", out var isPublic) && isPublic.GetBoolean()
+                    };
+
+                    // Get image from nested image object (discover/playlists format)
+                    if (item.TryGetProperty("image", out var imageObj) && imageObj.ValueKind == JsonValueKind.Object)
+                    {
+                        // Get covers array (preferred)
+                        if (imageObj.TryGetProperty("covers", out var covers) && covers.ValueKind == JsonValueKind.Array)
+                        {
+                            var imageUrls = new List<string>();
+                            foreach (var img in covers.EnumerateArray())
+                            {
+                                if (img.ValueKind == JsonValueKind.String)
+                                {
+                                    imageUrls.Add(img.GetString() ?? "");
+                                }
+                            }
+                            playlist.Images300 = imageUrls;
+                        }
+
+                        // Also get rectangle image as fallback
+                        if (imageObj.TryGetProperty("rectangle", out var rectangle) && rectangle.ValueKind == JsonValueKind.String)
+                        {
+                            playlist.ImageRectangle = new List<string> { rectangle.GetString() ?? "" };
+                        }
+                    }
+
+                    // Get owner info
+                    if (item.TryGetProperty("owner", out var owner))
+                    {
+                        playlist.Owner = new QobuzPlaylistOwner
+                        {
+                            Id = owner.TryGetProperty("id", out var ownerId) ? ownerId.GetInt64() : 0,
+                            Name = owner.TryGetProperty("name", out var ownerName) ? ownerName.GetString() ?? "" : ""
+                        };
+                    }
+
+                    playlists.Add(playlist);
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} discover playlists (offset: {Offset}, hasMore: {HasMore})",
+                playlists.Count, offset, hasMore);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get discover playlists");
+        }
+
+        return (playlists, hasMore);
     }
 
     /// <summary>

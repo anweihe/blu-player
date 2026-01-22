@@ -313,7 +313,7 @@
         setupSearch();
 
         // Setup infinite scroll for album charts
-        setupAlbumChartsScroll();
+        setupInfiniteScroll();
 
         if (userId && authToken) {
             console.log('initQobuz: Found credentials, verifying token for user:', userId);
@@ -518,17 +518,13 @@
         }
     }
 
-    // Setup infinite scroll for album charts
-    let albumChartsScrollSetup = false;
-    function setupAlbumChartsScroll() {
-        if (albumChartsScrollSetup) return;
+    // Setup infinite scroll for all paginated tabs
+    let infiniteScrollSetup = false;
+    function setupInfiniteScroll() {
+        if (infiniteScrollSetup) return;
 
         // Use window scroll - works for most page layouts
         window.addEventListener('scroll', () => {
-            // Only load more if on album-charts tab
-            if (currentTab !== 'album-charts') return;
-            if (albumChartsLoading || !albumChartsHasMore) return;
-
             // Calculate scroll position
             const scrollTop = window.scrollY || document.documentElement.scrollTop;
             const scrollHeight = document.documentElement.scrollHeight;
@@ -536,12 +532,20 @@
 
             // Load more when within 500px of the bottom
             if (scrollTop + clientHeight >= scrollHeight - 500) {
-                console.log('Loading more album charts...', { scrollTop, scrollHeight, clientHeight });
-                loadMoreAlbumCharts();
+                if (currentTab === 'album-charts' && albumChartsHasMore && !albumChartsLoading) {
+                    console.log('Loading more album charts...');
+                    loadMoreAlbumCharts();
+                } else if (currentTab === 'new-releases' && newReleasesHasMore && !newReleasesLoading) {
+                    console.log('Loading more new releases...');
+                    loadMoreNewReleases();
+                } else if (currentTab === 'top-playlists' && topPlaylistsHasMore && !topPlaylistsLoading) {
+                    console.log('Loading more top playlists...');
+                    loadMoreTopPlaylists();
+                }
             }
         });
 
-        albumChartsScrollSetup = true;
+        infiniteScrollSetup = true;
     }
 
     function handleSearchInput() {
@@ -772,6 +776,16 @@
     let albumChartsHasMore = true;
     let albumChartsLoading = false;
 
+    // New releases pagination state
+    let newReleasesOffset = 0;
+    let newReleasesHasMore = true;
+    let newReleasesLoading = false;
+
+    // Top playlists pagination state
+    let topPlaylistsOffset = 0;
+    let topPlaylistsHasMore = true;
+    let topPlaylistsLoading = false;
+
     // Scroll position tracking for back navigation
     let savedScrollPosition = 0;
 
@@ -800,26 +814,86 @@
         }
     }
 
-    // Load new releases
-    async function loadNewReleases() {
-        showLoading();
+    // Load new releases with pagination
+    async function loadNewReleases(append = false) {
+        if (newReleasesLoading) return;
+        if (append && !newReleasesHasMore) return;
+
+        newReleasesLoading = true;
+
+        if (!append) {
+            showLoading();
+            newReleasesOffset = 0;
+            newReleasesHasMore = true;
+        }
 
         try {
-            const response = await fetch('?handler=FeaturedAlbums&type=new-releases&limit=50');
+            const creds = await getQobuzCredentials();
+            const authToken = creds?.authToken || '';
+            const response = await fetch(`?handler=NewReleases&authToken=${encodeURIComponent(authToken)}&offset=${newReleasesOffset}&limit=50`);
             const data = await response.json();
 
             if (data.success) {
-                renderAlbums(data.albums);
+                if (append) {
+                    appendNewReleases(data.albums, newReleasesOffset);
+                } else {
+                    renderAlbums(data.albums);
+                }
+                newReleasesOffset += data.albums.length;
+                newReleasesHasMore = data.hasMore;
                 newReleasesLoaded = true;
             } else {
-                showError('Neuheiten konnten nicht geladen werden');
+                if (!append) {
+                    showError('Neuheiten konnten nicht geladen werden');
+                }
             }
         } catch (error) {
             console.error('Failed to load new releases:', error);
-            showError('Neuheiten konnten nicht geladen werden');
+            if (!append) {
+                showError('Neuheiten konnten nicht geladen werden');
+            }
         }
 
-        hideLoading();
+        newReleasesLoading = false;
+        if (!append) {
+            hideLoading();
+        }
+    }
+
+    // Load more new releases when scrolling
+    function loadMoreNewReleases() {
+        if (currentTab === 'new-releases' && newReleasesHasMore && !newReleasesLoading) {
+            loadNewReleases(true);
+        }
+    }
+
+    // Append new releases to existing grid
+    function appendNewReleases(albums, startIndex) {
+        const grid = document.getElementById('albums-grid');
+        if (!grid || !albums || albums.length === 0) return;
+
+        const html = albums.map(album => `
+            <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+                <div class="playlist-cover">
+                    ${album.coverUrl
+                        ? `<img src="${album.coverUrl}" alt="${escapeHtml(album.title)}" loading="lazy">`
+                        : `<div class="playlist-cover-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M9 18V5l12-2v13"/>
+                                <circle cx="6" cy="18" r="3"/>
+                                <circle cx="18" cy="16" r="3"/>
+                            </svg>
+                           </div>`
+                    }
+                </div>
+                <div class="playlist-info">
+                    <h3 class="playlist-name">${escapeHtml(album.title)}</h3>
+                    <div class="playlist-meta">${escapeHtml(album.artistName || '')}</div>
+                </div>
+            </div>
+        `).join('');
+
+        grid.insertAdjacentHTML('beforeend', html);
     }
 
     // Load album charts (most streamed) with pagination
@@ -1052,26 +1126,57 @@
         }
     }
 
-    // Load top playlists
-    async function loadTopPlaylists() {
-        showLoading();
+    // Load top playlists with pagination
+    async function loadTopPlaylists(append = false) {
+        if (topPlaylistsLoading) return;
+        if (append && !topPlaylistsHasMore) return;
+
+        topPlaylistsLoading = true;
+
+        if (!append) {
+            showLoading();
+            topPlaylistsOffset = 0;
+            topPlaylistsHasMore = true;
+        }
 
         try {
-            const response = await fetch('?handler=FeaturedPlaylists&limit=50');
+            const creds = await getQobuzCredentials();
+            const authToken = creds?.authToken || '';
+            const response = await fetch(`?handler=DiscoverPlaylists&authToken=${encodeURIComponent(authToken)}&offset=${topPlaylistsOffset}&limit=50`);
             const data = await response.json();
 
             if (data.success) {
-                renderTopPlaylists(data.playlists);
+                if (append) {
+                    appendTopPlaylists(data.playlists);
+                } else {
+                    renderTopPlaylists(data.playlists);
+                }
+                topPlaylistsOffset += data.playlists.length;
+                topPlaylistsHasMore = data.hasMore;
                 topPlaylistsLoaded = true;
             } else {
-                showError('Top Playlists konnten nicht geladen werden');
+                if (!append) {
+                    showError('Top Playlists konnten nicht geladen werden');
+                }
             }
         } catch (error) {
             console.error('Failed to load top playlists:', error);
-            showError('Top Playlists konnten nicht geladen werden');
+            if (!append) {
+                showError('Top Playlists konnten nicht geladen werden');
+            }
         }
 
-        hideLoading();
+        topPlaylistsLoading = false;
+        if (!append) {
+            hideLoading();
+        }
+    }
+
+    // Load more top playlists when scrolling
+    function loadMoreTopPlaylists() {
+        if (currentTab === 'top-playlists' && topPlaylistsHasMore && !topPlaylistsLoading) {
+            loadTopPlaylists(true);
+        }
     }
 
     // Render top playlists grid
@@ -1107,6 +1212,35 @@
                 </div>
             </div>
         `).join('');
+    }
+
+    // Append top playlists to existing grid
+    function appendTopPlaylists(playlists) {
+        const grid = document.getElementById('top-playlists-grid');
+        if (!grid || !playlists || playlists.length === 0) return;
+
+        const html = playlists.map(playlist => `
+            <div class="playlist-card" onclick="selectPlaylist(${playlist.id})">
+                <div class="playlist-cover">
+                    ${playlist.coverUrl
+                        ? `<img src="${playlist.coverUrl}" alt="${escapeHtml(playlist.name)}" loading="lazy">`
+                        : `<div class="playlist-cover-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M9 18V5l12-2v13"/>
+                                <circle cx="6" cy="18" r="3"/>
+                                <circle cx="18" cy="16" r="3"/>
+                            </svg>
+                           </div>`
+                    }
+                </div>
+                <div class="playlist-info">
+                    <h3 class="playlist-name">${escapeHtml(playlist.name)}</h3>
+                    <div class="playlist-meta">${playlist.tracksCount} Titel · ${playlist.formattedDuration}</div>
+                </div>
+            </div>
+        `).join('');
+
+        grid.insertAdjacentHTML('beforeend', html);
     }
 
     // Load favorites

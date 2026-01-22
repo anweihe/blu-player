@@ -250,6 +250,61 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
+    /// Get new releases from Qobuz discover endpoint with pagination
+    /// </summary>
+    public async Task<IActionResult> OnGetNewReleasesAsync(string? authToken = null, int offset = 0, int limit = 50)
+    {
+        _logger.LogInformation("Fetching new releases (offset={Offset}, limit={Limit})", offset, limit);
+
+        var (albums, hasMore) = await _qobuzService.GetNewReleasesAsync(authToken, offset, limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            hasMore,
+            offset,
+            albums = albums.Select(a => new
+            {
+                id = a.Id,
+                title = a.Title,
+                artistName = a.Artist?.Name,
+                coverUrl = a.CoverUrl,
+                tracksCount = a.TracksCount,
+                duration = a.Duration,
+                releasedAt = a.ReleasedAt
+            })
+        });
+    }
+
+    /// <summary>
+    /// Get discover playlists from Qobuz with pagination
+    /// </summary>
+    public async Task<IActionResult> OnGetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50)
+    {
+        _logger.LogInformation("Fetching discover playlists (offset={Offset}, limit={Limit})", offset, limit);
+
+        var (playlists, hasMore) = await _qobuzService.GetDiscoverPlaylistsAsync(authToken, offset, limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            hasMore,
+            offset,
+            playlists = playlists.Select(p => new
+            {
+                id = p.Id,
+                name = p.Name,
+                description = p.Description,
+                tracksCount = p.TracksCount,
+                duration = p.Duration,
+                formattedDuration = p.FormattedDuration,
+                coverUrl = p.CoverUrl,
+                ownerName = p.Owner?.Name
+            })
+        });
+    }
+
+    /// <summary>
     /// Get featured/editorial playlists from Qobuz
     /// </summary>
     public async Task<IActionResult> OnGetFeaturedPlaylistsAsync(int limit = 50)
