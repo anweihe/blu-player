@@ -176,6 +176,14 @@ public class RadioParadiseModel : PageModel
             return new JsonResult(new { success = false, error = "Status konnte nicht abgerufen werden" });
         }
 
+        // Convert direct Bluesound URL to proxy URL to avoid mixed content issues
+        var imageUrl = status.ImageUrl;
+        if (!string.IsNullOrEmpty(imageUrl) && imageUrl.StartsWith($"http://{ip}:{port}"))
+        {
+            var path = imageUrl.Substring($"http://{ip}:{port}".Length);
+            imageUrl = $"/Qobuz?handler=BluesoundImage&ip={ip}&port={port}&path={Uri.EscapeDataString(path)}";
+        }
+
         return new JsonResult(new
         {
             success = true,
@@ -185,7 +193,7 @@ public class RadioParadiseModel : PageModel
                 title = status.Title,
                 artist = status.Artist,
                 album = status.Album,
-                imageUrl = status.ImageUrl,
+                imageUrl = imageUrl,
                 currentSeconds = status.CurrentSeconds,
                 totalSeconds = status.TotalSeconds,
                 service = status.Service

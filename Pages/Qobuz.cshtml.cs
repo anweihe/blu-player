@@ -874,6 +874,15 @@ public class QobuzModel : PageModel
             return new JsonResult(new { success = false, error = "Status konnte nicht abgerufen werden" });
         }
 
+        // Convert direct Bluesound URL to proxy URL to avoid mixed content issues
+        var imageUrl = status.ImageUrl;
+        if (!string.IsNullOrEmpty(imageUrl) && imageUrl.StartsWith($"http://{ip}:{port}"))
+        {
+            // Extract path from full URL and create proxy URL
+            var path = imageUrl.Substring($"http://{ip}:{port}".Length);
+            imageUrl = $"/Qobuz?handler=BluesoundImage&ip={ip}&port={port}&path={Uri.EscapeDataString(path)}";
+        }
+
         return new JsonResult(new
         {
             success = true,
@@ -883,12 +892,49 @@ public class QobuzModel : PageModel
                 title = status.Title,
                 artist = status.Artist,
                 album = status.Album,
-                imageUrl = status.ImageUrl,
+                imageUrl = imageUrl,
                 currentSeconds = status.CurrentSeconds,
                 totalSeconds = status.TotalSeconds,
                 service = status.Service
             }
         });
+    }
+
+    /// <summary>
+    /// Proxy endpoint to serve Bluesound images (avoids mixed content issues)
+    /// </summary>
+    public async Task<IActionResult> OnGetBluesoundImageAsync(string ip, int port, string path)
+    {
+        if (string.IsNullOrEmpty(ip) || string.IsNullOrEmpty(path))
+        {
+            return NotFound();
+        }
+
+        try
+        {
+            var imageUrl = $"http://{ip}:{port}{path}";
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+            var response = await httpClient.GetAsync(imageUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                return NotFound();
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+            var imageData = await response.Content.ReadAsByteArrayAsync();
+
+            // Cache for 1 hour
+            Response.Headers["Cache-Control"] = "public, max-age=3600";
+
+            return File(imageData, contentType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to proxy image from Bluesound {Ip}:{Port}{Path}", ip, port, path);
+            return NotFound();
+        }
     }
 
     /// <summary>
@@ -1088,14 +1134,21 @@ public class QobuzModel : PageModel
         if (string.IsNullOrEmpty(relativeUrl))
             return null;
 
+        // If it's already a full URL, convert to proxy URL
+        if (relativeUrl.StartsWith($"http://{ip}:{port}"))
+        {
+            var path = relativeUrl.Substring($"http://{ip}:{port}".Length);
+            return $"/Qobuz?handler=BluesoundImage&ip={ip}&port={port}&path={Uri.EscapeDataString(path)}";
+        }
+
         if (relativeUrl.StartsWith("http://") || relativeUrl.StartsWith("https://"))
             return relativeUrl;
 
-        // Handle relative paths like /Artwork?...
+        // Handle relative paths like /Artwork?... - use proxy to avoid mixed content
         if (relativeUrl.StartsWith("/"))
-            return $"http://{ip}:{port}{relativeUrl}";
+            return $"/Qobuz?handler=BluesoundImage&ip={ip}&port={port}&path={Uri.EscapeDataString(relativeUrl)}";
 
-        return $"http://{ip}:{port}/{relativeUrl}";
+        return $"/Qobuz?handler=BluesoundImage&ip={ip}&port={port}&path={Uri.EscapeDataString("/" + relativeUrl)}";
     }
 
     /// <summary>
