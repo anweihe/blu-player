@@ -277,13 +277,13 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
-    /// Get discover playlists from Qobuz with pagination
+    /// Get discover playlists from Qobuz with pagination and optional tag/genre filters
     /// </summary>
-    public async Task<IActionResult> OnGetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50)
+    public async Task<IActionResult> OnGetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50, string? tags = null, string? genreIds = null)
     {
-        _logger.LogInformation("Fetching discover playlists (offset={Offset}, limit={Limit})", offset, limit);
+        _logger.LogInformation("Fetching discover playlists (offset={Offset}, limit={Limit}, tags={Tags}, genreIds={GenreIds})", offset, limit, tags ?? "(all)", genreIds ?? "(all)");
 
-        var (playlists, hasMore) = await _qobuzService.GetDiscoverPlaylistsAsync(authToken, offset, limit);
+        var (playlists, hasMore) = await _qobuzService.GetDiscoverPlaylistsAsync(authToken, offset, limit, tags, genreIds);
 
         return new JsonResult(new
         {

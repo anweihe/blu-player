@@ -293,7 +293,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                     </svg>
-                    <span>Top Playlists</span>
+                    <span>Qobuz Playlists</span>
                 </button>
                 <button type="button" class="tab-btn" data-tab="recommendations" onclick="switchTab('recommendations')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -391,16 +391,118 @@
                 </div>
             </div>
 
-            <!-- Tab Content: Top Playlists -->
+            <!-- Tab Content: Qobuz Playlists -->
             <div id="tab-top-playlists" class="tab-content">
                 <div class="section-header">
-                    <h2>Top Playlists</h2>
-                    <button type="button" class="btn-refresh" onclick="loadTopPlaylists()">
+                    <h2>Qobuz Playlists</h2>
+                    <button type="button" class="btn-refresh" onclick="refreshCurrentPlaylistsSubTab()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M23 4v6h-6M1 20v-6h6"/>
                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                         </svg>
                     </button>
+                </div>
+
+                <!-- Playlists Sub-Navigation -->
+                <div class="playlists-sub-nav">
+                    <button type="button" class="sub-tab-btn active" data-subtab="all" onclick="switchPlaylistsSubTab('all'); return false;">Alle</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="popular" onclick="switchPlaylistsSubTab('popular'); return false;">Top-Playlists</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="new" onclick="switchPlaylistsSubTab('new'); return false;">Neuheiten</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="hi-res" onclick="switchPlaylistsSubTab('hi-res'); return false;">Hi-Res</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="bestof2025" onclick="switchPlaylistsSubTab('bestof2025'); return false;">Best of 2025</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="focus" onclick="switchPlaylistsSubTab('focus'); return false;">Fokus</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="mood" onclick="switchPlaylistsSubTab('mood'); return false;">Moods</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="artist" onclick="switchPlaylistsSubTab('artist'); return false;">KünstlerInnen</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="danslecasque" onclick="switchPlaylistsSubTab('danslecasque'); return false;">Gehört von...</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="label" onclick="switchPlaylistsSubTab('label'); return false;">Label-Geschichten</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="qobuzdigs" onclick="switchPlaylistsSubTab('qobuzdigs'); return false;">Geheimtipps</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="event" onclick="switchPlaylistsSubTab('event'); return false;">Events & Medien</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="partner" onclick="switchPlaylistsSubTab('partner'); return false;">Hi-Fi Partners</button>
+                </div>
+
+                <!-- Genre Filter -->
+                <div class="genre-filter">
+                    <div class="genre-filter-row">
+                        <button type="button" class="genre-toggle" id="genreToggle" onclick="toggleGenreFilter(); return false;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18V5l12-2v13"/>
+                                <circle cx="6" cy="18" r="3"/>
+                                <circle cx="18" cy="16" r="3"/>
+                            </svg>
+                            <span>Genre</span>
+                            <span class="genre-badge" id="genreBadge">0</span>
+                            <svg class="genre-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="genre-clear-inline" id="genreClearInline" onclick="clearGenreFilter(); return false;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="genre-chips-wrapper" id="genreWrapper">
+                        <div class="genre-chips-inner">
+                            <div class="genre-chips">
+                                <button type="button" class="genre-chip" data-genre="112" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Pop/Rock
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="80" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Jazz
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="10" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Klassik
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="160" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Deutsche Musik
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="64" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Electronic
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="127" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Soul/Funk/R&B
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="116" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Metal
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="133" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Hip-Hop/Rap
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="2" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Blues/Country/Folk
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="91" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Soundtracks
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="94" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    World Music
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="167" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Kinder
+                                </button>
+                                <button type="button" class="genre-chip" data-genre="59" onclick="toggleGenre(this); return false;">
+                                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                                    Hörbücher
+                                </button>
+                                <button type="button" class="genre-clear" id="genreClear" onclick="clearGenreFilter(); return false;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                    Zurücksetzen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="top-playlists-grid" class="playlists-grid">
@@ -411,8 +513,8 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                     </svg>
-                    <h3>Keine Top Playlists</h3>
-                    <p>Momentan keine Top Playlists verfügbar.</p>
+                    <h3>Keine Playlists</h3>
+                    <p>Momentan keine Playlists verfügbar.</p>
                 </div>
             </div>
 

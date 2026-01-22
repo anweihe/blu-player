@@ -63,9 +63,9 @@ public interface IQobuzApiService
     Task<List<QobuzPlaylist>> GetFeaturedPlaylistsAsync(int limit = 50);
 
     /// <summary>
-    /// Get discover playlists with pagination
+    /// Get discover playlists with pagination and optional tag/genre filters
     /// </summary>
-    Task<(List<QobuzPlaylist> Playlists, bool HasMore)> GetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50);
+    Task<(List<QobuzPlaylist> Playlists, bool HasMore)> GetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50, string? tags = null, string? genreIds = null);
 
     /// <summary>
     /// Get album with tracks
@@ -1073,9 +1073,9 @@ public class QobuzApiService : IQobuzApiService
     }
 
     /// <summary>
-    /// Get discover playlists with pagination (uses discover/playlists endpoint)
+    /// Get discover playlists with pagination and optional tag/genre filters (uses discover/playlists endpoint)
     /// </summary>
-    public async Task<(List<QobuzPlaylist> Playlists, bool HasMore)> GetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50)
+    public async Task<(List<QobuzPlaylist> Playlists, bool HasMore)> GetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50, string? tags = null, string? genreIds = null)
     {
         var playlists = new List<QobuzPlaylist>();
         var hasMore = false;
@@ -1090,14 +1090,14 @@ public class QobuzApiService : IQobuzApiService
             }
 
             var url = $"{QobuzApiBase}/discover/playlists" +
-                      $"?genre_ids=" +
-                      $"&tags=" +
+                      $"?genre_ids={genreIds ?? ""}" +
+                      $"&tags={tags ?? ""}" +
                       $"&offset={offset}" +
                       $"&limit={limit}" +
                       $"&app_id={credentials.AppId}" +
                       (string.IsNullOrEmpty(authToken) ? "" : $"&user_auth_token={authToken}");
 
-            _logger.LogDebug("Fetching discover playlists (offset: {Offset}, limit: {Limit})", offset, limit);
+            _logger.LogDebug("Fetching discover playlists (offset: {Offset}, limit: {Limit}, tags: {Tags}, genreIds: {GenreIds})", offset, limit, tags ?? "(all)", genreIds ?? "(all)");
 
             var response = await _httpClient.GetAsync(url);
             var responseContent = await response.Content.ReadAsStringAsync();

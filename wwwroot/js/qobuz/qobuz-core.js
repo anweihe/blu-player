@@ -52,7 +52,13 @@
         currentFavoritesSubTab: 'albums',
         favAlbumsLoaded: false,
         favTracksLoaded: false,
-        favArtistsLoaded: false
+        favArtistsLoaded: false,
+        // Playlist sub-tabs state
+        currentPlaylistsSubTab: 'all',
+        playlistsSubTabsLoaded: {},  // { 'all': true, 'popular': false, ... }
+        // Genre filter state
+        selectedGenres: new Set(),   // Set of genre IDs
+        genreFilterExpanded: false
     };
 
     // Pagination state
@@ -65,7 +71,9 @@
         newReleasesLoading: false,
         topPlaylistsOffset: 0,
         topPlaylistsHasMore: true,
-        topPlaylistsLoading: false
+        topPlaylistsLoading: false,
+        // Per-subtab playlist pagination
+        playlistsPagination: {}  // { 'all': { offset: 0, hasMore: true, loading: false }, ... }
     };
 
     // Scroll position tracking

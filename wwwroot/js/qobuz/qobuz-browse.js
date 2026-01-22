@@ -332,54 +332,270 @@
         `).join('');
     }
 
+    // ==================== Genre Filter ====================
+
+    // Ensure selectedGenres is initialized
+    function ensureGenreState() {
+        if (!QobuzApp.tabs.selectedGenres || !(QobuzApp.tabs.selectedGenres instanceof Set)) {
+            QobuzApp.tabs.selectedGenres = new Set();
+        }
+    }
+
+    function toggleGenreFilter() {
+        try {
+            const toggle = document.getElementById('genreToggle');
+            const wrapper = document.getElementById('genreWrapper');
+
+            QobuzApp.tabs.genreFilterExpanded = !QobuzApp.tabs.genreFilterExpanded;
+
+            if (toggle) toggle.classList.toggle('expanded', QobuzApp.tabs.genreFilterExpanded);
+            if (wrapper) wrapper.classList.toggle('expanded', QobuzApp.tabs.genreFilterExpanded);
+        } catch (error) {
+            console.error('Error in toggleGenreFilter:', error);
+        }
+    }
+
+    function toggleGenre(chipElement) {
+        try {
+            ensureGenreState();
+            const genreId = chipElement.dataset.genre;
+            const selectedGenres = QobuzApp.tabs.selectedGenres;
+
+            if (selectedGenres.has(genreId)) {
+                selectedGenres.delete(genreId);
+                chipElement.classList.remove('selected');
+            } else {
+                selectedGenres.add(genreId);
+                chipElement.classList.add('selected');
+            }
+
+            updateGenreFilterState();
+
+            // Reset pagination and reload playlists (skip global loading overlay)
+            resetPlaylistsPagination();
+            loadTopPlaylists(false, true);
+        } catch (error) {
+            console.error('Error in toggleGenre:', error);
+        }
+    }
+
+    function clearGenreFilter() {
+        try {
+            ensureGenreState();
+            QobuzApp.tabs.selectedGenres.clear();
+
+            // Remove selected class from all chips
+            document.querySelectorAll('.genre-chip').forEach(chip => {
+                chip.classList.remove('selected');
+            });
+
+            updateGenreFilterState();
+
+            // Reset pagination and reload playlists (skip global loading overlay)
+            resetPlaylistsPagination();
+            loadTopPlaylists(false, true);
+        } catch (error) {
+            console.error('Error in clearGenreFilter:', error);
+        }
+    }
+
+    function updateGenreFilterState() {
+        try {
+            ensureGenreState();
+            const count = QobuzApp.tabs.selectedGenres.size;
+            const toggle = document.getElementById('genreToggle');
+            const badge = document.getElementById('genreBadge');
+            const clearBtn = document.getElementById('genreClear');
+            const clearBtnInline = document.getElementById('genreClearInline');
+
+            // Update badge
+            if (badge) badge.textContent = count;
+
+            // Update toggle style
+            if (toggle) {
+                toggle.classList.toggle('has-selection', count > 0);
+            }
+
+            // Show/hide clear button (inside expanded panel)
+            if (clearBtn) {
+                clearBtn.classList.toggle('visible', count > 0);
+            }
+
+            // Show/hide inline clear button (next to toggle, always visible when filters active)
+            if (clearBtnInline) {
+                clearBtnInline.classList.toggle('visible', count > 0);
+            }
+        } catch (error) {
+            console.error('Error in updateGenreFilterState:', error);
+        }
+    }
+
+    function getGenreIdsParam() {
+        try {
+            ensureGenreState();
+            const selectedGenres = QobuzApp.tabs.selectedGenres;
+            if (!selectedGenres || selectedGenres.size === 0) return '';
+            return Array.from(selectedGenres).join(',');
+        } catch (error) {
+            console.error('Error in getGenreIdsParam:', error);
+            return '';
+        }
+    }
+
+    function resetPlaylistsPagination() {
+        try {
+            // Clear all pagination states since filters changed
+            QobuzApp.pagination.playlistsPagination = {};
+            QobuzApp.tabs.playlistsSubTabsLoaded = {};
+
+            // Show loading skeleton in grid instead of full-page loading overlay
+            const grid = document.getElementById('top-playlists-grid');
+            if (grid) {
+                grid.innerHTML = '<div class="grid-loading"><div class="loading-spinner-small"></div></div>';
+            }
+
+            // Hide empty state
+            const emptyState = document.getElementById('top-playlists-empty');
+            if (emptyState) emptyState.style.display = 'none';
+        } catch (error) {
+            console.error('Error in resetPlaylistsPagination:', error);
+        }
+    }
+
+    // ==================== Playlists Sub-Tabs ====================
+
+    function switchPlaylistsSubTab(subTab) {
+        try {
+            // Update button styles
+            document.querySelectorAll('.playlists-sub-nav .sub-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.subtab === subTab);
+            });
+
+            QobuzApp.tabs.currentPlaylistsSubTab = subTab;
+
+            // Show loading in grid (not global overlay)
+            const grid = document.getElementById('top-playlists-grid');
+            if (grid) {
+                grid.innerHTML = '<div class="grid-loading"><div class="loading-spinner-small"></div></div>';
+            }
+
+            // Hide empty state
+            const emptyState = document.getElementById('top-playlists-empty');
+            if (emptyState) emptyState.style.display = 'none';
+
+            // Reset pagination for this sub-tab since we're switching
+            const paginationKey = getPaginationKey();
+            QobuzApp.pagination.playlistsPagination[paginationKey] = null;
+
+            // Load playlists (skip global loading overlay)
+            loadTopPlaylists(false, true);
+        } catch (error) {
+            console.error('Error in switchPlaylistsSubTab:', error);
+        }
+    }
+
+    function refreshCurrentPlaylistsSubTab() {
+        try {
+            const paginationKey = getPaginationKey();
+            const pagination = QobuzApp.pagination.playlistsPagination[paginationKey];
+            if (pagination) {
+                pagination.offset = 0;
+                pagination.hasMore = true;
+            }
+            QobuzApp.tabs.playlistsSubTabsLoaded[paginationKey] = false;
+
+            // Show loading in grid (not global overlay)
+            const grid = document.getElementById('top-playlists-grid');
+            if (grid) {
+                grid.innerHTML = '<div class="grid-loading"><div class="loading-spinner-small"></div></div>';
+            }
+
+            loadTopPlaylists(false, true);
+        } catch (error) {
+            console.error('Error in refreshCurrentPlaylistsSubTab:', error);
+        }
+    }
+
+    function getPaginationKey() {
+        try {
+            // Create a unique key based on current sub-tab and genre selection
+            const subTab = QobuzApp.tabs.currentPlaylistsSubTab || 'all';
+            const genreIds = getGenreIdsParam();
+            return genreIds ? `${subTab}_${genreIds}` : subTab;
+        } catch (error) {
+            console.error('Error in getPaginationKey:', error);
+            return 'all';
+        }
+    }
+
     // ==================== Top Playlists ====================
 
-    async function loadTopPlaylists(append = false) {
-        const pagination = QobuzApp.pagination;
-        if (pagination.topPlaylistsLoading) return;
-        if (append && !pagination.topPlaylistsHasMore) return;
+    async function loadTopPlaylists(append = false, skipGlobalLoading = false) {
+        const subTab = QobuzApp.tabs.currentPlaylistsSubTab;
+        const apiTag = subTab === 'all' ? '' : subTab;
+        const genreIds = getGenreIdsParam();
+        const paginationKey = getPaginationKey();
 
-        pagination.topPlaylistsLoading = true;
+        // Initialize per-subtab pagination if not exists
+        if (!QobuzApp.pagination.playlistsPagination[paginationKey]) {
+            QobuzApp.pagination.playlistsPagination[paginationKey] = {
+                offset: 0,
+                hasMore: true,
+                loading: false
+            };
+        }
+        const pagination = QobuzApp.pagination.playlistsPagination[paginationKey];
+
+        if (pagination.loading) return;
+        if (append && !pagination.hasMore) return;
+
+        pagination.loading = true;
 
         if (!append) {
-            QobuzApp.core.showLoading();
-            pagination.topPlaylistsOffset = 0;
-            pagination.topPlaylistsHasMore = true;
+            // Only show global loading on initial load, not on filter changes
+            if (!skipGlobalLoading) {
+                QobuzApp.core.showLoading();
+            }
+            pagination.offset = 0;
+            pagination.hasMore = true;
         }
 
         try {
             const creds = await QobuzApp.auth.getQobuzCredentials();
             const authToken = creds?.authToken || '';
-            const response = await fetch(`?handler=DiscoverPlaylists&authToken=${encodeURIComponent(authToken)}&offset=${pagination.topPlaylistsOffset}&limit=50`);
+            const response = await fetch(`?handler=DiscoverPlaylists&authToken=${encodeURIComponent(authToken)}&offset=${pagination.offset}&limit=50&tags=${encodeURIComponent(apiTag)}&genreIds=${encodeURIComponent(genreIds)}`);
             const data = await response.json();
 
             if (data.success) {
                 if (append) {
-                    appendTopPlaylists(data.playlists, pagination.topPlaylistsOffset);
+                    appendTopPlaylists(data.playlists, pagination.offset);
                 } else {
                     renderTopPlaylists(data.playlists);
                 }
-                pagination.topPlaylistsOffset += data.playlists.length;
-                pagination.topPlaylistsHasMore = data.hasMore;
+                pagination.offset += data.playlists.length;
+                pagination.hasMore = data.hasMore;
+                QobuzApp.tabs.playlistsSubTabsLoaded[paginationKey] = true;
                 QobuzApp.tabs.topPlaylistsLoaded = true;
             } else if (!append) {
-                QobuzApp.core.showError('Top-Playlists konnten nicht geladen werden');
+                QobuzApp.core.showError('Playlists konnten nicht geladen werden');
             }
         } catch (error) {
-            console.error('Failed to load top playlists:', error);
+            console.error('Failed to load playlists:', error);
             if (!append) {
-                QobuzApp.core.showError('Top-Playlists konnten nicht geladen werden');
+                QobuzApp.core.showError('Playlists konnten nicht geladen werden');
             }
         }
 
-        pagination.topPlaylistsLoading = false;
-        if (!append) {
+        pagination.loading = false;
+        if (!append && !skipGlobalLoading) {
             QobuzApp.core.hideLoading();
         }
     }
 
     function loadMoreTopPlaylists() {
-        if (QobuzApp.tabs.currentTab === 'top-playlists' && QobuzApp.pagination.topPlaylistsHasMore && !QobuzApp.pagination.topPlaylistsLoading) {
+        const paginationKey = getPaginationKey();
+        const pagination = QobuzApp.pagination.playlistsPagination[paginationKey];
+        if (QobuzApp.tabs.currentTab === 'top-playlists' && pagination && pagination.hasMore && !pagination.loading) {
             loadTopPlaylists(true);
         }
     }
@@ -883,6 +1099,11 @@
         switchTab,
         switchFavoritesSubTab,
         refreshCurrentFavoritesSubTab,
+        switchPlaylistsSubTab,
+        refreshCurrentPlaylistsSubTab,
+        toggleGenreFilter,
+        toggleGenre,
+        clearGenreFilter,
         loadNewReleases,
         loadAlbumCharts,
         loadTopPlaylists,
@@ -901,6 +1122,11 @@
     window.switchTab = switchTab;
     window.switchFavoritesSubTab = switchFavoritesSubTab;
     window.refreshCurrentFavoritesSubTab = refreshCurrentFavoritesSubTab;
+    window.switchPlaylistsSubTab = switchPlaylistsSubTab;
+    window.refreshCurrentPlaylistsSubTab = refreshCurrentPlaylistsSubTab;
+    window.toggleGenreFilter = toggleGenreFilter;
+    window.toggleGenre = toggleGenre;
+    window.clearGenreFilter = clearGenreFilter;
     window.loadNewReleases = loadNewReleases;
     window.loadAlbumCharts = loadAlbumCharts;
     window.loadTopPlaylists = loadTopPlaylists;
