@@ -828,11 +828,19 @@
         align-items: flex-start;
         padding: 14px 14px 0;
         gap: 10px;
+        flex-wrap: nowrap;
     }
 
     .card-title-area {
-        flex: 1;
+        flex: 1 1 0;
         min-width: 0;
+        overflow: hidden;
+    }
+
+    /* Ensure header buttons stay on the right */
+    .join-group-dropdown,
+    .dissolve-form {
+        flex-shrink: 0;
     }
 
     .card-title {
