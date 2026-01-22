@@ -478,7 +478,7 @@
             </div>
 
             <div class="playlist-detail-info">
-                <div class="playlist-detail-cover">
+                <div class="playlist-detail-cover" onclick="openCoverLightbox()">
                     <img id="detail-cover" src="" alt="Cover">
                     <div class="playlist-cover-placeholder" id="detail-cover-placeholder">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -512,6 +512,18 @@
 
     </main>
 
+</div>
+
+<!-- Cover Lightbox Modal -->
+<div id="cover-lightbox" class="cover-lightbox">
+    <button type="button" class="lightbox-close" onclick="closeCoverLightbox()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+    </button>
+    <div class="lightbox-content">
+        <img id="lightbox-image" src="" alt="Cover">
+    </div>
 </div>
 
 <!-- user-profiles.js and hamburger-menu.js are loaded in _Layout.cshtml -->
