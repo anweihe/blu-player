@@ -322,6 +322,109 @@ main[role="main"] {
   }
 }
 
+/* ==================== Desktop Progress Section ==================== */
+.global-np-progress-desktop {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 400px;
+  min-width: 200px;
+}
+
+.global-np-time-current,
+.global-np-time-total {
+  font-size: 0.75rem;
+  color: var(--np-text-muted);
+  min-width: 36px;
+  font-variant-numeric: tabular-nums;
+}
+
+.global-np-time-current {
+  text-align: right;
+}
+
+.global-np-time-total {
+  text-align: left;
+}
+
+.global-np-progress-bar-desktop {
+  flex: 1;
+  height: 4px;
+  background: var(--np-bg-secondary);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: height 0.15s ease;
+}
+
+.global-np-progress-bar-desktop:hover {
+  height: 6px;
+}
+
+.global-np-progress-fill-desktop {
+  height: 100%;
+  background: var(--np-accent);
+  width: 0%;
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.global-np-progress-bar-desktop:hover .global-np-progress-fill-desktop {
+  background: #2ed36c;
+}
+
+/* ==================== Desktop Player Button ==================== */
+.global-np-player-btn-desktop {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--np-border);
+  border-radius: var(--np-radius);
+  color: var(--np-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  max-width: 180px;
+  flex-shrink: 0;
+}
+
+.global-np-player-btn-desktop:hover {
+  border-color: var(--np-accent);
+  color: var(--np-text);
+  background: var(--np-bg-secondary);
+}
+
+.global-np-player-btn-desktop svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.global-np-player-btn-desktop span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==================== Desktop Breakpoint (768px+) ==================== */
+@media (min-width: 768px) {
+  .global-np-progress-desktop {
+    display: flex;
+  }
+
+  .global-np-player-btn-desktop {
+    display: flex;
+  }
+
+  /* Hide player name from info section on desktop (shown in button instead) */
+  .global-np-player-name {
+    display: none;
+  }
+}
+
 /* ==================== Global Player Selector ==================== */
 .global-player-selector-overlay {
   position: fixed;

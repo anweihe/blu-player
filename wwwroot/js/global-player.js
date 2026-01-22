@@ -219,6 +219,14 @@
         if (currentTime) currentTime.textContent = formatTime(current);
         if (totalTime) totalTime.textContent = formatTime(total);
 
+        // Update desktop progress bar and times
+        const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+        const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+        const desktopTotalTime = document.getElementById('global-np-time-total-desktop');
+        if (desktopProgressFill) desktopProgressFill.style.width = `${progress}%`;
+        if (desktopCurrentTime) desktopCurrentTime.textContent = formatTime(current);
+        if (desktopTotalTime) desktopTotalTime.textContent = formatTime(total);
+
         // Update popup if open
         if (popup && popup.style.display === 'flex') {
             const popupProgressFill = document.getElementById('global-popup-progress-fill');
@@ -310,6 +318,12 @@
         if (popupProgressBar) {
             popupProgressBar.addEventListener('click', handleProgressBarClick);
         }
+
+        // Desktop progress bar
+        const desktopProgressBar = document.getElementById('global-np-progress-bar-desktop');
+        if (desktopProgressBar) {
+            desktopProgressBar.addEventListener('click', handleProgressBarClick);
+        }
     }
 
     function handleProgressBarClick(e) {
@@ -340,6 +354,12 @@
         const currentTime = document.getElementById('global-current-time');
         if (progressFill) progressFill.style.width = `${progress}%`;
         if (currentTime) currentTime.textContent = formatTime(seekTime);
+
+        // Update desktop progress bar and time
+        const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+        const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+        if (desktopProgressFill) desktopProgressFill.style.width = `${progress}%`;
+        if (desktopCurrentTime) desktopCurrentTime.textContent = formatTime(seekTime);
 
         // Update popup if open
         if (popup && popup.style.display === 'flex') {
@@ -411,10 +431,16 @@
     }
 
     function updatePlayerDisplay() {
-        // Update footer player name
+        // Update footer player name (mobile)
         const footerPlayerName = document.getElementById('global-np-player-name-text');
         if (footerPlayerName) {
             footerPlayerName.textContent = globalSelectedPlayer.name;
+        }
+
+        // Update desktop player button text
+        const desktopPlayerText = document.getElementById('global-np-player-desktop-text');
+        if (desktopPlayerText) {
+            desktopPlayerText.textContent = globalSelectedPlayer.name;
         }
 
         // Update popup player name
@@ -504,6 +530,12 @@
             const currentTime = document.getElementById('global-current-time');
             if (progressFill) progressFill.style.width = `${progress}%`;
             if (currentTime) currentTime.textContent = formatTime(estimatedPosition);
+
+            // Update desktop progress bar and time
+            const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+            const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+            if (desktopProgressFill) desktopProgressFill.style.width = `${progress}%`;
+            if (desktopCurrentTime) desktopCurrentTime.textContent = formatTime(estimatedPosition);
 
             // Update popup progress if open
             if (popup && popup.style.display === 'flex') {
@@ -607,6 +639,10 @@
             const popupTotalTimeEl = document.getElementById('global-popup-total-time');
             if (popupTotalTimeEl) popupTotalTimeEl.textContent = formatTime(status.totalSeconds);
 
+            // Update desktop total time
+            const desktopTotalTimeEl = document.getElementById('global-np-time-total-desktop');
+            if (desktopTotalTimeEl) desktopTotalTimeEl.textContent = formatTime(status.totalSeconds);
+
             // Only do immediate UI update if track changed or progress differs by more than 3 seconds
             // (otherwise the animation will smoothly update it)
             if (trackChanged || actualDiff > 3) {
@@ -616,6 +652,12 @@
                 const currentTime = document.getElementById('global-current-time');
                 if (progressFill) progressFill.style.width = `${progress}%`;
                 if (currentTime) currentTime.textContent = formatTime(status.currentSeconds);
+
+                // Update desktop progress bar and current time
+                const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+                const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+                if (desktopProgressFill) desktopProgressFill.style.width = `${progress}%`;
+                if (desktopCurrentTime) desktopCurrentTime.textContent = formatTime(status.currentSeconds);
 
                 // Sync popup progress
                 if (popup && popup.style.display === 'flex') {
@@ -1560,6 +1602,14 @@
                 if (progressFill) progressFill.style.width = `${progress}%`;
                 if (currentTime) currentTime.textContent = formatTime(currentSeconds);
                 if (totalTime) totalTime.textContent = formatTime(totalSeconds);
+
+                // Update desktop progress bar and times
+                const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+                const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+                const desktopTotalTime = document.getElementById('global-np-time-total-desktop');
+                if (desktopProgressFill) desktopProgressFill.style.width = `${progress}%`;
+                if (desktopCurrentTime) desktopCurrentTime.textContent = formatTime(currentSeconds);
+                if (desktopTotalTime) desktopTotalTime.textContent = formatTime(totalSeconds);
 
                 // Update popup if open
                 if (popup && popup.style.display === 'flex') {

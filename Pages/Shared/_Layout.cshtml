@@ -433,6 +433,14 @@
                     </span>
                 </div>
             </div>
+            <!-- Desktop Progress Section -->
+            <div class="global-np-progress-desktop" id="global-np-progress-desktop">
+                <span class="global-np-time-current" id="global-np-time-current-desktop">0:00</span>
+                <div class="global-np-progress-bar-desktop" id="global-np-progress-bar-desktop">
+                    <div class="global-np-progress-fill-desktop" id="global-np-progress-fill-desktop"></div>
+                </div>
+                <span class="global-np-time-total" id="global-np-time-total-desktop">0:00</span>
+            </div>
             <button type="button" class="global-np-btn global-np-btn-play" onclick="globalTogglePlayPause()" id="global-btn-play-pause">
                 <svg viewBox="0 0 24 24" fill="currentColor" class="global-icon-play">
                     <path d="M8 5v14l11-7z"/>
@@ -440,6 +448,14 @@
                 <svg viewBox="0 0 24 24" fill="currentColor" class="global-icon-pause" style="display: none;">
                     <path d="M6 4h4v16H6zM14 4h4v16h-4z"/>
                 </svg>
+            </button>
+            <!-- Desktop Player Selector -->
+            <button type="button" class="global-np-player-btn-desktop" id="global-np-player-btn-desktop" onclick="openGlobalPlayerSelector()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span id="global-np-player-desktop-text">Dieses Gerät</span>
             </button>
             <button type="button" class="global-np-volume-btn" id="global-volume-btn" onclick="openGlobalVolumePanel()" title="Lautstärke">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
