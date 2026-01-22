@@ -312,6 +312,9 @@
         // Setup search for new DOM elements
         setupSearch();
 
+        // Setup infinite scroll for album charts
+        setupAlbumChartsScroll();
+
         if (userId && authToken) {
             console.log('initQobuz: Found credentials, verifying token for user:', userId);
             showLoading();
@@ -331,6 +334,11 @@
 
                     showLoggedInState(data);
                     await loadPlaylists();
+
+                    // Load new releases (default tab)
+                    if (!newReleasesLoaded) {
+                        loadNewReleases();
+                    }
 
                     // Sync Qobuz quality setting from Bluesound player (if selected)
                     await syncBluesoundQobuzQuality();
@@ -464,6 +472,11 @@
 
                 showLoggedInState(data);
                 await loadPlaylists();
+
+                // Load new releases (default tab)
+                if (!newReleasesLoaded) {
+                    loadNewReleases();
+                }
             } else {
                 showError(data.error || 'Login fehlgeschlagen');
             }
@@ -503,6 +516,32 @@
             searchInput.addEventListener('keydown', handleSearchKeydown);
             searchSetup = true;
         }
+    }
+
+    // Setup infinite scroll for album charts
+    let albumChartsScrollSetup = false;
+    function setupAlbumChartsScroll() {
+        if (albumChartsScrollSetup) return;
+
+        // Use window scroll - works for most page layouts
+        window.addEventListener('scroll', () => {
+            // Only load more if on album-charts tab
+            if (currentTab !== 'album-charts') return;
+            if (albumChartsLoading || !albumChartsHasMore) return;
+
+            // Calculate scroll position
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = window.innerHeight;
+
+            // Load more when within 500px of the bottom
+            if (scrollTop + clientHeight >= scrollHeight - 500) {
+                console.log('Loading more album charts...', { scrollTop, scrollHeight, clientHeight });
+                loadMoreAlbumCharts();
+            }
+        });
+
+        albumChartsScrollSetup = true;
     }
 
     function handleSearchInput() {
@@ -722,11 +761,19 @@
     }
 
     // Tab switching
-    let currentTab = 'my-playlists';
+    let currentTab = 'new-releases';
     let newReleasesLoaded = false;
     let albumChartsLoaded = false;
     let topPlaylistsLoaded = false;
     let recommendationsLoaded = false;
+
+    // Album charts pagination state
+    let albumChartsOffset = 0;
+    let albumChartsHasMore = true;
+    let albumChartsLoading = false;
+
+    // Scroll position tracking for back navigation
+    let savedScrollPosition = 0;
 
     function switchTab(tabId) {
         // Update tab buttons
@@ -775,28 +822,57 @@
         hideLoading();
     }
 
-    // Load album charts (most streamed)
-    async function loadAlbumCharts() {
-        showLoading();
+    // Load album charts (most streamed) with pagination
+    async function loadAlbumCharts(append = false) {
+        if (albumChartsLoading) return;
+        if (append && !albumChartsHasMore) return;
+
+        albumChartsLoading = true;
+
+        if (!append) {
+            showLoading();
+            albumChartsOffset = 0;
+            albumChartsHasMore = true;
+        }
 
         try {
             const creds = await getQobuzCredentials();
             const authToken = creds?.authToken || '';
-            const response = await fetch(`?handler=MostStreamedAlbums&authToken=${encodeURIComponent(authToken)}&limit=50`);
+            const response = await fetch(`?handler=MostStreamedAlbums&authToken=${encodeURIComponent(authToken)}&offset=${albumChartsOffset}&limit=50`);
             const data = await response.json();
 
             if (data.success) {
-                renderChartAlbums(data.albums);
+                if (append) {
+                    appendChartAlbums(data.albums, albumChartsOffset);
+                } else {
+                    renderChartAlbums(data.albums);
+                }
+                albumChartsOffset += data.albums.length;
+                albumChartsHasMore = data.hasMore;
                 albumChartsLoaded = true;
             } else {
-                showError('Album-Charts konnten nicht geladen werden');
+                if (!append) {
+                    showError('Album-Charts konnten nicht geladen werden');
+                }
             }
         } catch (error) {
             console.error('Failed to load album charts:', error);
-            showError('Album-Charts konnten nicht geladen werden');
+            if (!append) {
+                showError('Album-Charts konnten nicht geladen werden');
+            }
         }
 
-        hideLoading();
+        albumChartsLoading = false;
+        if (!append) {
+            hideLoading();
+        }
+    }
+
+    // Load more album charts when scrolling
+    function loadMoreAlbumCharts() {
+        if (currentTab === 'album-charts' && albumChartsHasMore && !albumChartsLoading) {
+            loadAlbumCharts(true);
+        }
     }
 
     // Render chart albums grid
@@ -832,6 +908,35 @@
                 </div>
             </div>
         `).join('');
+    }
+
+    // Append more chart albums to the grid (for infinite scroll)
+    function appendChartAlbums(albums, startIndex) {
+        const grid = document.getElementById('charts-grid');
+        if (!grid || !albums || albums.length === 0) return;
+
+        const html = albums.map((album, index) => `
+            <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+                <div class="playlist-cover">
+                    <span class="chart-position">${startIndex + index + 1}</span>
+                    ${album.coverUrl
+                        ? `<img src="${album.coverUrl}" alt="${escapeHtml(album.title)}" loading="lazy">`
+                        : `<div class="playlist-cover-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                           </div>`
+                    }
+                </div>
+                <div class="playlist-info">
+                    <h3 class="playlist-name">${escapeHtml(album.title)}</h3>
+                    <div class="playlist-meta">${escapeHtml(album.artistName || 'Unbekannt')}</div>
+                </div>
+            </div>
+        `).join('');
+
+        grid.insertAdjacentHTML('beforeend', html);
     }
 
     // Render albums grid
@@ -871,6 +976,9 @@
     // Select album - load and show tracks
     // highlightTrackIndex: optional index of track to highlight and scroll to
     async function selectAlbum(albumId, highlightTrackIndex = null) {
+        // Save scroll position before navigating
+        savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+
         const creds = await getQobuzCredentials();
         const authToken = creds?.authToken;
         if (!authToken) {
@@ -1204,6 +1312,9 @@
     // Select playlist - load and show tracks
     // highlightTrackIndex: optional index of track to highlight and scroll to
     async function selectPlaylist(playlistId, highlightTrackIndex = null) {
+        // Save scroll position before navigating
+        savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+
         const creds = await getQobuzCredentials();
         const authToken = creds?.authToken;
         if (!authToken) return;
@@ -1322,6 +1433,11 @@
     function backToPlaylists() {
         playlistDetailSection.style.display = 'none';
         loggedInSection.style.display = 'block';
+
+        // Restore scroll position after DOM update
+        requestAnimationFrame(() => {
+            window.scrollTo(0, savedScrollPosition);
+        });
     }
 
     // Bluesound status polling

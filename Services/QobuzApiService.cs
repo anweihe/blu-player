@@ -48,9 +48,9 @@ public interface IQobuzApiService
     Task<List<QobuzAlbum>> GetFeaturedAlbumsAsync(string type = "new-releases", int limit = 50);
 
     /// <summary>
-    /// Get most streamed albums from discover endpoint
+    /// Get most streamed albums from discover endpoint with pagination
     /// </summary>
-    Task<List<QobuzAlbum>> GetMostStreamedAlbumsAsync(string? authToken = null, int limit = 50);
+    Task<(List<QobuzAlbum> Albums, bool HasMore)> GetMostStreamedAlbumsAsync(string? authToken = null, int offset = 0, int limit = 50);
 
     /// <summary>
     /// Get featured/editorial playlists from Qobuz
@@ -772,11 +772,12 @@ public class QobuzApiService : IQobuzApiService
     }
 
     /// <summary>
-    /// Get most streamed albums from discover/index endpoint
+    /// Get most streamed albums from discover/mostStreamed endpoint with pagination
     /// </summary>
-    public async Task<List<QobuzAlbum>> GetMostStreamedAlbumsAsync(string? authToken = null, int limit = 50)
+    public async Task<(List<QobuzAlbum> Albums, bool HasMore)> GetMostStreamedAlbumsAsync(string? authToken = null, int offset = 0, int limit = 50)
     {
         var albums = new List<QobuzAlbum>();
+        var hasMore = false;
 
         try
         {
@@ -784,15 +785,17 @@ public class QobuzApiService : IQobuzApiService
             if (credentials == null)
             {
                 _logger.LogError("Cannot get most streamed albums: app credentials not available");
-                return albums;
+                return (albums, hasMore);
             }
 
-            var url = $"{QobuzApiBase}/discover/index" +
+            var url = $"{QobuzApiBase}/discover/mostStreamed" +
                       $"?genre_ids=" +
+                      $"&offset={offset}" +
+                      $"&limit={limit}" +
                       $"&app_id={credentials.AppId}" +
                       (string.IsNullOrEmpty(authToken) ? "" : $"&user_auth_token={authToken}");
 
-            _logger.LogDebug("Fetching most streamed albums from discover endpoint");
+            _logger.LogDebug("Fetching most streamed albums from offset {Offset}", offset);
 
             var response = await _httpClient.GetAsync(url);
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -800,76 +803,87 @@ public class QobuzApiService : IQobuzApiService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Failed to get most streamed albums: {Status}", response.StatusCode);
-                return albums;
+                return (albums, hasMore);
             }
 
-            // Parse the JSON to find containers/most_streamed
+            // Parse the JSON: { has_more: bool, items: [...] }
             using var doc = JsonDocument.Parse(responseContent);
             var root = doc.RootElement;
 
-            if (root.TryGetProperty("containers", out var containers))
-            {
-                foreach (var container in containers.EnumerateArray())
-                {
-                    if (container.TryGetProperty("id", out var idElement) &&
-                        idElement.GetString() == "most_streamed" &&
-                        container.TryGetProperty("albums", out var albumsElement) &&
-                        albumsElement.TryGetProperty("items", out var items))
-                    {
-                        foreach (var item in items.EnumerateArray())
-                        {
-                            try
-                            {
-                                var album = new QobuzAlbum
-                                {
-                                    Id = item.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
-                                    Title = item.TryGetProperty("title", out var title) ? title.GetString() ?? "" : ""
-                                };
+            hasMore = root.TryGetProperty("has_more", out var hasMoreElement) && hasMoreElement.GetBoolean();
 
-                                // Get artist info
-                                if (item.TryGetProperty("artist", out var artist))
+            if (root.TryGetProperty("items", out var items))
+            {
+                foreach (var item in items.EnumerateArray())
+                {
+                    try
+                    {
+                        var album = new QobuzAlbum
+                        {
+                            Id = item.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
+                            Title = item.TryGetProperty("title", out var title) ? title.GetString() ?? "" : ""
+                        };
+
+                        // Get artist info - API returns "artists" array, find main-artist
+                        if (item.TryGetProperty("artists", out var artists))
+                        {
+                            foreach (var artistItem in artists.EnumerateArray())
+                            {
+                                // Check for main-artist role or just use first artist
+                                var isMainArtist = artistItem.TryGetProperty("roles", out var roles) &&
+                                    roles.EnumerateArray().Any(r => r.GetString() == "main-artist");
+
+                                if (isMainArtist || album.Artist == null)
                                 {
                                     album.Artist = new QobuzArtist
                                     {
-                                        Id = artist.TryGetProperty("id", out var artistId) ? artistId.GetInt64() : 0,
-                                        Name = artist.TryGetProperty("name", out var artistName) ? artistName.GetString() ?? "" : ""
+                                        Id = artistItem.TryGetProperty("id", out var artistId) ? artistId.GetInt64() : 0,
+                                        Name = artistItem.TryGetProperty("name", out var artistName) ? artistName.GetString() ?? "" : ""
                                     };
+
+                                    if (isMainArtist) break;
                                 }
-
-                                // Get cover image
-                                if (item.TryGetProperty("image", out var image))
-                                {
-                                    album.Image = new QobuzImage
-                                    {
-                                        Small = image.TryGetProperty("small", out var small) ? small.GetString() : null,
-                                        Thumbnail = image.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null,
-                                        Large = image.TryGetProperty("large", out var large) ? large.GetString() : null
-                                    };
-                                }
-
-                                albums.Add(album);
-
-                                if (albums.Count >= limit)
-                                    break;
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogWarning(ex, "Failed to parse album item");
                             }
                         }
-                        break;
+                        // Fallback to single artist object if present
+                        else if (item.TryGetProperty("artist", out var artist))
+                        {
+                            album.Artist = new QobuzArtist
+                            {
+                                Id = artist.TryGetProperty("id", out var artistId) ? artistId.GetInt64() : 0,
+                                Name = artist.TryGetProperty("name", out var artistName) ? artistName.GetString() ?? "" : ""
+                            };
+                        }
+
+                        // Get cover image
+                        if (item.TryGetProperty("image", out var image))
+                        {
+                            album.Image = new QobuzImage
+                            {
+                                Small = image.TryGetProperty("small", out var small) ? small.GetString() : null,
+                                Thumbnail = image.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null,
+                                Large = image.TryGetProperty("large", out var large) ? large.GetString() : null
+                            };
+                        }
+
+                        albums.Add(album);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse album item");
                     }
                 }
             }
 
-            _logger.LogInformation("Retrieved {Count} most streamed albums", albums.Count);
+            _logger.LogInformation("Retrieved {Count} most streamed albums (offset: {Offset}, hasMore: {HasMore})",
+                albums.Count, offset, hasMore);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get most streamed albums");
         }
 
-        return albums;
+        return (albums, hasMore);
     }
 
     /// <summary>

@@ -223,17 +223,19 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
-    /// Get most streamed albums from Qobuz discover endpoint
+    /// Get most streamed albums from Qobuz discover endpoint with pagination
     /// </summary>
-    public async Task<IActionResult> OnGetMostStreamedAlbumsAsync(string? authToken = null, int limit = 50)
+    public async Task<IActionResult> OnGetMostStreamedAlbumsAsync(string? authToken = null, int offset = 0, int limit = 50)
     {
-        _logger.LogInformation("Fetching most streamed albums");
+        _logger.LogInformation("Fetching most streamed albums (offset={Offset}, limit={Limit})", offset, limit);
 
-        var albums = await _qobuzService.GetMostStreamedAlbumsAsync(authToken, limit);
+        var (albums, hasMore) = await _qobuzService.GetMostStreamedAlbumsAsync(authToken, offset, limit);
 
         return new JsonResult(new
         {
             success = true,
+            hasMore,
+            offset,
             albums = albums.Select(a => new
             {
                 id = a.Id,
