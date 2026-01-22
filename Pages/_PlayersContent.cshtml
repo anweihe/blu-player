@@ -2006,9 +2006,15 @@
         if (npAlbum) npAlbum.textContent = data.album || '';
 
         if (artworkContainer) {
+            const existingImg = artworkContainer.querySelector('img');
+            const currentSrc = existingImg?.src || '';
+
             if (data.imageUrl) {
-                artworkContainer.innerHTML = `<img src="${data.imageUrl}" alt="Album Art" onerror="this.parentElement.innerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><circle cx=\\'12\\' cy=\\'12\\' r=\\'10\\'/><circle cx=\\'12\\' cy=\\'12\\' r=\\'3\\'/></svg>'">`;
-            } else {
+                // Only update if URL changed to avoid flicker
+                if (currentSrc !== data.imageUrl) {
+                    artworkContainer.innerHTML = `<img src="${data.imageUrl}" alt="Album Art" onerror="this.parentElement.innerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><circle cx=\\'12\\' cy=\\'12\\' r=\\'10\\'/><circle cx=\\'12\\' cy=\\'12\\' r=\\'3\\'/></svg>'">`;
+                }
+            } else if (existingImg || !artworkContainer.querySelector('svg')) {
                 artworkContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>`;
             }
         }
