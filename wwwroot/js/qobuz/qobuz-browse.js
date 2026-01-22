@@ -9,6 +9,9 @@
 
     const escapeHtml = () => QobuzApp.core.escapeHtml;
 
+    // Album info state
+    let currentAlbumForInfo = null;
+
     // ==================== Infinite Scroll ====================
 
     function setupInfiniteScroll() {
@@ -1002,6 +1005,24 @@
         playback.currentSourceId = album.id;
         playback.currentSourceName = album.title;
 
+        // Save album data for info request
+        currentAlbumForInfo = {
+            id: album.id,
+            title: album.title,
+            artistName: album.artistName
+        };
+
+        // Reset album info container
+        const infoContainer = document.getElementById('album-info-container');
+        if (infoContainer) {
+            infoContainer.style.display = 'none';
+        }
+        const infoBtn = document.getElementById('btn-album-info');
+        if (infoBtn) {
+            infoBtn.disabled = false;
+            infoBtn.querySelector('span').textContent = 'Album-Info';
+        }
+
         document.getElementById('detail-name').textContent = album.title;
         document.getElementById('detail-description').textContent = album.artistName || '';
         document.getElementById('detail-tracks-count').textContent = `${album.tracksCount} Titel`;
@@ -1117,6 +1138,70 @@
         }
     }
 
+    // ==================== Album Info ====================
+
+    async function fetchAlbumInfo() {
+        if (!currentAlbumForInfo) return;
+
+        const btn = document.getElementById('btn-album-info');
+        const container = document.getElementById('album-info-container');
+        const content = document.getElementById('album-info-content');
+
+        if (!btn || !container || !content) return;
+
+        // Toggle: close if already visible
+        if (container.style.display === 'block') {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Loading state
+        btn.disabled = true;
+        btn.querySelector('span').textContent = 'Laden...';
+        container.style.display = 'block';
+        content.innerHTML = '<div class="album-info-loading"><div class="loading-spinner-small"></div></div>';
+
+        try {
+            const response = await fetch('/api/albuminfo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    albumId: currentAlbumForInfo.id?.toString() || '',
+                    artist: currentAlbumForInfo.artistName || '',
+                    title: currentAlbumForInfo.title || ''
+                })
+            });
+
+            const data = await response.json();
+            if (data.success && data.data) {
+                const escape = QobuzApp.core.escapeHtml;
+                let html = '';
+                if (data.data.style) {
+                    html += `<div class="album-info-style">${escape(data.data.style)}</div>`;
+                }
+                if (data.data.summary) {
+                    html += `<div class="album-info-text">${escape(data.data.summary)}</div>`;
+                }
+                content.innerHTML = html;
+            } else {
+                content.innerHTML = `<div class="album-info-error">${data.error || 'Fehler beim Laden'}</div>`;
+            }
+        } catch (error) {
+            console.error('Failed to fetch album info:', error);
+            content.innerHTML = '<div class="album-info-error">Verbindungsfehler</div>';
+        }
+
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Album-Info';
+    }
+
+    function closeAlbumInfo() {
+        const container = document.getElementById('album-info-container');
+        if (container) {
+            container.style.display = 'none';
+        }
+    }
+
     // ==================== Export Functions ====================
 
     QobuzApp.browse = {
@@ -1140,7 +1225,9 @@
         selectAlbum,
         selectPlaylist,
         backToPlaylists,
-        playAll
+        playAll,
+        fetchAlbumInfo,
+        closeAlbumInfo
     };
 
     // Global exports
@@ -1165,5 +1252,7 @@
     window.backToPlaylists = backToPlaylists;
     window.playAll = playAll;
     window.playFavoriteTrack = playFavoriteTrack;
+    window.fetchAlbumInfo = fetchAlbumInfo;
+    window.closeAlbumInfo = closeAlbumInfo;
 
 })();
