@@ -823,20 +823,15 @@
 
     /* Card Header */
     .card-header {
-        position: relative;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: start;
         padding: 14px 14px 0;
+        gap: 10px;
     }
 
     .card-title-area {
-        padding-right: 44px; /* Space for the button */
-    }
-
-    /* Position header buttons in top-right corner */
-    .join-group-dropdown,
-    .dissolve-form {
-        position: absolute;
-        top: 14px;
-        right: 14px;
+        min-width: 0;
     }
 
     .card-title {
