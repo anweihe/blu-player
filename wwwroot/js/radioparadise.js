@@ -324,6 +324,9 @@
                 isPlaying = true;
                 updateNowPlaying(item);
                 startBluesoundStatusPolling();
+
+                // Save to listening history
+                saveToHistory(item.title, item.imageUrl, playUrl, item.subtitle);
             } else {
                 showError(data.error || 'Kanal konnte nicht abgespielt werden');
             }
@@ -333,6 +336,27 @@
         }
 
         hideLoading();
+    }
+
+    // Save channel to listening history
+    async function saveToHistory(title, imageUrl, actionUrl, quality) {
+        try {
+            await fetch('/RadioParadise?handler=SaveHistory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                    title: title,
+                    imageUrl: imageUrl,
+                    actionUrl: actionUrl,
+                    quality: quality
+                })
+            });
+        } catch (error) {
+            console.error('Failed to save to history:', error);
+        }
     }
 
     // Update now playing bar

@@ -23,6 +23,11 @@
     let lastStatusTime = 0;
     let lastTrackTitle = null;
 
+    // Live stream state
+    let isLiveStream = false;
+    let liveStreamStartTime = 0;
+    let liveStreamTimerInterval = null;
+
     // Callbacks for page-specific playback control (set by Qobuz page)
     let onTogglePlayPause = null;
     let onPlayPrevious = null;
@@ -206,6 +211,9 @@
     function handleAudioTimeUpdate() {
         if (!globalAudioPlayer || !globalAudioPlayer.duration) return;
 
+        // Skip if live stream - live stream timer handles its own display
+        if (isLiveStream) return;
+
         const current = globalAudioPlayer.currentTime;
         const total = globalAudioPlayer.duration;
         const progress = (current / total) * 100;
@@ -327,6 +335,9 @@
     }
 
     function handleProgressBarClick(e) {
+        // Don't allow seeking on live streams
+        if (isLiveStream) return;
+
         // Get duration from audio player if available, fallback to lastKnownTotal
         const duration = (globalAudioPlayer && globalAudioPlayer.duration) || lastKnownTotal;
         if (!duration || duration <= 0) return;
@@ -1527,6 +1538,56 @@
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
+    // ==================== Live Stream Timer ====================
+
+    function startLiveStreamTimer() {
+        stopLiveStreamTimer();
+        isLiveStream = true;
+        liveStreamStartTime = Date.now();
+
+        // Set initial state: progress 0%, total time ∞
+        updateLiveStreamDisplay(0);
+
+        // Update every second
+        liveStreamTimerInterval = setInterval(() => {
+            if (!isLiveStream) {
+                stopLiveStreamTimer();
+                return;
+            }
+            const elapsedSeconds = Math.floor((Date.now() - liveStreamStartTime) / 1000);
+            updateLiveStreamDisplay(elapsedSeconds);
+        }, 1000);
+    }
+
+    function stopLiveStreamTimer() {
+        if (liveStreamTimerInterval) {
+            clearInterval(liveStreamTimerInterval);
+            liveStreamTimerInterval = null;
+        }
+        isLiveStream = false;
+        liveStreamStartTime = 0;
+    }
+
+    function updateLiveStreamDisplay(elapsedSeconds) {
+        const timeStr = formatTime(elapsedSeconds);
+
+        // Desktop progress bar
+        const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+        const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+        const desktopTotalTime = document.getElementById('global-np-time-total-desktop');
+        if (desktopProgressFill) desktopProgressFill.style.width = '0%';
+        if (desktopCurrentTime) desktopCurrentTime.textContent = timeStr;
+        if (desktopTotalTime) desktopTotalTime.textContent = '∞';
+
+        // Popup progress bar
+        const popupProgressFill = document.getElementById('global-popup-progress-fill');
+        const popupCurrentTime = document.getElementById('global-popup-current-time');
+        const popupTotalTime = document.getElementById('global-popup-total-time');
+        if (popupProgressFill) popupProgressFill.style.width = '0%';
+        if (popupCurrentTime) popupCurrentTime.textContent = timeStr;
+        if (popupTotalTime) popupTotalTime.textContent = '∞';
+    }
+
     function escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
@@ -1565,11 +1626,28 @@
                     cover.style.display = 'none';
                     placeholder.style.display = 'flex';
                 }
+
+                // Handle live stream timer
+                if (track.isLive) {
+                    // Only start timer if not already running (don't reset on status updates)
+                    if (!isLiveStream) {
+                        startLiveStreamTimer();
+                    }
+                } else {
+                    stopLiveStreamTimer();
+                }
+            } else {
+                stopLiveStreamTimer();
             }
         },
         setPlaying: (playing) => {
             globalIsPlaying = playing;
             updatePlayPauseButtons();
+
+            // Stop live stream timer when playback stops
+            if (!playing && isLiveStream) {
+                stopLiveStreamTimer();
+            }
         },
         // Register callbacks for page-specific playback control
         registerPlaybackCallbacks: (callbacks) => {
@@ -1589,6 +1667,9 @@
         },
         // Update progress bar
         updateProgress: (currentSeconds, totalSeconds) => {
+            // Skip if live stream - live stream timer handles its own display
+            if (isLiveStream) return;
+
             if (totalSeconds > 0) {
                 lastKnownPosition = currentSeconds;
                 lastKnownTotal = totalSeconds;
@@ -1623,6 +1704,8 @@
                 }
             }
         },
+        // Check if currently playing a live stream
+        isLiveStream: () => isLiveStream,
         // Play a track directly on the global audio player
         playTrack: (streamUrl, track) => {
             if (!globalAudioPlayer) return false;

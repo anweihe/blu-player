@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using BluesoundWeb.Models;
 using BluesoundWeb.Services;
 using System.Xml.Linq;
 
@@ -9,15 +10,18 @@ public class RadioParadiseModel : PageModel
 {
     private readonly IBluesoundPlayerService _playerService;
     private readonly IBluesoundApiService _bluesoundService;
+    private readonly IListeningHistoryService _historyService;
     private readonly ILogger<RadioParadiseModel> _logger;
 
     public RadioParadiseModel(
         IBluesoundPlayerService playerService,
         IBluesoundApiService bluesoundService,
+        IListeningHistoryService historyService,
         ILogger<RadioParadiseModel> logger)
     {
         _playerService = playerService;
         _bluesoundService = bluesoundService;
+        _historyService = historyService;
         _logger = logger;
     }
 
@@ -213,6 +217,21 @@ public class RadioParadiseModel : PageModel
         };
 
         return new JsonResult(new { success });
+    }
+
+    /// <summary>
+    /// Save a Radio Paradise channel to listening history
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveHistoryAsync([FromBody] SaveRadioParadiseHistoryRequest request)
+    {
+        if (string.IsNullOrEmpty(request.ActionUrl))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende ActionUrl" });
+        }
+
+        await _historyService.SaveRadioParadiseAsync(request.Title, request.ImageUrl, request.ActionUrl, request.Quality);
+
+        return new JsonResult(new { success = true });
     }
 
     /// <summary>

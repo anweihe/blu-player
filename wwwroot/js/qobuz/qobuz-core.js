@@ -253,7 +253,18 @@
 
                     await QobuzApp.auth.syncBluesoundQobuzQuality();
 
-                    if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.hasPendingNavigation()) {
+                    // Check for URL parameters (album or playlist from history)
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const albumId = urlParams.get('album');
+                    const playlistId = urlParams.get('playlist');
+
+                    if (albumId && typeof window.selectAlbum === 'function') {
+                        console.log('initQobuz: Opening album from URL parameter:', albumId);
+                        setTimeout(() => window.selectAlbum(albumId), 100);
+                    } else if (playlistId && typeof window.selectPlaylist === 'function') {
+                        console.log('initQobuz: Opening playlist from URL parameter:', playlistId);
+                        setTimeout(() => window.selectPlaylist(playlistId), 100);
+                    } else if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.hasPendingNavigation()) {
                         setTimeout(() => {
                             GlobalPlayer.executePendingNavigation();
                         }, 150);

@@ -55,6 +55,9 @@ builder.Services.AddScoped<IAlbumRatingService, AlbumRatingService>();
 // Register Album Info service
 builder.Services.AddScoped<IAlbumInfoService, AlbumInfoService>();
 
+// Register Listening History service
+builder.Services.AddScoped<IListeningHistoryService, ListeningHistoryService>();
+
 var app = builder.Build();
 
 // Apply pending migrations at startup

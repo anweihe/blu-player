@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using BluesoundWeb.Models;
 using BluesoundWeb.Services;
 using System.Xml.Linq;
 
@@ -9,15 +10,18 @@ public class TuneInModel : PageModel
 {
     private readonly IBluesoundPlayerService _playerService;
     private readonly IBluesoundApiService _bluesoundService;
+    private readonly IListeningHistoryService _historyService;
     private readonly ILogger<TuneInModel> _logger;
 
     public TuneInModel(
         IBluesoundPlayerService playerService,
         IBluesoundApiService bluesoundService,
+        IListeningHistoryService historyService,
         ILogger<TuneInModel> logger)
     {
         _playerService = playerService;
         _bluesoundService = bluesoundService;
+        _historyService = historyService;
         _logger = logger;
     }
 
@@ -261,6 +265,21 @@ public class TuneInModel : PageModel
         };
 
         return new JsonResult(new { success });
+    }
+
+    /// <summary>
+    /// Save a TuneIn station to listening history
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveHistoryAsync([FromBody] SaveTuneInHistoryRequest request)
+    {
+        if (string.IsNullOrEmpty(request.ActionUrl))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende ActionUrl" });
+        }
+
+        await _historyService.SaveTuneInAsync(request.Title, request.ImageUrl, request.ActionUrl);
+
+        return new JsonResult(new { success = true });
     }
 
     /// <summary>

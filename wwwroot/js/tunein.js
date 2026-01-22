@@ -528,6 +528,9 @@
                 isPlaying = true;
                 updateNowPlaying(item);
                 startBluesoundStatusPolling();
+
+                // Save to listening history
+                saveToHistory(item.title, item.imageUrl, playUrl);
             } else {
                 showError(data.error || 'Station konnte nicht abgespielt werden');
             }
@@ -537,6 +540,26 @@
         }
 
         hideLoading();
+    }
+
+    // Save station to listening history
+    async function saveToHistory(title, imageUrl, actionUrl) {
+        try {
+            await fetch('/TuneIn?handler=SaveHistory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                    title: title,
+                    imageUrl: imageUrl,
+                    actionUrl: actionUrl
+                })
+            });
+        } catch (error) {
+            console.error('Failed to save to history:', error);
+        }
     }
 
     // Update now playing bar

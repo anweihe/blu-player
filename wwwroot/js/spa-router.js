@@ -146,6 +146,14 @@
         currentPageCleanup = function() {
             // No specific cleanup needed for index page
         };
+
+        // The page's inline script should have already run via executeScripts()
+        // But as a fallback, call initIndexPage after a frame to ensure DOM is ready
+        requestAnimationFrame(() => {
+            if (typeof window.initIndexPage === 'function') {
+                window.initIndexPage();
+            }
+        });
     }
 
     /**

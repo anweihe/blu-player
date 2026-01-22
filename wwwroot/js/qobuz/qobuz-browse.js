@@ -1005,6 +1005,11 @@
         playback.currentSourceId = album.id;
         playback.currentSourceName = album.title;
 
+        // Reset history tracking for new source
+        if (QobuzApp.playbackFn?.resetHistoryTracking) {
+            QobuzApp.playbackFn.resetHistoryTracking();
+        }
+
         // Save album data for info request
         currentAlbumForInfo = {
             id: album.id,
@@ -1063,6 +1068,11 @@
         playback.currentSourceType = 'playlist';
         playback.currentSourceId = playlist.id ? playlist.id.toString() : null;
         playback.currentSourceName = playlist.name;
+
+        // Reset history tracking for new source
+        if (QobuzApp.playbackFn?.resetHistoryTracking) {
+            QobuzApp.playbackFn.resetHistoryTracking();
+        }
 
         document.getElementById('detail-name').textContent = playlist.name;
         document.getElementById('detail-description').textContent = playlist.description || '';

@@ -19,6 +19,13 @@ public class BluesoundDbContext : DbContext
     public DbSet<AlbumRating> AlbumRatings { get; set; } = null!;
     public DbSet<AlbumInfo> AlbumInfos { get; set; } = null!;
 
+    // Listening History
+    public DbSet<TuneInHistoryEntry> TuneInHistory { get; set; } = null!;
+    public DbSet<RadioParadiseHistoryEntry> RadioParadiseHistory { get; set; } = null!;
+    public DbSet<QobuzAlbumHistoryEntry> QobuzAlbumHistory { get; set; } = null!;
+    public DbSet<QobuzPlaylistHistoryEntry> QobuzPlaylistHistory { get; set; } = null!;
+    public DbSet<QobuzPlaylistTrack> QobuzPlaylistTracks { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -138,6 +145,65 @@ public class BluesoundDbContext : DbContext
             entity.Property(e => e.AlbumId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Artist).HasMaxLength(500);
             entity.Property(e => e.Title).HasMaxLength(500);
+        });
+
+        // Listening History configurations
+
+        // TuneIn History
+        modelBuilder.Entity<TuneInHistoryEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ActionUrl).IsUnique();
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.ActionUrl).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.ImageUrl).HasMaxLength(2000);
+        });
+
+        // Radio Paradise History
+        modelBuilder.Entity<RadioParadiseHistoryEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ActionUrl).IsUnique();
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.ActionUrl).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.ImageUrl).HasMaxLength(2000);
+            entity.Property(e => e.Quality).HasMaxLength(50);
+        });
+
+        // Qobuz Album History
+        modelBuilder.Entity<QobuzAlbumHistoryEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.AlbumId).IsUnique();
+            entity.Property(e => e.AlbumId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.AlbumName).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Artist).HasMaxLength(500);
+            entity.Property(e => e.CoverUrl).HasMaxLength(2000);
+        });
+
+        // Qobuz Playlist History
+        modelBuilder.Entity<QobuzPlaylistHistoryEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.PlaylistId).IsUnique();
+            entity.Property(e => e.PlaylistId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PlaylistName).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.CoverUrl).HasMaxLength(2000);
+        });
+
+        // Qobuz Playlist Tracks (for saved playlists)
+        modelBuilder.Entity<QobuzPlaylistTrack>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PlaylistHistoryEntryId, e.Position });
+            entity.Property(e => e.TrackId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Artist).HasMaxLength(500);
+
+            entity.HasOne(e => e.PlaylistHistoryEntry)
+                  .WithMany(p => p.Tracks)
+                  .HasForeignKey(e => e.PlaylistHistoryEntryId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

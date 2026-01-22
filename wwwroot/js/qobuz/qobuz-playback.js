@@ -80,6 +80,9 @@
 
             updateNowPlaying(track);
             updateTrackHighlight();
+
+            // Save to listening history (once per source)
+            saveToHistoryOnce(track);
         } else {
             QobuzApp.core.showError(data.error || 'Stream URL konnte nicht abgerufen werden');
         }
@@ -173,8 +176,78 @@
             if (data.native) {
                 console.log('Native Qobuz playback started - player manages queue');
             }
+
+            // Save to listening history (once per source)
+            saveToHistoryOnce(track);
         } else {
             QobuzApp.core.showError(data.error || 'Wiedergabe auf Bluesound fehlgeschlagen');
+        }
+    }
+
+    // ==================== Save to History ====================
+
+    // Track which source we've already saved to avoid duplicates
+    let lastSavedHistorySourceId = null;
+
+    function saveToHistoryOnce(track) {
+        const playback = QobuzApp.playback;
+        const currentSourceKey = `${playback.currentSourceType}-${playback.currentSourceId}`;
+
+        // Only save if we haven't saved this source yet
+        if (lastSavedHistorySourceId !== currentSourceKey) {
+            lastSavedHistorySourceId = currentSourceKey;
+            saveToHistory(track);
+        }
+    }
+
+    // Reset history tracking when source changes (called from qobuz-browse.js)
+    function resetHistoryTracking() {
+        lastSavedHistorySourceId = null;
+    }
+
+    async function saveToHistory(track) {
+        const playback = QobuzApp.playback;
+
+        try {
+            if (playback.currentSourceType === 'album' && playback.currentSourceId) {
+                // Save album to history
+                await fetch('/Qobuz?handler=SaveAlbumHistory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        albumId: playback.currentSourceId,
+                        albumName: track.albumTitle || playback.currentSourceName || 'Unknown Album',
+                        artist: track.artistName,
+                        coverUrl: track.albumCover
+                    })
+                });
+            } else if (playback.currentSourceType === 'playlist' && playback.currentSourceId) {
+                // Save playlist to history with first 10 tracks
+                const tracks = playback.currentTracks.slice(0, 10).map((t, i) => ({
+                    trackId: String(t.id),
+                    title: t.title,
+                    artist: t.artistName
+                }));
+
+                await fetch('/Qobuz?handler=SavePlaylistHistory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        playlistId: playback.currentSourceId,
+                        playlistName: playback.currentSourceName || 'Unknown Playlist',
+                        coverUrl: track.albumCover,
+                        tracks: tracks
+                    })
+                });
+            }
+        } catch (error) {
+            console.error('Failed to save to history:', error);
         }
     }
 
@@ -235,11 +308,13 @@
             const progressPercent = (estimatedPosition / progress.lastKnownTotal) * 100;
 
             if (window.GlobalPlayer) {
-                const progressFill = document.getElementById('global-progress-fill');
-                const currentTime = document.getElementById('global-current-time');
-                if (progressFill) progressFill.style.width = `${progressPercent}%`;
-                if (currentTime) currentTime.textContent = QobuzApp.core.formatTime(estimatedPosition);
+                // Desktop progress bar
+                const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+                const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+                if (desktopProgressFill) desktopProgressFill.style.width = `${progressPercent}%`;
+                if (desktopCurrentTime) desktopCurrentTime.textContent = QobuzApp.core.formatTime(estimatedPosition);
 
+                // Popup progress bar
                 const popupProgressFill = document.getElementById('global-popup-progress-fill');
                 const popupCurrentTime = document.getElementById('global-popup-current-time');
                 if (popupProgressFill) popupProgressFill.style.width = `${progressPercent}%`;
@@ -307,19 +382,24 @@
             progress.lastKnownTotal = status.totalSeconds;
             progress.lastStatusTime = Date.now();
 
-            const totalTimeEl = document.getElementById('global-total-time');
-            if (totalTimeEl) totalTimeEl.textContent = QobuzApp.core.formatTime(status.totalSeconds);
+            // Desktop total time
+            const desktopTotalTimeEl = document.getElementById('global-np-time-total-desktop');
+            if (desktopTotalTimeEl) desktopTotalTimeEl.textContent = QobuzApp.core.formatTime(status.totalSeconds);
 
+            // Popup total time
             const popupTotalTimeEl = document.getElementById('global-popup-total-time');
             if (popupTotalTimeEl) popupTotalTimeEl.textContent = QobuzApp.core.formatTime(status.totalSeconds);
 
             if (trackChanged || actualDiff > 3) {
                 const progressPercent = (status.currentSeconds / status.totalSeconds) * 100;
-                const progressFill = document.getElementById('global-progress-fill');
-                const currentTime = document.getElementById('global-current-time');
-                if (progressFill) progressFill.style.width = `${progressPercent}%`;
-                if (currentTime) currentTime.textContent = QobuzApp.core.formatTime(status.currentSeconds);
 
+                // Desktop progress bar
+                const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+                const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+                if (desktopProgressFill) desktopProgressFill.style.width = `${progressPercent}%`;
+                if (desktopCurrentTime) desktopCurrentTime.textContent = QobuzApp.core.formatTime(status.currentSeconds);
+
+                // Popup progress bar
                 const popupProgressFill = document.getElementById('global-popup-progress-fill');
                 const popupCurrentTime = document.getElementById('global-popup-current-time');
                 if (popupProgressFill) popupProgressFill.style.width = `${progressPercent}%`;
@@ -529,13 +609,15 @@
         progress.lastKnownTotal = 0;
         progress.lastStatusTime = Date.now();
 
-        const progressFill = document.getElementById('global-progress-fill');
-        const currentTime = document.getElementById('global-current-time');
-        const totalTime = document.getElementById('global-total-time');
-        if (progressFill) progressFill.style.width = '0%';
-        if (currentTime) currentTime.textContent = '0:00';
-        if (totalTime) totalTime.textContent = '0:00';
+        // Desktop progress bar
+        const desktopProgressFill = document.getElementById('global-np-progress-fill-desktop');
+        const desktopCurrentTime = document.getElementById('global-np-time-current-desktop');
+        const desktopTotalTime = document.getElementById('global-np-time-total-desktop');
+        if (desktopProgressFill) desktopProgressFill.style.width = '0%';
+        if (desktopCurrentTime) desktopCurrentTime.textContent = '0:00';
+        if (desktopTotalTime) desktopTotalTime.textContent = '0:00';
 
+        // Popup progress bar
         const popupProgressFill = document.getElementById('global-popup-progress-fill');
         const popupCurrentTime = document.getElementById('global-popup-current-time');
         const popupTotalTime = document.getElementById('global-popup-total-time');
@@ -705,7 +787,8 @@
         updateTrackHighlight,
         updateProgress,
         updateTotalTime,
-        checkCurrentPlayback
+        checkCurrentPlayback,
+        resetHistoryTracking
     };
 
     // Global exports

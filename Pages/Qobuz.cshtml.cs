@@ -11,6 +11,7 @@ public class QobuzModel : PageModel
     private readonly IQobuzApiService _qobuzService;
     private readonly IBluesoundPlayerService _playerService;
     private readonly IBluesoundApiService _bluesoundService;
+    private readonly IListeningHistoryService _historyService;
     private readonly ILogger<QobuzModel> _logger;
     private readonly HttpClient _httpClient;
 
@@ -18,12 +19,14 @@ public class QobuzModel : PageModel
         IQobuzApiService qobuzService,
         IBluesoundPlayerService playerService,
         IBluesoundApiService bluesoundService,
+        IListeningHistoryService historyService,
         ILogger<QobuzModel> logger,
         IHttpClientFactory httpClientFactory)
     {
         _qobuzService = qobuzService;
         _playerService = playerService;
         _bluesoundService = bluesoundService;
+        _historyService = historyService;
         _logger = logger;
         _httpClient = httpClientFactory.CreateClient();
     }
@@ -1093,6 +1096,36 @@ public class QobuzModel : PageModel
             return $"http://{ip}:{port}{relativeUrl}";
 
         return $"http://{ip}:{port}/{relativeUrl}";
+    }
+
+    /// <summary>
+    /// Save a Qobuz album to listening history
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveAlbumHistoryAsync([FromBody] SaveQobuzAlbumHistoryRequest request)
+    {
+        if (string.IsNullOrEmpty(request.AlbumId))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende AlbumId" });
+        }
+
+        await _historyService.SaveQobuzAlbumAsync(request.AlbumId, request.AlbumName, request.Artist, request.CoverUrl);
+
+        return new JsonResult(new { success = true });
+    }
+
+    /// <summary>
+    /// Save a Qobuz playlist to listening history
+    /// </summary>
+    public async Task<IActionResult> OnPostSavePlaylistHistoryAsync([FromBody] SaveQobuzPlaylistHistoryRequest request)
+    {
+        if (string.IsNullOrEmpty(request.PlaylistId))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende PlaylistId" });
+        }
+
+        await _historyService.SaveQobuzPlaylistAsync(request.PlaylistId, request.PlaylistName, request.CoverUrl, request.Tracks);
+
+        return new JsonResult(new { success = true });
     }
 }
 
