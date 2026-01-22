@@ -210,3 +210,14 @@ public class SetApiKeyRequest
 {
     public string ApiKey { get; set; } = string.Empty;
 }
+
+// ==================== Album Info DTOs ====================
+
+/// <summary>
+/// DTO for album info response
+/// </summary>
+public class AlbumInfoDto
+{
+    public string? Summary { get; set; }
+    public string? Style { get; set; }
+}

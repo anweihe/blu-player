@@ -17,6 +17,7 @@ public class BluesoundDbContext : DbContext
     public DbSet<QueueTrack> QueueTracks { get; set; } = null!;
     public DbSet<StoredPlayer> StoredPlayers { get; set; } = null!;
     public DbSet<AlbumRating> AlbumRatings { get; set; } = null!;
+    public DbSet<AlbumInfo> AlbumInfos { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -121,6 +122,16 @@ public class BluesoundDbContext : DbContext
 
         // AlbumRating configuration (for caching album ratings from Mistral AI)
         modelBuilder.Entity<AlbumRating>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.AlbumId).IsUnique();
+            entity.Property(e => e.AlbumId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Artist).HasMaxLength(500);
+            entity.Property(e => e.Title).HasMaxLength(500);
+        });
+
+        // AlbumInfo configuration (for caching album info summaries from Mistral AI)
+        modelBuilder.Entity<AlbumInfo>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.AlbumId).IsUnique();

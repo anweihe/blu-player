@@ -52,6 +52,9 @@ builder.Services.AddHttpClient<IQobuzApiService, QobuzApiService>();
 // Register Album Rating service
 builder.Services.AddScoped<IAlbumRatingService, AlbumRatingService>();
 
+// Register Album Info service
+builder.Services.AddScoped<IAlbumInfoService, AlbumInfoService>();
+
 var app = builder.Build();
 
 // Apply pending migrations at startup
