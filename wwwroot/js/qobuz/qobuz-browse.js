@@ -118,7 +118,7 @@
         try {
             const creds = await QobuzApp.auth.getQobuzCredentials();
             const authToken = creds?.authToken || '';
-            const response = await fetch(`?handler=NewReleases&authToken=${encodeURIComponent(authToken)}&offset=${pagination.newReleasesOffset}&limit=50`);
+            const response = await fetch(`?handler=NewReleases&authToken=${encodeURIComponent(authToken)}&offset=${pagination.newReleasesOffset}&limit=20`);
             const data = await response.json();
 
             if (data.success) {
@@ -158,7 +158,7 @@
 
         const escape = QobuzApp.core.escapeHtml;
         const html = albums.map(album => `
-            <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+            <div class="playlist-card" data-album-id="${album.id}" onclick="selectAlbum('${album.id}')">
                 <div class="playlist-cover">
                     ${album.coverUrl
                         ? `<img src="${album.coverUrl}" alt="${escape(album.title)}" loading="lazy">`
@@ -179,6 +179,11 @@
         `).join('');
 
         grid.insertAdjacentHTML('beforeend', html);
+
+        // Fetch ratings in background
+        if (typeof fetchRatingsForAlbums === 'function') {
+            fetchRatingsForAlbums(albums);
+        }
     }
 
     function renderAlbums(albums) {
@@ -195,7 +200,7 @@
 
         const escape = QobuzApp.core.escapeHtml;
         grid.innerHTML = albums.map(album => `
-            <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+            <div class="playlist-card" data-album-id="${album.id}" onclick="selectAlbum('${album.id}')">
                 <div class="playlist-cover">
                     ${album.coverUrl
                         ? `<img src="${album.coverUrl}" alt="${escape(album.title)}" loading="lazy">`
@@ -214,6 +219,11 @@
                 </div>
             </div>
         `).join('');
+
+        // Fetch ratings in background
+        if (typeof fetchRatingsForAlbums === 'function') {
+            fetchRatingsForAlbums(albums);
+        }
     }
 
     // ==================== Album Charts ====================
@@ -234,7 +244,7 @@
         try {
             const creds = await QobuzApp.auth.getQobuzCredentials();
             const authToken = creds?.authToken || '';
-            const response = await fetch(`?handler=MostStreamedAlbums&authToken=${encodeURIComponent(authToken)}&offset=${pagination.albumChartsOffset}&limit=50`);
+            const response = await fetch(`?handler=MostStreamedAlbums&authToken=${encodeURIComponent(authToken)}&offset=${pagination.albumChartsOffset}&limit=20`);
             const data = await response.json();
 
             if (data.success) {
@@ -274,7 +284,7 @@
 
         const escape = QobuzApp.core.escapeHtml;
         const html = albums.map((album, idx) => `
-            <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+            <div class="playlist-card" data-album-id="${album.id}" onclick="selectAlbum('${album.id}')">
                 <div class="playlist-cover">
                     <span class="chart-position">${startIndex + idx + 1}</span>
                     ${album.coverUrl
@@ -295,6 +305,11 @@
         `).join('');
 
         grid.insertAdjacentHTML('beforeend', html);
+
+        // Fetch ratings in background
+        if (typeof fetchRatingsForAlbums === 'function') {
+            fetchRatingsForAlbums(albums);
+        }
     }
 
     function renderAlbumCharts(albums) {
@@ -311,7 +326,7 @@
 
         const escape = QobuzApp.core.escapeHtml;
         grid.innerHTML = albums.map((album, idx) => `
-            <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+            <div class="playlist-card" data-album-id="${album.id}" onclick="selectAlbum('${album.id}')">
                 <div class="playlist-cover">
                     <span class="chart-position">${idx + 1}</span>
                     ${album.coverUrl
@@ -330,6 +345,11 @@
                 </div>
             </div>
         `).join('');
+
+        // Fetch ratings in background
+        if (typeof fetchRatingsForAlbums === 'function') {
+            fetchRatingsForAlbums(albums);
+        }
     }
 
     // ==================== Genre Filter ====================
@@ -688,7 +708,7 @@
                     if (emptyState) emptyState.style.display = 'none';
                     const escape = QobuzApp.core.escapeHtml;
                     grid.innerHTML = data.albums.map(album => `
-                        <div class="playlist-card" onclick="selectAlbum('${album.id}')">
+                        <div class="playlist-card" data-album-id="${album.id}" onclick="selectAlbum('${album.id}')">
                             <div class="playlist-cover">
                                 ${album.coverUrl
                                     ? `<img src="${album.coverUrl}" alt="${escape(album.title)}" loading="lazy">`
@@ -706,6 +726,11 @@
                             </div>
                         </div>
                     `).join('');
+
+                    // Fetch ratings in background
+                    if (typeof fetchRatingsForAlbums === 'function') {
+                        fetchRatingsForAlbums(data.albums);
+                    }
                 } else {
                     grid.innerHTML = '';
                     if (emptyState) emptyState.style.display = 'block';

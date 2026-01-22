@@ -49,6 +49,9 @@ builder.Services.AddScoped<IBluesoundPlayerService, BluesoundPlayerService>();
 // Register Qobuz service
 builder.Services.AddHttpClient<IQobuzApiService, QobuzApiService>();
 
+// Register Album Rating service
+builder.Services.AddScoped<IAlbumRatingService, AlbumRatingService>();
+
 var app = builder.Build();
 
 // Apply pending migrations at startup
