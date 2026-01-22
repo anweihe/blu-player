@@ -551,6 +551,326 @@
     color: #ef4444;
 }
 
+/* Menu Panel & Overlay */
+.settings-app .menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.settings-app .menu-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.settings-app .menu-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    background: var(--settings-surface);
+    z-index: 201;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+.settings-app .menu-panel.active {
+    transform: translateX(0);
+}
+
+.settings-app .menu-header {
+    padding: 20px 16px;
+    border-bottom: 1px solid var(--settings-border);
+}
+
+.settings-app .menu-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--settings-surface-hover);
+    border-radius: var(--settings-radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-app .menu-profile:hover {
+    background: #1c1c1f;
+}
+
+.settings-app .menu-profile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    background: var(--settings-accent);
+    flex-shrink: 0;
+}
+
+.settings-app .menu-profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-app .menu-profile-name {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--settings-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.settings-app .menu-profile-switch {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--settings-accent);
+    margin-top: 2px;
+}
+
+.settings-app .menu-profile-arrow {
+    width: 18px;
+    height: 18px;
+    color: var(--settings-text-muted);
+    flex-shrink: 0;
+}
+
+.settings-app .menu-items {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+.settings-app .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--settings-radius-sm);
+    color: var(--settings-text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    margin-bottom: 4px;
+}
+
+.settings-app .menu-item:hover {
+    background: var(--settings-surface-hover);
+    color: var(--settings-text);
+}
+
+.settings-app .menu-item.active {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--settings-accent);
+}
+
+.settings-app .menu-item svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.settings-app .menu-divider {
+    height: 1px;
+    background: var(--settings-border);
+    margin: 8px 0;
+}
+
+.settings-app .menu-footer {
+    padding: 12px;
+    border-top: 1px solid var(--settings-border);
+}
+
+.settings-app .menu-item-home {
+    margin-bottom: 0;
+}
+
+/* Profile Switcher Modal */
+.settings-app .profile-switcher-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.settings-app .profile-switcher-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.settings-app .profile-switcher-modal {
+    background: var(--settings-surface);
+    border-radius: var(--settings-radius);
+    width: 100%;
+    max-width: 400px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    animation: modalIn 0.25s ease;
+}
+
+@keyframes modalIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.settings-app .profile-switcher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--settings-border);
+}
+
+.settings-app .profile-switcher-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.settings-app .btn-close-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    color: var(--settings-text-muted);
+    cursor: pointer;
+    border-radius: var(--settings-radius-sm);
+    transition: all 0.15s ease;
+}
+
+.settings-app .btn-close-modal:hover {
+    background: var(--settings-surface-hover);
+    color: var(--settings-text);
+}
+
+.settings-app .btn-close-modal svg {
+    width: 20px;
+    height: 20px;
+}
+
+.settings-app .profile-switcher-list {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-app .profile-switcher-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--settings-surface-hover);
+    border: 2px solid transparent;
+    border-radius: var(--settings-radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-app .profile-switcher-item:hover {
+    background: #1c1c1f;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.settings-app .profile-switcher-item.active {
+    border-color: var(--settings-accent);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.settings-app .profile-switcher-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+}
+
+.settings-app .profile-switcher-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--settings-text);
+}
+
+.settings-app .btn-add-profile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: none;
+    border-top: 1px solid var(--settings-border);
+    color: var(--settings-text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-app .btn-add-profile:hover {
+    background: var(--settings-surface-hover);
+    color: var(--settings-text);
+}
+
+.settings-app .btn-add-profile svg {
+    width: 20px;
+    height: 20px;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
     .settings-page {
