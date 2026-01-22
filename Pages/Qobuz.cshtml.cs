@@ -435,6 +435,83 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
+    /// Get user's favorite albums
+    /// </summary>
+    public async Task<IActionResult> OnGetFavoriteAlbumsAsync(string authToken, int limit = 500)
+    {
+        _logger.LogInformation("Fetching favorite albums (limit: {Limit})", limit);
+
+        var albums = await _qobuzService.GetFavoriteAlbumsAsync(authToken, limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            albums = albums.Select(a => new
+            {
+                id = a.Id,
+                title = a.Title,
+                artistName = a.Artist?.Name,
+                coverUrl = a.CoverUrl,
+                tracksCount = a.TracksCount,
+                duration = a.Duration,
+                typeLabel = a.TypeLabel,
+                type = "album"
+            })
+        });
+    }
+
+    /// <summary>
+    /// Get user's favorite tracks
+    /// </summary>
+    public async Task<IActionResult> OnGetFavoriteTracksAsync(string authToken, int limit = 500)
+    {
+        _logger.LogInformation("Fetching favorite tracks (limit: {Limit})", limit);
+
+        var tracks = await _qobuzService.GetFavoriteTracksAsync(authToken, limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            tracks = tracks.Select(t => new
+            {
+                id = t.Id,
+                title = t.Title,
+                artistName = t.Performer?.Name,
+                albumTitle = t.Album?.Title,
+                albumId = t.Album?.Id,
+                coverUrl = t.Album?.CoverUrl,
+                duration = t.Duration,
+                formattedDuration = t.FormattedDuration,
+                isHiRes = t.IsHiRes,
+                type = "track"
+            })
+        });
+    }
+
+    /// <summary>
+    /// Get user's favorite artists
+    /// </summary>
+    public async Task<IActionResult> OnGetFavoriteArtistsAsync(string authToken, int limit = 100)
+    {
+        _logger.LogInformation("Fetching favorite artists (limit: {Limit})", limit);
+
+        var artists = await _qobuzService.GetFavoriteArtistsAsync(authToken, limit);
+
+        return new JsonResult(new
+        {
+            success = true,
+            artists = artists.Select(a => new
+            {
+                id = a.Id,
+                name = a.Name,
+                imageUrl = a.ImageUrl,
+                albumsCount = a.AlbumsCount,
+                type = "artist"
+            })
+        });
+    }
+
+    /// <summary>
     /// Get album with tracks
     /// </summary>
     public async Task<IActionResult> OnGetAlbumTracksAsync(string albumId, string authToken)

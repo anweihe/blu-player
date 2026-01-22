@@ -420,7 +420,7 @@
             <div id="tab-recommendations" class="tab-content">
                 <div class="section-header">
                     <h2>Deine Favoriten</h2>
-                    <button type="button" class="btn-refresh" onclick="loadRecommendations()">
+                    <button type="button" class="btn-refresh" onclick="refreshCurrentFavoritesSubTab()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M23 4v6h-6M1 20v-6h6"/>
                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -428,38 +428,74 @@
                     </button>
                 </div>
 
-                <div id="recommendations-content">
-                    <!-- Favorite albums section -->
-                    <div id="recommendations-albums-section" style="display: none;">
-                        <h3 class="subsection-title">Alben</h3>
-                        <div id="recommendations-albums-grid" class="playlists-grid">
-                            <!-- Favorite albums will be loaded here -->
-                        </div>
-                    </div>
+                <!-- Sub-Navigation -->
+                <div class="favorites-sub-nav">
+                    <button type="button" class="sub-tab-btn active" data-subtab="albums" onclick="switchFavoritesSubTab('albums')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        Alben
+                    </button>
+                    <button type="button" class="sub-tab-btn" data-subtab="tracks" onclick="switchFavoritesSubTab('tracks')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18V5l12-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="18" cy="16" r="3"/>
+                        </svg>
+                        Titel
+                    </button>
+                    <button type="button" class="sub-tab-btn" data-subtab="artists" onclick="switchFavoritesSubTab('artists')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        Künstler
+                    </button>
+                </div>
 
-                    <!-- Favorite playlists section -->
-                    <div id="recommendations-playlists-section" style="display: none;">
-                        <h3 class="subsection-title">Playlists</h3>
-                        <div id="recommendations-playlists-grid" class="playlists-grid">
-                            <!-- Favorite playlists will be loaded here -->
-                        </div>
+                <!-- Sub-Tab Contents -->
+                <div id="favorites-albums" class="favorites-content active">
+                    <div id="favorites-albums-grid" class="playlists-grid">
+                        <!-- Favorite albums will be loaded here -->
                     </div>
-
-                    <!-- Favorite tracks section -->
-                    <div id="recommendations-tracks-section" style="display: none;">
-                        <h3 class="subsection-title">Titel</h3>
-                        <div id="recommendations-tracks-grid" class="playlists-grid">
-                            <!-- Favorite tracks will be loaded here -->
-                        </div>
+                    <div id="favorites-albums-empty" class="empty-state" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <h3>Keine Alben</h3>
+                        <p>Füge Alben zu deinen Favoriten hinzu.</p>
                     </div>
                 </div>
 
-                <div id="recommendations-empty" class="empty-state" style="display: none;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                    </svg>
-                    <h3>Keine Favoriten</h3>
-                    <p>Füge Alben und Titel zu deinen Favoriten hinzu.</p>
+                <div id="favorites-tracks" class="favorites-content">
+                    <div id="favorites-tracks-list" class="tracks-list">
+                        <!-- Favorite tracks will be loaded here -->
+                    </div>
+                    <div id="favorites-tracks-empty" class="empty-state" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9 18V5l12-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="18" cy="16" r="3"/>
+                        </svg>
+                        <h3>Keine Titel</h3>
+                        <p>Füge Titel zu deinen Favoriten hinzu.</p>
+                    </div>
+                </div>
+
+                <div id="favorites-artists" class="favorites-content">
+                    <div id="favorites-artists-grid" class="artists-grid">
+                        <!-- Favorite artists will be loaded here -->
+                    </div>
+                    <div id="favorites-artists-empty" class="empty-state" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <h3>Keine Künstler</h3>
+                        <p>Füge Künstler zu deinen Favoriten hinzu.</p>
+                    </div>
                 </div>
             </div>
 
@@ -527,4 +563,10 @@
 </div>
 
 <!-- user-profiles.js and hamburger-menu.js are loaded in _Layout.cshtml -->
-<script src="~/js/qobuz.js" asp-append-version="true"></script>
+<!-- Qobuz modules (order matters: auth, search, browse, playback, lightbox, then core) -->
+<script src="~/js/qobuz/qobuz-auth.js" asp-append-version="true"></script>
+<script src="~/js/qobuz/qobuz-search.js" asp-append-version="true"></script>
+<script src="~/js/qobuz/qobuz-browse.js" asp-append-version="true"></script>
+<script src="~/js/qobuz/qobuz-playback.js" asp-append-version="true"></script>
+<script src="~/js/qobuz/qobuz-lightbox.js" asp-append-version="true"></script>
+<script src="~/js/qobuz/qobuz-core.js" asp-append-version="true"></script>

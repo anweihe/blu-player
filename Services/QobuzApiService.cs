@@ -83,6 +83,21 @@ public interface IQobuzApiService
     Task<QobuzRecommendationsResult> GetRecommendationsAsync(string authToken, int limit = 50);
 
     /// <summary>
+    /// Get user's favorite albums
+    /// </summary>
+    Task<List<QobuzAlbum>> GetFavoriteAlbumsAsync(string authToken, int limit = 500);
+
+    /// <summary>
+    /// Get user's favorite tracks
+    /// </summary>
+    Task<List<QobuzTrack>> GetFavoriteTracksAsync(string authToken, int limit = 500);
+
+    /// <summary>
+    /// Get user's favorite artists
+    /// </summary>
+    Task<List<QobuzFavoriteArtist>> GetFavoriteArtistsAsync(string authToken, int limit = 100);
+
+    /// <summary>
     /// Check if app credentials are available
     /// </summary>
     bool HasAppCredentials { get; }
@@ -1333,6 +1348,141 @@ public class QobuzApiService : IQobuzApiService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Get user's favorite albums
+    /// </summary>
+    public async Task<List<QobuzAlbum>> GetFavoriteAlbumsAsync(string authToken, int limit = 500)
+    {
+        var albums = new List<QobuzAlbum>();
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get favorite albums: app credentials not available");
+                return albums;
+            }
+
+            var url = $"{QobuzApiBase}/favorite/getUserFavorites" +
+                      $"?type=albums" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}" +
+                      $"&user_auth_token={authToken}";
+
+            _logger.LogDebug("Fetching favorite albums (limit: {Limit})", limit);
+
+            var response = await _httpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var favAlbums = JsonSerializer.Deserialize<QobuzFavoriteAlbumsResponse>(content);
+                if (favAlbums?.Albums?.Items != null)
+                {
+                    albums.AddRange(favAlbums.Albums.Items);
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} favorite albums", albums.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get favorite albums");
+        }
+
+        return albums;
+    }
+
+    /// <summary>
+    /// Get user's favorite tracks
+    /// </summary>
+    public async Task<List<QobuzTrack>> GetFavoriteTracksAsync(string authToken, int limit = 500)
+    {
+        var tracks = new List<QobuzTrack>();
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get favorite tracks: app credentials not available");
+                return tracks;
+            }
+
+            var url = $"{QobuzApiBase}/favorite/getUserFavorites" +
+                      $"?type=tracks" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}" +
+                      $"&user_auth_token={authToken}";
+
+            _logger.LogDebug("Fetching favorite tracks (limit: {Limit})", limit);
+
+            var response = await _httpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var favTracks = JsonSerializer.Deserialize<QobuzFavoriteTracksResponse>(content);
+                if (favTracks?.Tracks?.Items != null)
+                {
+                    tracks.AddRange(favTracks.Tracks.Items);
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} favorite tracks", tracks.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get favorite tracks");
+        }
+
+        return tracks;
+    }
+
+    /// <summary>
+    /// Get user's favorite artists
+    /// </summary>
+    public async Task<List<QobuzFavoriteArtist>> GetFavoriteArtistsAsync(string authToken, int limit = 100)
+    {
+        var artists = new List<QobuzFavoriteArtist>();
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get favorite artists: app credentials not available");
+                return artists;
+            }
+
+            var url = $"{QobuzApiBase}/favorite/getUserFavorites" +
+                      $"?type=artists" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}" +
+                      $"&user_auth_token={authToken}";
+
+            _logger.LogDebug("Fetching favorite artists (limit: {Limit})", limit);
+
+            var response = await _httpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var favArtists = JsonSerializer.Deserialize<QobuzFavoriteArtistsResponse>(content);
+                if (favArtists?.Artists?.Items != null)
+                {
+                    artists.AddRange(favArtists.Artists.Items);
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} favorite artists", artists.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get favorite artists");
+        }
+
+        return artists;
     }
 
     private static string ComputeMd5Hash(string input)

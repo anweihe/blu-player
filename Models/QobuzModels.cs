@@ -549,3 +549,60 @@ public class QobuzFavoriteTracksResponse
     [JsonPropertyName("tracks")]
     public QobuzTracksContainer? Tracks { get; set; }
 }
+
+/// <summary>
+/// Extended artist info for favorites with additional fields
+/// </summary>
+public class QobuzFavoriteArtist
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("picture")]
+    public string? Picture { get; set; }
+
+    [JsonPropertyName("image")]
+    public QobuzImage? Image { get; set; }
+
+    [JsonPropertyName("albums_count")]
+    public int AlbumsCount { get; set; }
+
+    /// <summary>
+    /// Get the best available image URL
+    /// </summary>
+    public string? ImageUrl =>
+        Picture ??
+        Image?.Large ??
+        Image?.Small ??
+        Image?.Thumbnail;
+}
+
+/// <summary>
+/// Container for favorite artists
+/// </summary>
+public class QobuzArtistsContainer
+{
+    [JsonPropertyName("items")]
+    public List<QobuzFavoriteArtist>? Items { get; set; }
+
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("offset")]
+    public int Offset { get; set; }
+
+    [JsonPropertyName("limit")]
+    public int Limit { get; set; }
+}
+
+/// <summary>
+/// Response from favorite/getUserFavorites?type=artists
+/// </summary>
+public class QobuzFavoriteArtistsResponse
+{
+    [JsonPropertyName("artists")]
+    public QobuzArtistsContainer? Artists { get; set; }
+}
