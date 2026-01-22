@@ -1529,7 +1529,10 @@
         `;
 
         globalAvailablePlayers.forEach(player => {
-            const isSelected = globalSelectedPlayer.type === 'bluesound' && globalSelectedPlayer.id === player.id;
+            // Compare by IP address since id might not be saved/loaded from settings
+            const playerIp = player.ipAddress || player.ip;
+            const isSelected = globalSelectedPlayer.type === 'bluesound' &&
+                (globalSelectedPlayer.ip === playerIp || globalSelectedPlayer.ipAddress === playerIp);
             html += `
                 <div class="global-player-option ${isSelected ? 'active' : ''}" onclick="selectGlobalPlayer('bluesound', ${JSON.stringify(player).replace(/"/g, '&quot;')})">
                     <div class="global-player-icon">
