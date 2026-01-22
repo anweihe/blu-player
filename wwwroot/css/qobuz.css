@@ -1178,7 +1178,6 @@
         font-weight: 600;
         cursor: pointer;
         transition: all var(--transition);
-        margin-top: 8px;
         width: fit-content;
     }
 
@@ -1190,6 +1189,129 @@
     .btn-play-all svg {
         width: 20px;
         height: 20px;
+    }
+
+    /* Detail Actions Container */
+    .detail-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* Album Info Button */
+    .btn-album-info {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-accent);
+        border-radius: 50px;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .btn-album-info:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--accent-blue);
+    }
+
+    .btn-album-info:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-album-info svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Album Info Container */
+    .album-info-container {
+        margin-top: 20px;
+        margin-bottom: 24px;
+        padding: 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+    }
+
+    .album-info-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .album-info-header h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .btn-close-info {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        transition: all var(--transition);
+    }
+
+    .btn-close-info:hover {
+        background: var(--bg-card-hover);
+        color: var(--text-primary);
+    }
+
+    .btn-close-info svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .album-info-content {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: var(--text-secondary);
+    }
+
+    .album-info-style {
+        position: relative;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        background: linear-gradient(135deg,
+            rgba(59, 130, 246, 0.1) 0%,
+            rgba(59, 130, 246, 0.05) 100%);
+        border-left: 3px solid var(--accent-blue);
+        border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+        font-size: 0.9rem;
+        font-style: italic;
+        line-height: 1.7;
+        color: var(--text-primary);
+    }
+
+    .album-info-text {
+        white-space: pre-wrap;
+    }
+
+    .album-info-loading {
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .album-info-error {
+        color: var(--danger);
+        text-align: center;
+        padding: 20px;
     }
 
     /* Tracks List */
