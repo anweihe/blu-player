@@ -148,6 +148,9 @@
         // Load saved player and stream quality from server
         await loadSettingsFromServer();
 
+        // Validate selected player and ensure a valid device is always selected
+        await validateAndEnsurePlayer();
+
         // Restore playback state from previous page
         restorePlaybackState();
 
@@ -157,6 +160,9 @@
             // Check current playback status
             checkCurrentPlayback();
         }
+
+        // Start background mDNS discovery to populate available players
+        discoverPlayersInBackground();
 
         // Close popups on overlay click
         popup?.addEventListener('click', function(e) {
@@ -204,6 +210,55 @@
         } catch (e) {
             console.error('Failed to load settings from server:', e);
         }
+    }
+
+    // Validate selected player is reachable, fall back to browser if not
+    async function validateAndEnsurePlayer() {
+        // If browser is selected, nothing to validate
+        if (globalSelectedPlayer.type === 'browser') {
+            return;
+        }
+
+        // If a Bluesound player is selected, check if it's reachable
+        if (globalSelectedPlayer.type === 'bluesound' && globalSelectedPlayer.ip) {
+            try {
+                const response = await fetch(
+                    `/Qobuz?handler=BluesoundStatus&ip=${globalSelectedPlayer.ip}&port=${globalSelectedPlayer.port || 11000}`,
+                    { signal: AbortSignal.timeout(5000) } // 5 second timeout
+                );
+                const data = await response.json();
+
+                if (data.success) {
+                    // Player is reachable, keep the selection
+                    console.log('Selected Bluesound player is reachable:', globalSelectedPlayer.name);
+                    return;
+                }
+            } catch (e) {
+                console.warn('Selected Bluesound player not reachable:', globalSelectedPlayer.name, e.message);
+            }
+
+            // Player not reachable, fall back to browser
+            console.log('Falling back to browser playback');
+            globalSelectedPlayer = { type: 'browser', name: 'Dieses Gerät' };
+            updatePlayerDisplay();
+            await saveSelectedPlayer();
+        }
+    }
+
+    // Discover players in background (non-blocking)
+    function discoverPlayersInBackground() {
+        // Fire and forget - don't await
+        fetch('/Qobuz?handler=Players&refresh=false')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    globalAvailablePlayers = data.players || [];
+                    console.log('Background discovery found', globalAvailablePlayers.length, 'players');
+                }
+            })
+            .catch(e => {
+                console.warn('Background player discovery failed:', e.message);
+            });
     }
 
     // ==================== Global Audio Player Events ====================
