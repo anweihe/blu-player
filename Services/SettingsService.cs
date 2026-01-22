@@ -7,10 +7,12 @@ namespace BluesoundWeb.Services;
 public class SettingsService : ISettingsService
 {
     private readonly BluesoundDbContext _context;
+    private readonly IEncryptionService _encryptionService;
 
-    public SettingsService(BluesoundDbContext context)
+    public SettingsService(BluesoundDbContext context, IEncryptionService encryptionService)
     {
         _context = context;
+        _encryptionService = encryptionService;
     }
 
     #region Profile Operations
@@ -344,6 +346,46 @@ public class SettingsService : ISettingsService
                 }
                 : null
         };
+    }
+
+    #endregion
+
+    #region API Keys
+
+    public async Task<bool> HasMistralApiKeyAsync()
+    {
+        var settings = await GetOrCreateGlobalSettingsAsync();
+        return !string.IsNullOrEmpty(settings.MistralApiKeyEncrypted);
+    }
+
+    public async Task<bool> SetMistralApiKeyAsync(string apiKey)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return false;
+
+        var settings = await GetOrCreateGlobalSettingsAsync();
+        settings.MistralApiKeyEncrypted = _encryptionService.Encrypt(apiKey.Trim());
+        settings.MistralApiKeyUpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> DeleteMistralApiKeyAsync()
+    {
+        var settings = await GetOrCreateGlobalSettingsAsync();
+        settings.MistralApiKeyEncrypted = null;
+        settings.MistralApiKeyUpdatedAt = null;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<string?> GetMistralApiKeyAsync()
+    {
+        var settings = await GetOrCreateGlobalSettingsAsync();
+        if (string.IsNullOrEmpty(settings.MistralApiKeyEncrypted))
+            return null;
+
+        return _encryptionService.Decrypt(settings.MistralApiKeyEncrypted);
     }
 
     #endregion

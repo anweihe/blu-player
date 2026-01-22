@@ -66,6 +66,7 @@ public class BluesoundDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.ActiveProfileId).HasMaxLength(100);
+            entity.Property(e => e.MistralApiKeyEncrypted).HasMaxLength(500);
 
             // Seed the singleton row
             entity.HasData(new GlobalSettings { Id = 1, ActiveProfileId = null });

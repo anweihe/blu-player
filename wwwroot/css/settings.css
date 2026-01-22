@@ -1,0 +1,575 @@
+/* ==================== Settings Page ==================== */
+
+/* CSS Variables */
+:root {
+    --settings-bg: #0a0a0b;
+    --settings-surface: #111113;
+    --settings-surface-hover: #161618;
+    --settings-border: rgba(255, 255, 255, 0.06);
+    --settings-text: #f4f4f5;
+    --settings-text-secondary: #a1a1aa;
+    --settings-text-muted: #52525b;
+    --settings-accent: #22c55e;
+    --settings-accent-hover: #16a34a;
+    --settings-danger: #ef4444;
+    --settings-danger-hover: #dc2626;
+    --settings-radius: 12px;
+    --settings-radius-sm: 8px;
+}
+
+/* Base App Container */
+.settings-app {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--settings-bg);
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    color: var(--settings-text);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* Header */
+.settings-app .app-header {
+    background: var(--settings-surface);
+    border-bottom: 1px solid var(--settings-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 max(16px, env(safe-area-inset-left));
+    padding-top: env(safe-area-inset-top);
+}
+
+.settings-app .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.settings-app .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-app .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    color: var(--settings-text-secondary);
+    cursor: pointer;
+    border-radius: var(--settings-radius-sm);
+    transition: all 0.15s ease;
+}
+
+.settings-app .hamburger-btn:hover {
+    background: var(--settings-surface-hover);
+    color: var(--settings-text);
+}
+
+.settings-app .hamburger-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+.settings-app .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-app .profile-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--settings-accent);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-app .profile-indicator:hover {
+    transform: scale(1.05);
+}
+
+.settings-app .profile-initial {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+}
+
+.settings-app .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-app .brand-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--settings-accent);
+}
+
+.settings-app .brand h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+/* Settings Page Content */
+.settings-page {
+    flex: 1;
+    padding: 24px 16px;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+
+/* Content */
+.settings-content {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+/* Section */
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.settings-section-muted {
+    opacity: 0.4;
+}
+
+.section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--settings-surface);
+    border: 1px solid var(--settings-border);
+    border-radius: var(--settings-radius-sm);
+    color: var(--settings-accent);
+    flex-shrink: 0;
+}
+
+.section-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.section-title-group {
+    padding-top: 2px;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--settings-text);
+    margin: 0 0 2px;
+}
+
+.section-description {
+    font-size: 0.8rem;
+    color: var(--settings-text-muted);
+    margin: 0;
+}
+
+/* Cards */
+.settings-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.settings-card {
+    background: var(--settings-surface);
+    border: 1px solid var(--settings-border);
+    border-radius: var(--settings-radius);
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-card.configured {
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.settings-card:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.settings-card.configured:hover {
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+/* Card Header */
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--settings-border);
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.card-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #ff7000, #ff9500);
+    border-radius: 8px;
+    color: white;
+}
+
+.brand-logo svg {
+    width: 20px;
+    height: 20px;
+}
+
+.brand-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--settings-text);
+}
+
+.brand-type {
+    font-size: 0.75rem;
+    color: var(--settings-text-muted);
+}
+
+.card-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    color: var(--settings-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.card-status.configured {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--settings-accent);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--settings-text-muted);
+}
+
+.card-status.configured .status-dot {
+    background: var(--settings-accent);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+/* Card Body */
+.card-body {
+    padding: 20px;
+}
+
+/* API Key Form */
+.api-key-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--settings-text-secondary);
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-field {
+    width: 100%;
+    padding: 12px 48px 12px 14px;
+    background: var(--settings-bg);
+    border: 1px solid var(--settings-border);
+    border-radius: var(--settings-radius-sm);
+    color: var(--settings-text);
+    font-size: 0.9rem;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    letter-spacing: 0.02em;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-field::placeholder {
+    color: var(--settings-text-muted);
+    font-family: inherit;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--settings-accent);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.input-toggle {
+    position: absolute;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--settings-text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.input-toggle:hover {
+    color: var(--settings-text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.input-toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
+.input-hint {
+    font-size: 0.75rem;
+    color: var(--settings-text-muted);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Buttons */
+.settings-app .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--settings-radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-app .btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.settings-app .btn-primary {
+    background: var(--settings-accent);
+    color: white;
+}
+
+.settings-app .btn-primary:hover:not(:disabled) {
+    background: var(--settings-accent-hover);
+    transform: translateY(-1px);
+}
+
+.settings-app .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.settings-app .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.settings-app .btn-primary.loading {
+    position: relative;
+    color: transparent;
+}
+
+.settings-app .btn-primary.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: settings-spin 0.6s linear infinite;
+}
+
+.settings-app .btn-danger {
+    background: transparent;
+    color: var(--settings-danger);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.settings-app .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--settings-danger);
+}
+
+/* Configured State */
+.api-key-configured {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.configured-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.configured-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--settings-accent);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.configured-badge svg {
+    width: 18px;
+    height: 18px;
+}
+
+.configured-mask {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mask-dots {
+    font-family: 'SF Mono', 'Monaco', monospace;
+    font-size: 1rem;
+    color: var(--settings-text-muted);
+    letter-spacing: 0.15em;
+}
+
+/* Animations */
+@keyframes settings-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes settings-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+.shake {
+    animation: settings-shake 0.5s ease;
+}
+
+/* Toast */
+.settings-toast {
+    position: fixed;
+    bottom: calc(100px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: var(--settings-surface);
+    border: 1px solid var(--settings-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    font-size: 0.85rem;
+    color: var(--settings-text);
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 1000;
+}
+
+.settings-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.settings-toast svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.settings-toast-success svg {
+    color: #22c55e;
+}
+
+.settings-toast-error svg {
+    color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .settings-page {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .api-key-configured {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .settings-app .btn-danger {
+        width: 100%;
+    }
+}

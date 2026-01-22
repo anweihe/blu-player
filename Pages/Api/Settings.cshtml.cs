@@ -137,4 +137,39 @@ public class SettingsModel : PageModel
             return new JsonResult(ApiResponse.Fail(ex.Message));
         }
     }
+
+    // ==================== API Keys ====================
+
+    // GET /api/settings?handler=mistralApiKey
+    public async Task<IActionResult> OnGetMistralApiKeyAsync()
+    {
+        var hasKey = await _settingsService.HasMistralApiKeyAsync();
+        return new JsonResult(ApiResponse<ApiKeyStatusDto>.Ok(new ApiKeyStatusDto
+        {
+            IsConfigured = hasKey
+        }));
+    }
+
+    // PUT /api/settings?handler=mistralApiKey
+    public async Task<IActionResult> OnPutMistralApiKeyAsync([FromBody] SetApiKeyRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.ApiKey))
+        {
+            return new JsonResult(ApiResponse.Fail("API Key darf nicht leer sein"));
+        }
+
+        var success = await _settingsService.SetMistralApiKeyAsync(request.ApiKey);
+        if (!success)
+        {
+            return new JsonResult(ApiResponse.Fail("Fehler beim Speichern des API Keys"));
+        }
+        return new JsonResult(ApiResponse.Ok());
+    }
+
+    // DELETE /api/settings?handler=mistralApiKey
+    public async Task<IActionResult> OnDeleteMistralApiKeyAsync()
+    {
+        var success = await _settingsService.DeleteMistralApiKeyAsync();
+        return new JsonResult(success ? ApiResponse.Ok() : ApiResponse.Fail("Fehler beim Löschen"));
+    }
 }

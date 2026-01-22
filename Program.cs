@@ -28,6 +28,9 @@ else
                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 }
 
+// Register Encryption service
+builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
+
 // Register Settings service
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 

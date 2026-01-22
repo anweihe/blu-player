@@ -191,3 +191,22 @@ public class UpdateQueueIndexRequest
 {
     public int CurrentIndex { get; set; }
 }
+
+// ==================== API Key DTOs ====================
+
+/// <summary>
+/// DTO for API key status (never exposes the actual key)
+/// </summary>
+public class ApiKeyStatusDto
+{
+    public bool IsConfigured { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Request DTO for setting an API key
+/// </summary>
+public class SetApiKeyRequest
+{
+    public string ApiKey { get; set; } = string.Empty;
+}

@@ -25,4 +25,10 @@ public interface ISettingsService
 
     // Migration
     Task<bool> MigrateFromLocalStorageAsync(MigrateRequest request);
+
+    // API Keys (global, user-independent)
+    Task<bool> HasMistralApiKeyAsync();
+    Task<bool> SetMistralApiKeyAsync(string apiKey);
+    Task<bool> DeleteMistralApiKeyAsync();
+    Task<string?> GetMistralApiKeyAsync(); // For internal use only, never expose via API
 }
