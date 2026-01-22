@@ -625,8 +625,9 @@
                 }
             }
 
-            // Show the Now Playing bar
-            if (showBar && (globalIsPlaying || status.state === 'pause')) {
+            // Show the Now Playing bar if there's track info
+            // Show on initial load (showBar=true) even if stopped, as long as we have track info
+            if (showBar && status.title) {
                 showNowPlayingBar();
             }
         }
