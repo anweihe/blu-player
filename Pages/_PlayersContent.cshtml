@@ -823,24 +823,20 @@
 
     /* Card Header */
     .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
+        position: relative;
         padding: 14px 14px 0;
-        gap: 10px;
-        flex-wrap: nowrap;
     }
 
     .card-title-area {
-        flex: 1 1 0;
-        min-width: 0;
-        overflow: hidden;
+        padding-right: 44px; /* Space for the button */
     }
 
-    /* Ensure header buttons stay on the right */
+    /* Position header buttons in top-right corner */
     .join-group-dropdown,
     .dissolve-form {
-        flex-shrink: 0;
+        position: absolute;
+        top: 14px;
+        right: 14px;
     }
 
     .card-title {
