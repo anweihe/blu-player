@@ -203,40 +203,107 @@ public class AlbumInfoService : IAlbumInfoService
         }
 
         // Try to parse as JSON and extract summary and style
-        try
+        // First try with original text, then with single quotes converted
+        foreach (var jsonText in new[] { text, ConvertPythonDictToJson(text) })
         {
-            // Handle Python-style dicts with single quotes by converting to valid JSON
-            var jsonText = text;
-            if (text.Contains("'") && !text.Contains("\""))
+            try
             {
-                // Replace single quotes with double quotes for JSON parsing
-                jsonText = text.Replace("'", "\"");
+                using var jsonDoc = JsonDocument.Parse(jsonText);
+                var result = new AlbumInfoDto();
+
+                if (jsonDoc.RootElement.TryGetProperty("summary", out var summary))
+                {
+                    result.Summary = summary.GetString();
+                }
+
+                if (jsonDoc.RootElement.TryGetProperty("style", out var style))
+                {
+                    result.Style = style.GetString();
+                }
+
+                // If we got at least summary, return the DTO
+                if (result.Summary != null)
+                {
+                    return result;
+                }
             }
-
-            using var jsonDoc = JsonDocument.Parse(jsonText);
-            var result = new AlbumInfoDto();
-
-            if (jsonDoc.RootElement.TryGetProperty("summary", out var summary))
+            catch (JsonException)
             {
-                result.Summary = summary.GetString();
+                // Try next format
             }
-
-            if (jsonDoc.RootElement.TryGetProperty("style", out var style))
-            {
-                result.Style = style.GetString();
-            }
-
-            // If we got at least summary, return the DTO
-            if (result.Summary != null)
-            {
-                return result;
-            }
-        }
-        catch (JsonException)
-        {
-            // Not valid JSON, return text as summary
         }
 
         return new AlbumInfoDto { Summary = text };
+    }
+
+    /// <summary>
+    /// Convert Python-style dict with single quotes to valid JSON with double quotes.
+    /// Handles the pattern: { 'key': 'value', ... }
+    /// </summary>
+    private static string ConvertPythonDictToJson(string text)
+    {
+        if (string.IsNullOrEmpty(text) || !text.Contains("'"))
+            return text;
+
+        var result = new System.Text.StringBuilder();
+        bool inString = false;
+        char stringDelimiter = '\0';
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+
+            if (!inString)
+            {
+                if (c == '\'')
+                {
+                    // Start of a single-quoted string, convert to double quote
+                    result.Append('"');
+                    inString = true;
+                    stringDelimiter = '\'';
+                }
+                else if (c == '"')
+                {
+                    // Start of a double-quoted string
+                    result.Append(c);
+                    inString = true;
+                    stringDelimiter = '"';
+                }
+                else
+                {
+                    result.Append(c);
+                }
+            }
+            else
+            {
+                // Inside a string
+                if (c == stringDelimiter)
+                {
+                    // Check for escape
+                    if (i > 0 && text[i - 1] == '\\')
+                    {
+                        result.Append(c);
+                    }
+                    else
+                    {
+                        // End of string
+                        result.Append(stringDelimiter == '\'' ? '"' : c);
+                        inString = false;
+                        stringDelimiter = '\0';
+                    }
+                }
+                else if (c == '"' && stringDelimiter == '\'')
+                {
+                    // Escape double quotes inside single-quoted strings
+                    result.Append("\\\"");
+                }
+                else
+                {
+                    result.Append(c);
+                }
+            }
+        }
+
+        return result.ToString();
     }
 }

@@ -1280,39 +1280,83 @@
 
     .album-info-content {
         font-size: 0.9rem;
-        line-height: 1.6;
+        line-height: 1.7;
         color: var(--text-secondary);
     }
 
+    /* Style Quote - Editorial Blockquote Design */
     .album-info-style {
         position: relative;
-        padding: 16px 20px;
-        margin-bottom: 20px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
         background: linear-gradient(135deg,
-            rgba(59, 130, 246, 0.1) 0%,
-            rgba(59, 130, 246, 0.05) 100%);
-        border-left: 3px solid var(--accent-blue);
-        border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
-        font-size: 0.9rem;
+            rgba(29, 185, 84, 0.08) 0%,
+            rgba(29, 185, 84, 0.02) 100%);
+        border-radius: var(--radius-md);
+        font-size: 1rem;
         font-style: italic;
-        line-height: 1.7;
+        line-height: 1.8;
         color: var(--text-primary);
+        letter-spacing: 0.01em;
     }
 
+    .album-info-style::before {
+        content: '\201C';
+        position: absolute;
+        top: 8px;
+        left: 12px;
+        font-size: 3rem;
+        font-family: Georgia, 'Times New Roman', serif;
+        color: var(--accent-qobuz);
+        opacity: 0.4;
+        line-height: 1;
+    }
+
+    .album-info-style::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 24px;
+        right: 24px;
+        height: 2px;
+        background: linear-gradient(90deg,
+            var(--accent-qobuz) 0%,
+            transparent 100%);
+        opacity: 0.3;
+        border-radius: 1px;
+    }
+
+    /* Summary Text - Clean Editorial Body */
     .album-info-text {
         white-space: pre-wrap;
+        font-size: 0.9rem;
+        line-height: 1.8;
+        color: var(--text-secondary);
+        text-align: justify;
+        hyphens: auto;
+    }
+
+    .album-info-text::first-letter {
+        font-size: 1.8em;
+        font-weight: 600;
+        color: var(--text-primary);
+        float: left;
+        line-height: 1;
+        margin-right: 6px;
+        margin-top: 4px;
     }
 
     .album-info-loading {
         display: flex;
         justify-content: center;
-        padding: 20px;
+        padding: 40px 20px;
     }
 
     .album-info-error {
         color: var(--danger);
         text-align: center;
-        padding: 20px;
+        padding: 24px;
+        font-size: 0.9rem;
     }
 
     /* Tracks List */
