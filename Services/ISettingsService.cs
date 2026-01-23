@@ -11,9 +11,7 @@ public interface ISettingsService
     Task<ProfileDto?> UpdateProfileAsync(string profileId, string name);
     Task<bool> DeleteProfileAsync(string profileId);
 
-    // Active profile
-    Task<string?> GetActiveProfileIdAsync();
-    Task<bool> SetActiveProfileIdAsync(string? profileId);
+    // Note: Active profile is now stored per-device in browser localStorage
 
     // Qobuz credentials
     Task<ProfileDto?> UpdateQobuzCredentialsAsync(string profileId, UpdateQobuzCredentialsRequest request);

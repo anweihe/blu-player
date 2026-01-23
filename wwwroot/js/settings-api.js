@@ -139,6 +139,12 @@ const SettingsApi = (function() {
     async function deleteProfile(profileId) {
         const result = await apiRequest('DELETE', 'profile', { id: profileId });
         if (result.success) {
+            // If deleted profile was the active one, clear from localStorage
+            const activeId = localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY);
+            if (activeId === profileId) {
+                localStorage.removeItem(ACTIVE_PROFILE_STORAGE_KEY);
+                activeProfileIdCache = null;
+            }
             invalidateCache();
             return true;
         }
@@ -148,36 +154,50 @@ const SettingsApi = (function() {
 
     // ==================== Active Profile ====================
 
+    const ACTIVE_PROFILE_STORAGE_KEY = 'bluesound_active_profile_id';
+
     /**
-     * Get the active profile ID
+     * Get the active profile ID from localStorage
+     * Validates that the profile still exists in the backend
      * @returns {Promise<string|null>}
      */
     async function getActiveProfileId() {
+        // Return from cache if valid
         if (activeProfileIdCache !== null && isCacheValid()) {
             return activeProfileIdCache;
         }
 
-        const result = await apiRequest('GET', 'activeProfile');
-        if (result.success) {
-            activeProfileIdCache = result.data;
-            return result.data;
+        // Read from localStorage
+        const storedId = localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY);
+
+        if (storedId) {
+            // Verify profile still exists
+            const profiles = await getAllProfiles();
+            if (profiles.some(p => p.id === storedId)) {
+                activeProfileIdCache = storedId;
+                return storedId;
+            }
+            // Profile no longer exists, clear localStorage
+            localStorage.removeItem(ACTIVE_PROFILE_STORAGE_KEY);
         }
+
+        activeProfileIdCache = null;
         return null;
     }
 
     /**
-     * Set the active profile ID
+     * Set the active profile ID in localStorage
      * @param {string|null} profileId
      * @returns {Promise<boolean>}
      */
     async function setActiveProfileId(profileId) {
-        const result = await apiRequest('PUT', 'activeProfile', {}, { profileId });
-        if (result.success) {
-            activeProfileIdCache = profileId;
-            return true;
+        if (profileId) {
+            localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, profileId);
+        } else {
+            localStorage.removeItem(ACTIVE_PROFILE_STORAGE_KEY);
         }
-        console.error('Failed to set active profile:', result.error);
-        return false;
+        activeProfileIdCache = profileId;
+        return true;
     }
 
     /**
@@ -420,16 +440,22 @@ const SettingsApi = (function() {
                 return false;
             }
 
-            // Send migration request
+            // Send migration request (profiles only, active profile is stored in localStorage)
             const result = await apiRequest('POST', 'migrate', {}, {
                 profiles: profilesToMigrate,
-                activeProfileId: oldActiveProfileId || (profilesToMigrate.length > 0 ? profilesToMigrate[0].id : null)
+                activeProfileId: null // No longer used, but keep for backwards compatibility
             });
 
             if (result.success && result.migrated) {
-                // Clear old localStorage data
+                // Migrate active profile ID to localStorage (keep it there, don't remove)
+                // If oldActiveProfileId exists, it stays in localStorage
+                // If not, set the first profile as active
+                if (!oldActiveProfileId && profilesToMigrate.length > 0) {
+                    localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, profilesToMigrate[0].id);
+                }
+
+                // Clear old localStorage data (but keep active profile id)
                 localStorage.removeItem('bluesound_user_profiles');
-                localStorage.removeItem('bluesound_active_profile_id');
                 localStorage.removeItem('bluesound_selected_player');
                 localStorage.removeItem('qobuz_user_id');
                 localStorage.removeItem('qobuz_auth_token');

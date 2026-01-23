@@ -74,11 +74,11 @@ public class BluesoundDbContext : DbContext
         modelBuilder.Entity<GlobalSettings>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.ActiveProfileId).HasMaxLength(100);
+            // Note: ActiveProfileId removed - now stored per-device in browser localStorage
             entity.Property(e => e.MistralApiKeyEncrypted).HasMaxLength(500);
 
             // Seed the singleton row
-            entity.HasData(new GlobalSettings { Id = 1, ActiveProfileId = null });
+            entity.HasData(new GlobalSettings { Id = 1 });
         });
 
         // PlaybackQueue configuration (1:1 with UserProfile)

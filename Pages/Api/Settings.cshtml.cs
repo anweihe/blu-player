@@ -62,23 +62,8 @@ public class SettingsModel : PageModel
         return new JsonResult(ApiResponse.Ok());
     }
 
-    // GET /api/settings?handler=activeProfile
-    public async Task<IActionResult> OnGetActiveProfileAsync()
-    {
-        var profileId = await _settingsService.GetActiveProfileIdAsync();
-        return new JsonResult(ApiResponse<string?>.Ok(profileId));
-    }
-
-    // PUT /api/settings?handler=activeProfile
-    public async Task<IActionResult> OnPutActiveProfileAsync([FromBody] SetActiveProfileRequest request)
-    {
-        var success = await _settingsService.SetActiveProfileIdAsync(request.ProfileId);
-        if (!success)
-        {
-            return new JsonResult(ApiResponse.Fail("Profile not found"));
-        }
-        return new JsonResult(ApiResponse.Ok());
-    }
+    // Note: Active profile is now stored per-device in browser localStorage
+    // The handlers OnGetActiveProfileAsync and OnPutActiveProfileAsync have been removed
 
     // PUT /api/settings?handler=qobuz&id=xxx
     public async Task<IActionResult> OnPutQobuzAsync(string id, [FromBody] UpdateQobuzCredentialsRequest request)

@@ -81,12 +81,7 @@ public class SettingsService : ISettingsService
 
         if (profile == null) return false;
 
-        // Check if this is the active profile
-        var globalSettings = await GetOrCreateGlobalSettingsAsync();
-        if (globalSettings.ActiveProfileId == profileId)
-        {
-            globalSettings.ActiveProfileId = null;
-        }
+        // Note: Active profile cleanup is handled on the client side (localStorage)
 
         _context.UserProfiles.Remove(profile);
         await _context.SaveChangesAsync();
@@ -96,32 +91,7 @@ public class SettingsService : ISettingsService
 
     #endregion
 
-    #region Active Profile
-
-    public async Task<string?> GetActiveProfileIdAsync()
-    {
-        var settings = await GetOrCreateGlobalSettingsAsync();
-        return settings.ActiveProfileId;
-    }
-
-    public async Task<bool> SetActiveProfileIdAsync(string? profileId)
-    {
-        var settings = await GetOrCreateGlobalSettingsAsync();
-
-        if (profileId != null)
-        {
-            // Verify profile exists
-            var profileExists = await _context.UserProfiles.AnyAsync(p => p.ProfileId == profileId);
-            if (!profileExists) return false;
-        }
-
-        settings.ActiveProfileId = profileId;
-        await _context.SaveChangesAsync();
-
-        return true;
-    }
-
-    #endregion
+    // Note: Active profile is now stored per-device in browser localStorage
 
     #region Qobuz Credentials
 
@@ -276,12 +246,8 @@ public class SettingsService : ISettingsService
                 _context.UserProfiles.Add(profile);
             }
 
-            // Set active profile
-            if (!string.IsNullOrEmpty(request.ActiveProfileId))
-            {
-                var globalSettings = await GetOrCreateGlobalSettingsAsync();
-                globalSettings.ActiveProfileId = request.ActiveProfileId;
-            }
+            // Note: Active profile is now stored per-device in browser localStorage
+            // The frontend handles setting the active profile during migration
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();

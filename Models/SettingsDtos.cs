@@ -52,13 +52,7 @@ public class UpdateProfileRequest
     public string? Name { get; set; }
 }
 
-/// <summary>
-/// Request DTO for setting active profile
-/// </summary>
-public class SetActiveProfileRequest
-{
-    public string? ProfileId { get; set; }
-}
+// Note: SetActiveProfileRequest removed - active profile is now stored per-device in browser localStorage
 
 /// <summary>
 /// Request DTO for updating Qobuz credentials
@@ -97,6 +91,11 @@ public class UpdatePlayerRequest
 public class MigrateRequest
 {
     public List<MigrateProfileData> Profiles { get; set; } = new();
+
+    /// <summary>
+    /// Deprecated: Active profile is now stored per-device in browser localStorage.
+    /// This property is kept for backwards compatibility but is no longer used.
+    /// </summary>
     public string? ActiveProfileId { get; set; }
 }
 

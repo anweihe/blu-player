@@ -148,6 +148,15 @@
         // Load saved player and stream quality from server
         await loadSettingsFromServer();
 
+        // Ensure a profile is selected on this device
+        // If no profile is selected, this will show the profile switcher
+        const profileSelected = await UserProfileManager.ensureProfileSelected();
+        if (!profileSelected) {
+            // User needs to select a profile, don't continue initialization
+            // The profile switcher will handle the rest
+            return;
+        }
+
         // Validate selected player and ensure a valid device is always selected
         await validateAndEnsurePlayer();
 

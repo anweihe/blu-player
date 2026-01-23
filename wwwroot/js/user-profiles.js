@@ -217,6 +217,33 @@ const UserProfileManager = (function() {
         return await getActiveProfile();
     }
 
+    /**
+     * Ensure a profile is selected on this device.
+     * If no profile is selected but profiles exist, shows profile switcher.
+     * @returns {Promise<boolean>} True if a profile is active, false if user needs to select
+     */
+    async function ensureProfileSelected() {
+        const activeId = await SettingsApi.getActiveProfileId();
+
+        if (activeId) {
+            return true; // Profile is already selected
+        }
+
+        // No active profile, check if profiles exist
+        const profiles = await SettingsApi.getAllProfiles();
+
+        if (profiles.length > 0) {
+            // Profiles exist but none selected - show profile switcher
+            if (typeof window.showProfileSwitcher === 'function') {
+                window.showProfileSwitcher();
+            }
+            return false; // User needs to select a profile
+        }
+
+        // No profiles exist at all
+        return true; // Will be handled elsewhere (create profile flow)
+    }
+
     // Public API
     return {
         initialize,
@@ -236,7 +263,8 @@ const UserProfileManager = (function() {
         getQobuzCredentials,
         getProfileInitial,
         getProfileColor,
-        migrateOldData
+        migrateOldData,
+        ensureProfileSelected
     };
 })();
 
