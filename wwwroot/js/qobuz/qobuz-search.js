@@ -188,6 +188,7 @@
                     </div>
                     ${track.isHiRes ? '<span class="search-track-badge">Hi-Res</span>' : ''}
                     <span class="search-track-duration">${track.formattedDuration}</span>
+                    ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName) : ''}
                 </div>
             `).join('');
         } else {

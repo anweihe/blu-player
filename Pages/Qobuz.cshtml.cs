@@ -191,6 +191,7 @@ public class QobuzModel : PageModel
                 duration = t.Duration,
                 formattedDuration = t.FormattedDuration,
                 artistName = t.Performer?.Name,
+                artistId = t.Performer?.Id,
                 albumTitle = t.Album?.Title,
                 albumCover = t.Album?.CoverUrl,
                 isHiRes = t.IsHiRes,
@@ -377,6 +378,7 @@ public class QobuzModel : PageModel
                 id = t.Id,
                 title = t.Title,
                 artistName = t.Performer?.Name,
+                artistId = t.Performer?.Id,
                 albumTitle = t.Album?.Title,
                 albumId = t.Album?.Id,
                 coverUrl = t.Album?.CoverUrl,
@@ -426,6 +428,7 @@ public class QobuzModel : PageModel
                 id = t.Id,
                 title = t.Title,
                 artistName = t.Performer?.Name,
+                artistId = t.Performer?.Id,
                 albumTitle = t.Album?.Title,
                 albumId = t.Album?.Id,
                 coverUrl = t.Album?.CoverUrl,
@@ -480,6 +483,7 @@ public class QobuzModel : PageModel
                 id = t.Id,
                 title = t.Title,
                 artistName = t.Performer?.Name,
+                artistId = t.Performer?.Id,
                 albumTitle = t.Album?.Title,
                 albumId = t.Album?.Id,
                 coverUrl = t.Album?.CoverUrl,
@@ -547,6 +551,7 @@ public class QobuzModel : PageModel
                 duration = t.Duration,
                 formattedDuration = t.FormattedDuration,
                 artistName = t.Performer?.Name,
+                artistId = t.Performer?.Id,
                 albumTitle = t.Album?.Title,
                 albumId = t.Album?.Id,
                 coverUrl = t.Album?.CoverUrl,
@@ -662,6 +667,7 @@ public class QobuzModel : PageModel
                 duration = t.Duration,
                 formattedDuration = t.FormattedDuration,
                 artistName = t.Performer?.Name ?? album.Artist?.Name,
+                artistId = t.Performer?.Id ?? album.Artist?.Id,
                 albumTitle = album.Title,
                 albumCover = album.CoverUrl,
                 isHiRes = t.IsHiRes,
@@ -1262,31 +1268,41 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
-    /// Save a Qobuz album to listening history
+    /// Save a Qobuz album to listening history (per user profile)
     /// </summary>
     public async Task<IActionResult> OnPostSaveAlbumHistoryAsync([FromBody] SaveQobuzAlbumHistoryRequest request)
     {
+        if (string.IsNullOrEmpty(request.ProfileId))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende ProfileId" });
+        }
+
         if (string.IsNullOrEmpty(request.AlbumId))
         {
             return new JsonResult(new { success = false, error = "Fehlende AlbumId" });
         }
 
-        await _historyService.SaveQobuzAlbumAsync(request.AlbumId, request.AlbumName, request.Artist, request.CoverUrl);
+        await _historyService.SaveQobuzAlbumAsync(request.ProfileId, request.AlbumId, request.AlbumName, request.Artist, request.CoverUrl);
 
         return new JsonResult(new { success = true });
     }
 
     /// <summary>
-    /// Save a Qobuz playlist to listening history
+    /// Save a Qobuz playlist to listening history (per user profile)
     /// </summary>
     public async Task<IActionResult> OnPostSavePlaylistHistoryAsync([FromBody] SaveQobuzPlaylistHistoryRequest request)
     {
+        if (string.IsNullOrEmpty(request.ProfileId))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende ProfileId" });
+        }
+
         if (string.IsNullOrEmpty(request.PlaylistId))
         {
             return new JsonResult(new { success = false, error = "Fehlende PlaylistId" });
         }
 
-        await _historyService.SaveQobuzPlaylistAsync(request.PlaylistId, request.PlaylistName, request.CoverUrl, request.Tracks);
+        await _historyService.SaveQobuzPlaylistAsync(request.ProfileId, request.PlaylistId, request.PlaylistName, request.CoverUrl, request.Tracks);
 
         return new JsonResult(new { success = true });
     }

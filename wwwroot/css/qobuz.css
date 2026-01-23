@@ -1479,6 +1479,82 @@
         margin-left: 8px;
     }
 
+    /* Track Context Menu Button */
+    .track-menu-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        flex-shrink: 0;
+        margin-left: 4px;
+        transition: all var(--transition);
+    }
+
+    .track-menu-btn:hover {
+        background: var(--bg-card-hover);
+        color: var(--text-primary);
+    }
+
+    .track-menu-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .track-item:hover .track-menu-btn,
+    .search-track-item:hover .track-menu-btn {
+        display: flex;
+    }
+
+    /* Track Context Menu Dropdown */
+    .track-context-menu {
+        min-width: 180px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-accent);
+        border-radius: var(--radius-md);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        overflow: hidden;
+        opacity: 0;
+        transform: scale(0.95) translateY(-4px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .track-context-menu.active {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+
+    .track-context-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 16px;
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        text-align: left;
+        cursor: pointer;
+        transition: background var(--transition);
+    }
+
+    .track-context-menu-item:hover {
+        background: var(--bg-card-hover);
+    }
+
+    .track-context-menu-item svg {
+        width: 18px;
+        height: 18px;
+        color: var(--accent-qobuz);
+        flex-shrink: 0;
+    }
+
 /* Mobile */
 @media (max-width: 480px) {
     .main-content {
@@ -1535,6 +1611,11 @@
 
         .track-quality {
             display: none;
+        }
+
+        /* Always show menu button on mobile */
+        .track-menu-btn {
+            display: flex;
         }
     }
 

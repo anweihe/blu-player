@@ -793,6 +793,7 @@
                             </div>
                             ${track.isHiRes ? '<span class="track-quality">Hi-Res</span>' : ''}
                             <span class="track-duration">${track.formattedDuration || ''}</span>
+                            ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName) : ''}
                         </div>
                     `).join('');
 
@@ -1138,6 +1139,7 @@
                 </div>
                 ${track.isHiRes ? '<span class="track-quality">Hi-Res</span>' : ''}
                 <span class="track-duration">${track.formattedDuration}</span>
+                ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName) : ''}
             </div>
         `).join('');
     }
