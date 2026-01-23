@@ -1015,10 +1015,11 @@
         currentAlbumForInfo = {
             id: album.id,
             title: album.title,
-            artistName: album.artistName
+            artistName: album.artistName,
+            artistId: album.artistId
         };
 
-        // Reset album info container and show button for albums
+        // Reset album info container and show buttons for albums
         const infoContainer = document.getElementById('album-info-container');
         if (infoContainer) {
             infoContainer.style.display = 'none';
@@ -1027,6 +1028,13 @@
         if (infoBtn) {
             infoBtn.style.display = '';
             infoBtn.disabled = false;
+        }
+        // Show artist menu button if artist exists
+        const artistMenuBtn = document.getElementById('btn-artist-menu');
+        if (artistMenuBtn) {
+            artistMenuBtn.style.display = album.artistId ? '' : 'none';
+            artistMenuBtn.dataset.artistId = album.artistId || '';
+            artistMenuBtn.dataset.artistName = album.artistName || '';
         }
 
         document.getElementById('detail-name').textContent = album.title;
@@ -1080,10 +1088,14 @@
             QobuzApp.playbackFn.resetHistoryTracking();
         }
 
-        // Hide album-info button for playlists
+        // Hide album-info and artist-menu buttons for playlists
         const infoBtn = document.getElementById('btn-album-info');
         if (infoBtn) {
             infoBtn.style.display = 'none';
+        }
+        const artistMenuBtn = document.getElementById('btn-artist-menu');
+        if (artistMenuBtn) {
+            artistMenuBtn.style.display = 'none';
         }
         const infoContainer = document.getElementById('album-info-container');
         if (infoContainer) {

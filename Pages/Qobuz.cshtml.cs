@@ -651,6 +651,7 @@ public class QobuzModel : PageModel
                 id = album.Id,
                 title = album.Title,
                 artistName = album.Artist?.Name,
+                artistId = album.Artist?.Id,
                 coverUrl = album.CoverUrl,
                 tracksCount = album.TracksCount,
                 duration = album.Duration,
