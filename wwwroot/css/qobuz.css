@@ -2170,6 +2170,19 @@
     object-fit: cover;
 }
 
+.artist-portrait.clickable {
+    cursor: zoom-in;
+    transition: transform 0.2s ease;
+}
+
+.artist-portrait.clickable:hover {
+    transform: scale(1.02);
+}
+
+.artist-portrait.clickable:active {
+    transform: scale(0.98);
+}
+
 .artist-portrait-placeholder {
     width: 100%;
     height: 100%;

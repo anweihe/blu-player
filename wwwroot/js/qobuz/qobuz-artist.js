@@ -80,14 +80,14 @@
             if (portraitPlaceholder) portraitPlaceholder.style.display = 'none';
             // Make portrait clickable to open lightbox
             if (portraitContainer) {
-                portraitContainer.style.cursor = 'pointer';
+                portraitContainer.classList.add('clickable');
                 portraitContainer.onclick = () => openImageLightbox(artist.portraitUrl);
             }
         } else {
             portraitImg.style.display = 'none';
             if (portraitPlaceholder) portraitPlaceholder.style.display = 'flex';
             if (portraitContainer) {
-                portraitContainer.style.cursor = 'default';
+                portraitContainer.classList.remove('clickable');
                 portraitContainer.onclick = null;
             }
         }
