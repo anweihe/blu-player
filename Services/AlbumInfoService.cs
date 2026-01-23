@@ -205,7 +205,15 @@ public class AlbumInfoService : IAlbumInfoService
         // Try to parse as JSON and extract summary and style
         try
         {
-            using var jsonDoc = JsonDocument.Parse(text);
+            // Handle Python-style dicts with single quotes by converting to valid JSON
+            var jsonText = text;
+            if (text.Contains("'") && !text.Contains("\""))
+            {
+                // Replace single quotes with double quotes for JSON parsing
+                jsonText = text.Replace("'", "\"");
+            }
+
+            using var jsonDoc = JsonDocument.Parse(jsonText);
             var result = new AlbumInfoDto();
 
             if (jsonDoc.RootElement.TryGetProperty("summary", out var summary))
