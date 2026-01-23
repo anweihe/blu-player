@@ -209,6 +209,12 @@
         const playback = QobuzApp.playback;
 
         try {
+            const profileId = await SettingsApi.getActiveProfileId();
+            if (!profileId) {
+                console.warn('No active profile, cannot save to history');
+                return;
+            }
+
             if (playback.currentSourceType === 'album' && playback.currentSourceId) {
                 // Save album to history
                 await fetch('/Qobuz?handler=SaveAlbumHistory', {
@@ -218,6 +224,7 @@
                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                     },
                     body: JSON.stringify({
+                        profileId: profileId,
                         albumId: playback.currentSourceId,
                         albumName: track.albumTitle || playback.currentSourceName || 'Unknown Album',
                         artist: track.artistName,
@@ -239,6 +246,7 @@
                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                     },
                     body: JSON.stringify({
+                        profileId: profileId,
                         playlistId: playback.currentSourceId,
                         playlistName: playback.currentSourceName || 'Unknown Playlist',
                         coverUrl: track.albumCover,

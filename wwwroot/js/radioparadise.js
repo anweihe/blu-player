@@ -338,9 +338,15 @@
         hideLoading();
     }
 
-    // Save channel to listening history
+    // Save channel to listening history (per user profile)
     async function saveToHistory(title, imageUrl, actionUrl, quality) {
         try {
+            const profileId = await SettingsApi.getActiveProfileId();
+            if (!profileId) {
+                console.warn('No active profile, cannot save to history');
+                return;
+            }
+
             await fetch('/RadioParadise?handler=SaveHistory', {
                 method: 'POST',
                 headers: {
@@ -348,6 +354,7 @@
                     'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                 },
                 body: JSON.stringify({
+                    profileId: profileId,
                     title: title,
                     imageUrl: imageUrl,
                     actionUrl: actionUrl,

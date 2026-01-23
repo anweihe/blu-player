@@ -228,16 +228,21 @@ public class RadioParadiseModel : PageModel
     }
 
     /// <summary>
-    /// Save a Radio Paradise channel to listening history
+    /// Save a Radio Paradise channel to listening history (per user profile)
     /// </summary>
     public async Task<IActionResult> OnPostSaveHistoryAsync([FromBody] SaveRadioParadiseHistoryRequest request)
     {
+        if (string.IsNullOrEmpty(request.ProfileId))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende ProfileId" });
+        }
+
         if (string.IsNullOrEmpty(request.ActionUrl))
         {
             return new JsonResult(new { success = false, error = "Fehlende ActionUrl" });
         }
 
-        await _historyService.SaveRadioParadiseAsync(request.Title, request.ImageUrl, request.ActionUrl, request.Quality);
+        await _historyService.SaveRadioParadiseAsync(request.ProfileId, request.Title, request.ImageUrl, request.ActionUrl, request.Quality);
 
         return new JsonResult(new { success = true });
     }

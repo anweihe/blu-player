@@ -153,7 +153,9 @@ public class BluesoundDbContext : DbContext
         modelBuilder.Entity<TuneInHistoryEntry>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.ActionUrl).IsUnique();
+            entity.HasIndex(e => new { e.ProfileId, e.ActionUrl }).IsUnique();
+            entity.HasIndex(e => e.ProfileId);
+            entity.Property(e => e.ProfileId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
             entity.Property(e => e.ActionUrl).IsRequired().HasMaxLength(2000);
             entity.Property(e => e.ImageUrl).HasMaxLength(2000);
@@ -163,7 +165,9 @@ public class BluesoundDbContext : DbContext
         modelBuilder.Entity<RadioParadiseHistoryEntry>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.ActionUrl).IsUnique();
+            entity.HasIndex(e => new { e.ProfileId, e.ActionUrl }).IsUnique();
+            entity.HasIndex(e => e.ProfileId);
+            entity.Property(e => e.ProfileId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
             entity.Property(e => e.ActionUrl).IsRequired().HasMaxLength(2000);
             entity.Property(e => e.ImageUrl).HasMaxLength(2000);
@@ -174,7 +178,9 @@ public class BluesoundDbContext : DbContext
         modelBuilder.Entity<QobuzAlbumHistoryEntry>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.AlbumId).IsUnique();
+            entity.HasIndex(e => new { e.ProfileId, e.AlbumId }).IsUnique();
+            entity.HasIndex(e => e.ProfileId);
+            entity.Property(e => e.ProfileId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.AlbumId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.AlbumName).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Artist).HasMaxLength(500);
@@ -185,7 +191,9 @@ public class BluesoundDbContext : DbContext
         modelBuilder.Entity<QobuzPlaylistHistoryEntry>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.PlaylistId).IsUnique();
+            entity.HasIndex(e => new { e.ProfileId, e.PlaylistId }).IsUnique();
+            entity.HasIndex(e => e.ProfileId);
+            entity.Property(e => e.ProfileId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.PlaylistId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.PlaylistName).IsRequired().HasMaxLength(500);
             entity.Property(e => e.CoverUrl).HasMaxLength(2000);

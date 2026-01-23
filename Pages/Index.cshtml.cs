@@ -28,11 +28,23 @@ public class IndexModel : PageModel
     }
 
     /// <summary>
-    /// Get all listening history for the homepage
+    /// Get all listening history for the homepage (filtered by profile)
     /// </summary>
-    public async Task<IActionResult> OnGetHistoryAsync()
+    public async Task<IActionResult> OnGetHistoryAsync(string? profileId)
     {
-        var history = await _historyService.GetAllHistoryAsync();
+        if (string.IsNullOrEmpty(profileId))
+        {
+            return new JsonResult(new
+            {
+                success = true,
+                tuneIn = new List<object>(),
+                radioParadise = new List<object>(),
+                qobuzAlbums = new List<object>(),
+                qobuzPlaylists = new List<object>()
+            });
+        }
+
+        var history = await _historyService.GetAllHistoryAsync(profileId);
 
         return new JsonResult(new
         {

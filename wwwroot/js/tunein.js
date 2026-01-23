@@ -542,9 +542,15 @@
         hideLoading();
     }
 
-    // Save station to listening history
+    // Save station to listening history (per user profile)
     async function saveToHistory(title, imageUrl, actionUrl) {
         try {
+            const profileId = await SettingsApi.getActiveProfileId();
+            if (!profileId) {
+                console.warn('No active profile, cannot save to history');
+                return;
+            }
+
             await fetch('/TuneIn?handler=SaveHistory', {
                 method: 'POST',
                 headers: {
@@ -552,6 +558,7 @@
                     'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                 },
                 body: JSON.stringify({
+                    profileId: profileId,
                     title: title,
                     imageUrl: imageUrl,
                     actionUrl: actionUrl

@@ -6,11 +6,11 @@ namespace BluesoundWeb.Services;
 
 public interface IListeningHistoryService
 {
-    Task SaveTuneInAsync(string title, string? imageUrl, string actionUrl);
-    Task SaveRadioParadiseAsync(string title, string? imageUrl, string actionUrl, string? quality);
-    Task SaveQobuzAlbumAsync(string albumId, string albumName, string? artist, string? coverUrl);
-    Task SaveQobuzPlaylistAsync(string playlistId, string playlistName, string? coverUrl, List<SavePlaylistTrackRequest>? tracks);
-    Task<ListeningHistoryResponse> GetAllHistoryAsync();
+    Task SaveTuneInAsync(string profileId, string title, string? imageUrl, string actionUrl);
+    Task SaveRadioParadiseAsync(string profileId, string title, string? imageUrl, string actionUrl, string? quality);
+    Task SaveQobuzAlbumAsync(string profileId, string albumId, string albumName, string? artist, string? coverUrl);
+    Task SaveQobuzPlaylistAsync(string profileId, string playlistId, string playlistName, string? coverUrl, List<SavePlaylistTrackRequest>? tracks);
+    Task<ListeningHistoryResponse> GetAllHistoryAsync(string profileId);
 }
 
 public class ListeningHistoryService : IListeningHistoryService
@@ -25,15 +25,15 @@ public class ListeningHistoryService : IListeningHistoryService
         _logger = logger;
     }
 
-    public async Task SaveTuneInAsync(string title, string? imageUrl, string actionUrl)
+    public async Task SaveTuneInAsync(string profileId, string title, string? imageUrl, string actionUrl)
     {
-        if (string.IsNullOrEmpty(actionUrl)) return;
+        if (string.IsNullOrEmpty(profileId) || string.IsNullOrEmpty(actionUrl)) return;
 
         try
         {
-            // Check if entry already exists (upsert by ActionUrl)
+            // Check if entry already exists for this profile (upsert by ProfileId + ActionUrl)
             var existing = await _dbContext.TuneInHistory
-                .FirstOrDefaultAsync(e => e.ActionUrl == actionUrl);
+                .FirstOrDefaultAsync(e => e.ProfileId == profileId && e.ActionUrl == actionUrl);
 
             if (existing != null)
             {
@@ -47,17 +47,19 @@ public class ListeningHistoryService : IListeningHistoryService
                 // Add new entry
                 _dbContext.TuneInHistory.Add(new TuneInHistoryEntry
                 {
+                    ProfileId = profileId,
                     Title = title,
                     ImageUrl = imageUrl,
                     ActionUrl = actionUrl,
                     PlayedAt = DateTime.UtcNow
                 });
 
-                // Enforce limit - remove oldest entries beyond MaxHistoryEntries
-                var count = await _dbContext.TuneInHistory.CountAsync();
+                // Enforce limit per profile - remove oldest entries beyond MaxHistoryEntries
+                var count = await _dbContext.TuneInHistory.CountAsync(e => e.ProfileId == profileId);
                 if (count >= MaxHistoryEntries)
                 {
                     var oldestEntries = await _dbContext.TuneInHistory
+                        .Where(e => e.ProfileId == profileId)
                         .OrderBy(e => e.PlayedAt)
                         .Take(count - MaxHistoryEntries + 1)
                         .ToListAsync();
@@ -73,15 +75,15 @@ public class ListeningHistoryService : IListeningHistoryService
         }
     }
 
-    public async Task SaveRadioParadiseAsync(string title, string? imageUrl, string actionUrl, string? quality)
+    public async Task SaveRadioParadiseAsync(string profileId, string title, string? imageUrl, string actionUrl, string? quality)
     {
-        if (string.IsNullOrEmpty(actionUrl)) return;
+        if (string.IsNullOrEmpty(profileId) || string.IsNullOrEmpty(actionUrl)) return;
 
         try
         {
-            // Check if entry already exists (upsert by ActionUrl)
+            // Check if entry already exists for this profile (upsert by ProfileId + ActionUrl)
             var existing = await _dbContext.RadioParadiseHistory
-                .FirstOrDefaultAsync(e => e.ActionUrl == actionUrl);
+                .FirstOrDefaultAsync(e => e.ProfileId == profileId && e.ActionUrl == actionUrl);
 
             if (existing != null)
             {
@@ -96,6 +98,7 @@ public class ListeningHistoryService : IListeningHistoryService
                 // Add new entry
                 _dbContext.RadioParadiseHistory.Add(new RadioParadiseHistoryEntry
                 {
+                    ProfileId = profileId,
                     Title = title,
                     ImageUrl = imageUrl,
                     ActionUrl = actionUrl,
@@ -103,11 +106,12 @@ public class ListeningHistoryService : IListeningHistoryService
                     PlayedAt = DateTime.UtcNow
                 });
 
-                // Enforce limit
-                var count = await _dbContext.RadioParadiseHistory.CountAsync();
+                // Enforce limit per profile
+                var count = await _dbContext.RadioParadiseHistory.CountAsync(e => e.ProfileId == profileId);
                 if (count >= MaxHistoryEntries)
                 {
                     var oldestEntries = await _dbContext.RadioParadiseHistory
+                        .Where(e => e.ProfileId == profileId)
                         .OrderBy(e => e.PlayedAt)
                         .Take(count - MaxHistoryEntries + 1)
                         .ToListAsync();
@@ -123,15 +127,15 @@ public class ListeningHistoryService : IListeningHistoryService
         }
     }
 
-    public async Task SaveQobuzAlbumAsync(string albumId, string albumName, string? artist, string? coverUrl)
+    public async Task SaveQobuzAlbumAsync(string profileId, string albumId, string albumName, string? artist, string? coverUrl)
     {
-        if (string.IsNullOrEmpty(albumId)) return;
+        if (string.IsNullOrEmpty(profileId) || string.IsNullOrEmpty(albumId)) return;
 
         try
         {
-            // Check if entry already exists (upsert by AlbumId)
+            // Check if entry already exists for this profile (upsert by ProfileId + AlbumId)
             var existing = await _dbContext.QobuzAlbumHistory
-                .FirstOrDefaultAsync(e => e.AlbumId == albumId);
+                .FirstOrDefaultAsync(e => e.ProfileId == profileId && e.AlbumId == albumId);
 
             if (existing != null)
             {
@@ -146,6 +150,7 @@ public class ListeningHistoryService : IListeningHistoryService
                 // Add new entry
                 _dbContext.QobuzAlbumHistory.Add(new QobuzAlbumHistoryEntry
                 {
+                    ProfileId = profileId,
                     AlbumId = albumId,
                     AlbumName = albumName,
                     Artist = artist,
@@ -153,11 +158,12 @@ public class ListeningHistoryService : IListeningHistoryService
                     PlayedAt = DateTime.UtcNow
                 });
 
-                // Enforce limit
-                var count = await _dbContext.QobuzAlbumHistory.CountAsync();
+                // Enforce limit per profile
+                var count = await _dbContext.QobuzAlbumHistory.CountAsync(e => e.ProfileId == profileId);
                 if (count >= MaxHistoryEntries)
                 {
                     var oldestEntries = await _dbContext.QobuzAlbumHistory
+                        .Where(e => e.ProfileId == profileId)
                         .OrderBy(e => e.PlayedAt)
                         .Take(count - MaxHistoryEntries + 1)
                         .ToListAsync();
@@ -173,16 +179,16 @@ public class ListeningHistoryService : IListeningHistoryService
         }
     }
 
-    public async Task SaveQobuzPlaylistAsync(string playlistId, string playlistName, string? coverUrl, List<SavePlaylistTrackRequest>? tracks)
+    public async Task SaveQobuzPlaylistAsync(string profileId, string playlistId, string playlistName, string? coverUrl, List<SavePlaylistTrackRequest>? tracks)
     {
-        if (string.IsNullOrEmpty(playlistId)) return;
+        if (string.IsNullOrEmpty(profileId) || string.IsNullOrEmpty(playlistId)) return;
 
         try
         {
-            // Check if entry already exists (upsert by PlaylistId)
+            // Check if entry already exists for this profile (upsert by ProfileId + PlaylistId)
             var existing = await _dbContext.QobuzPlaylistHistory
                 .Include(e => e.Tracks)
-                .FirstOrDefaultAsync(e => e.PlaylistId == playlistId);
+                .FirstOrDefaultAsync(e => e.ProfileId == profileId && e.PlaylistId == playlistId);
 
             if (existing != null)
             {
@@ -215,6 +221,7 @@ public class ListeningHistoryService : IListeningHistoryService
                 // Add new entry
                 var entry = new QobuzPlaylistHistoryEntry
                 {
+                    ProfileId = profileId,
                     PlaylistId = playlistId,
                     PlaylistName = playlistName,
                     CoverUrl = coverUrl,
@@ -238,12 +245,13 @@ public class ListeningHistoryService : IListeningHistoryService
 
                 _dbContext.QobuzPlaylistHistory.Add(entry);
 
-                // Enforce limit
-                var count = await _dbContext.QobuzPlaylistHistory.CountAsync();
+                // Enforce limit per profile
+                var count = await _dbContext.QobuzPlaylistHistory.CountAsync(e => e.ProfileId == profileId);
                 if (count >= MaxHistoryEntries)
                 {
                     var oldestEntries = await _dbContext.QobuzPlaylistHistory
                         .Include(e => e.Tracks)
+                        .Where(e => e.ProfileId == profileId)
                         .OrderBy(e => e.PlayedAt)
                         .Take(count - MaxHistoryEntries + 1)
                         .ToListAsync();
@@ -259,14 +267,18 @@ public class ListeningHistoryService : IListeningHistoryService
         }
     }
 
-    public async Task<ListeningHistoryResponse> GetAllHistoryAsync()
+    public async Task<ListeningHistoryResponse> GetAllHistoryAsync(string profileId)
     {
         var response = new ListeningHistoryResponse();
 
+        if (string.IsNullOrEmpty(profileId))
+            return response;
+
         try
         {
-            // Get TuneIn history (most recent first)
+            // Get TuneIn history for this profile (most recent first)
             var tuneInHistory = await _dbContext.TuneInHistory
+                .Where(e => e.ProfileId == profileId)
                 .OrderByDescending(e => e.PlayedAt)
                 .Take(MaxHistoryEntries)
                 .ToListAsync();
@@ -279,8 +291,9 @@ public class ListeningHistoryService : IListeningHistoryService
                 ActionUrl = e.ActionUrl
             }).ToList();
 
-            // Get Radio Paradise history
+            // Get Radio Paradise history for this profile
             var rpHistory = await _dbContext.RadioParadiseHistory
+                .Where(e => e.ProfileId == profileId)
                 .OrderByDescending(e => e.PlayedAt)
                 .Take(MaxHistoryEntries)
                 .ToListAsync();
@@ -294,8 +307,9 @@ public class ListeningHistoryService : IListeningHistoryService
                 Quality = e.Quality
             }).ToList();
 
-            // Get Qobuz album history
+            // Get Qobuz album history for this profile
             var albumHistory = await _dbContext.QobuzAlbumHistory
+                .Where(e => e.ProfileId == profileId)
                 .OrderByDescending(e => e.PlayedAt)
                 .Take(MaxHistoryEntries)
                 .ToListAsync();
@@ -309,8 +323,9 @@ public class ListeningHistoryService : IListeningHistoryService
                 CoverUrl = e.CoverUrl
             }).ToList();
 
-            // Get Qobuz playlist history (with tracks)
+            // Get Qobuz playlist history for this profile (with tracks)
             var playlistHistory = await _dbContext.QobuzPlaylistHistory
+                .Where(e => e.ProfileId == profileId)
                 .Include(e => e.Tracks.OrderBy(t => t.Position))
                 .OrderByDescending(e => e.PlayedAt)
                 .Take(MaxHistoryEntries)
@@ -333,7 +348,7 @@ public class ListeningHistoryService : IListeningHistoryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve listening history");
+            _logger.LogError(ex, "Failed to retrieve listening history for profile: {ProfileId}", profileId);
         }
 
         return response;

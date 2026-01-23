@@ -794,7 +794,16 @@
         }
 
         try {
-            const response = await fetch('/?handler=History');
+            // Get active profile ID for user-specific history
+            const profileId = await SettingsApi.getActiveProfileId();
+            if (!profileId) {
+                // No profile selected, show empty history
+                historyData = { tuneIn: [], radioParadise: [], qobuzAlbums: [], qobuzPlaylists: [] };
+                renderHistory();
+                return;
+            }
+
+            const response = await fetch(`/?handler=History&profileId=${encodeURIComponent(profileId)}`);
             if (!response.ok) {
                 console.error('Failed to fetch history:', response.status);
                 return;

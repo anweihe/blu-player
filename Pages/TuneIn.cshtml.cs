@@ -276,16 +276,21 @@ public class TuneInModel : PageModel
     }
 
     /// <summary>
-    /// Save a TuneIn station to listening history
+    /// Save a TuneIn station to listening history (per user profile)
     /// </summary>
     public async Task<IActionResult> OnPostSaveHistoryAsync([FromBody] SaveTuneInHistoryRequest request)
     {
+        if (string.IsNullOrEmpty(request.ProfileId))
+        {
+            return new JsonResult(new { success = false, error = "Fehlende ProfileId" });
+        }
+
         if (string.IsNullOrEmpty(request.ActionUrl))
         {
             return new JsonResult(new { success = false, error = "Fehlende ActionUrl" });
         }
 
-        await _historyService.SaveTuneInAsync(request.Title, request.ImageUrl, request.ActionUrl);
+        await _historyService.SaveTuneInAsync(request.ProfileId, request.Title, request.ImageUrl, request.ActionUrl);
 
         return new JsonResult(new { success = true });
     }

@@ -6,9 +6,10 @@ namespace BluesoundWeb.Models;
 public class TuneInHistoryEntry
 {
     public int Id { get; set; }
+    public string ProfileId { get; set; } = string.Empty;   // User profile ID
     public string Title { get; set; } = string.Empty;      // Station name
     public string? ImageUrl { get; set; }                   // Station logo
-    public string ActionUrl { get; set; } = string.Empty;   // Stream URL (unique identifier)
+    public string ActionUrl { get; set; } = string.Empty;   // Stream URL (unique per profile)
     public DateTime PlayedAt { get; set; }
 }
 
@@ -18,9 +19,10 @@ public class TuneInHistoryEntry
 public class RadioParadiseHistoryEntry
 {
     public int Id { get; set; }
+    public string ProfileId { get; set; } = string.Empty;   // User profile ID
     public string Title { get; set; } = string.Empty;      // Channel name (Main, Mellow, etc.)
     public string? ImageUrl { get; set; }
-    public string ActionUrl { get; set; } = string.Empty;   // Stream URL (unique identifier)
+    public string ActionUrl { get; set; } = string.Empty;   // Stream URL (unique per profile)
     public string? Quality { get; set; }                    // MQA, FLAC, etc.
     public DateTime PlayedAt { get; set; }
 }
@@ -31,7 +33,8 @@ public class RadioParadiseHistoryEntry
 public class QobuzAlbumHistoryEntry
 {
     public int Id { get; set; }
-    public string AlbumId { get; set; } = string.Empty;     // Qobuz Album ID (unique identifier)
+    public string ProfileId { get; set; } = string.Empty;   // User profile ID
+    public string AlbumId { get; set; } = string.Empty;     // Qobuz Album ID (unique per profile)
     public string AlbumName { get; set; } = string.Empty;
     public string? Artist { get; set; }
     public string? CoverUrl { get; set; }
@@ -44,7 +47,8 @@ public class QobuzAlbumHistoryEntry
 public class QobuzPlaylistHistoryEntry
 {
     public int Id { get; set; }
-    public string PlaylistId { get; set; } = string.Empty;  // Qobuz Playlist ID (unique identifier)
+    public string ProfileId { get; set; } = string.Empty;   // User profile ID
+    public string PlaylistId { get; set; } = string.Empty;  // Qobuz Playlist ID (unique per profile)
     public string PlaylistName { get; set; } = string.Empty;
     public string? CoverUrl { get; set; }
     public DateTime PlayedAt { get; set; }
@@ -125,6 +129,7 @@ public class QobuzPlaylistTrackDto
 /// </summary>
 public class SaveTuneInHistoryRequest
 {
+    public string ProfileId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public string ActionUrl { get; set; } = string.Empty;
@@ -132,6 +137,7 @@ public class SaveTuneInHistoryRequest
 
 public class SaveRadioParadiseHistoryRequest
 {
+    public string ProfileId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public string ActionUrl { get; set; } = string.Empty;
@@ -140,6 +146,7 @@ public class SaveRadioParadiseHistoryRequest
 
 public class SaveQobuzAlbumHistoryRequest
 {
+    public string ProfileId { get; set; } = string.Empty;
     public string AlbumId { get; set; } = string.Empty;
     public string AlbumName { get; set; } = string.Empty;
     public string? Artist { get; set; }
@@ -148,6 +155,7 @@ public class SaveQobuzAlbumHistoryRequest
 
 public class SaveQobuzPlaylistHistoryRequest
 {
+    public string ProfileId { get; set; } = string.Empty;
     public string PlaylistId { get; set; } = string.Empty;
     public string PlaylistName { get; set; } = string.Empty;
     public string? CoverUrl { get; set; }
