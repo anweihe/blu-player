@@ -1180,7 +1180,6 @@
 
         // Loading state
         btn.disabled = true;
-        btn.querySelector('span').textContent = 'Laden...';
         container.style.display = 'block';
         content.innerHTML = '<div class="album-info-loading"><div class="loading-spinner-small"></div></div>';
 
@@ -1215,7 +1214,6 @@
         }
 
         btn.disabled = false;
-        btn.querySelector('span').textContent = 'Album-Info';
     }
 
     function closeAlbumInfo() {
