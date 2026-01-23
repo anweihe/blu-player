@@ -1168,27 +1168,26 @@
     .btn-play-all {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 12px 24px;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        padding: 0;
         background: var(--accent-qobuz);
         border: none;
-        border-radius: 50px;
+        border-radius: 50%;
         color: white;
-        font-size: 0.9rem;
-        font-weight: 600;
         cursor: pointer;
         transition: all var(--transition);
-        width: fit-content;
     }
 
     .btn-play-all:hover {
         background: #1ed760;
-        transform: scale(1.02);
+        transform: scale(1.08);
     }
 
     .btn-play-all svg {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
     }
 
     /* Detail Actions Container */
@@ -1203,14 +1202,14 @@
     .btn-album-info {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 12px 24px;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        padding: 0;
         background: var(--bg-card);
         border: 1px solid var(--border-accent);
-        border-radius: 50px;
+        border-radius: 50%;
         color: var(--text-primary);
-        font-size: 0.9rem;
-        font-weight: 600;
         cursor: pointer;
         transition: all var(--transition);
     }
@@ -1218,16 +1217,18 @@
     .btn-album-info:hover {
         background: var(--bg-card-hover);
         border-color: var(--accent-blue);
+        transform: scale(1.08);
     }
 
     .btn-album-info:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+        transform: none;
     }
 
     .btn-album-info svg {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
     }
 
     /* Album Info Container */
@@ -1998,5 +1999,649 @@
 
     .artist-name {
         font-size: 0.85rem;
+    }
+}
+
+/* ========================================
+   Artist Detail Page
+   ======================================== */
+
+.artist-detail-section {
+    animation: fadeIn 0.3s ease;
+}
+
+.artist-detail-header {
+    margin-bottom: 20px;
+}
+
+/* Artist Hero Section */
+.artist-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 30px 20px;
+    margin-bottom: 24px;
+    background: linear-gradient(180deg,
+        rgba(29, 185, 84, 0.08) 0%,
+        transparent 100%);
+    border-radius: var(--radius-lg);
+}
+
+.artist-portrait {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--bg-secondary);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.artist-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.artist-portrait-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.artist-portrait-placeholder svg {
+    width: 64px;
+    height: 64px;
+    opacity: 0.5;
+}
+
+.artist-hero-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.artist-category {
+    padding: 4px 12px;
+    background: rgba(29, 185, 84, 0.15);
+    color: var(--accent-qobuz);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.artist-hero-info h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+}
+
+/* Artist Biography */
+.artist-biography {
+    padding: 20px;
+    margin-bottom: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+}
+
+.biography-content {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    max-height: 100px;
+    overflow: hidden;
+    position: relative;
+    white-space: pre-wrap;
+    transition: max-height 0.3s ease;
+}
+
+.biography-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(transparent, var(--bg-card));
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.biography-content.expanded {
+    max-height: none;
+}
+
+.biography-content.expanded::after {
+    opacity: 0;
+}
+
+.btn-expand-bio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--border-accent);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-expand-bio:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+.btn-expand-bio svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+}
+
+/* Artist Sections */
+.artist-section {
+    margin-bottom: 32px;
+}
+
+.artist-section h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    color: var(--text-primary);
+}
+
+/* Artist Top Tracks */
+.artist-top-tracks {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.btn-expand-tracks {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid var(--border-accent);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    width: 100%;
+}
+
+.btn-expand-tracks:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+.btn-expand-tracks svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+}
+
+.artist-track-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.artist-track-item:hover {
+    background: var(--bg-card-hover);
+}
+
+.artist-track-item.unavailable {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.artist-track-item:hover .track-number {
+    display: none;
+}
+
+.artist-track-item:hover .track-play-btn {
+    display: flex;
+}
+
+/* Discography Sub-Navigation */
+.discography-sub-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.discography-sub-nav::-webkit-scrollbar {
+    display: none;
+}
+
+/* Discography Grid */
+.discography-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+/* Similar Artists (horizontal scroll) */
+.similar-artists-scroll {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-accent) transparent;
+}
+
+.similar-artists-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.similar-artists-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.similar-artists-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-accent);
+    border-radius: 3px;
+}
+
+.similar-artist-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 120px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.similar-artist-card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+}
+
+.similar-artist-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--bg-secondary);
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.similar-artist-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.similar-artist-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.similar-artist-placeholder svg {
+    width: 32px;
+    height: 32px;
+    opacity: 0.5;
+}
+
+.similar-artist-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+/* Appears On Grid */
+.appears-on-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+/* Mobile Artist Page */
+@media (max-width: 480px) {
+    .artist-hero {
+        padding: 20px 16px;
+    }
+
+    .artist-portrait {
+        width: 140px;
+        height: 140px;
+    }
+
+    .artist-hero-info h1 {
+        font-size: 1.5rem;
+    }
+
+    .artist-biography {
+        padding: 16px;
+    }
+
+    .biography-content {
+        font-size: 0.85rem;
+    }
+
+    .discography-grid,
+    .appears-on-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .similar-artist-card {
+        width: 100px;
+        padding: 10px;
+    }
+
+    .similar-artist-avatar {
+        width: 64px;
+        height: 64px;
+    }
+
+    .similar-artist-name {
+        font-size: 0.75rem;
+    }
+
+    .artist-track-item {
+        padding: 10px 12px;
+    }
+
+    .artist-track-item .track-cover {
+        width: 40px;
+        height: 40px;
+    }
+
+    .artist-track-item .track-quality {
+        display: none;
+    }
+}
+
+/* ========================================
+   Artist Discography Full Page
+   ======================================== */
+
+.artist-discography-page {
+    animation: fadeIn 0.3s ease;
+}
+
+.discography-page-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.discography-page-title-area {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.discography-page-title-area h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.discography-artist-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* Filter & Sort Controls */
+.discography-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.discography-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+}
+
+.discography-filters::-webkit-scrollbar {
+    display: none;
+}
+
+.discography-filter-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border-accent);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.discography-filter-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.discography-filter-btn.active {
+    background: var(--accent-qobuz);
+    border-color: var(--accent-qobuz);
+    color: white;
+}
+
+.discography-sort {
+    flex-shrink: 0;
+}
+
+.discography-sort select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-accent);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.discography-sort select:hover {
+    border-color: var(--accent-qobuz);
+}
+
+.discography-sort select:focus {
+    outline: none;
+    border-color: var(--accent-qobuz);
+    box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.1);
+}
+
+/* Discography Page Grid */
+.discography-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
+}
+
+/* Discography Loading Indicator */
+.discography-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* "Mehr" Card for Artist Page Grid */
+.discography-more-card {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.discography-more-card:hover {
+    border-color: var(--border-accent);
+    background: var(--bg-card-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+}
+
+.more-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.more-card-content span {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.more-card-content svg {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-qobuz);
+}
+
+/* "Alles" Button next to Discography Tabs */
+.discography-all-btn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--border-accent);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    flex-shrink: 0;
+}
+
+.discography-all-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: var(--accent-qobuz);
+}
+
+.discography-all-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Hi-Res Badge on Album Cards */
+.album-hires-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 6px;
+    background: rgba(29, 185, 84, 0.9);
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: white;
+    z-index: 2;
+}
+
+/* Scroll Sentinel */
+#discography-scroll-sentinel {
+    height: 1px;
+    width: 100%;
+}
+
+/* Mobile Discography Page */
+@media (max-width: 480px) {
+    .discography-page-header {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .discography-page-title-area h1 {
+        font-size: 1.25rem;
+    }
+
+    .discography-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .discography-sort {
+        width: 100%;
+    }
+
+    .discography-sort select {
+        width: 100%;
+    }
+
+    .discography-page-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
     }
 }

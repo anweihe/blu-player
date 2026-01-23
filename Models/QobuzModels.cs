@@ -1,6 +1,61 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace BluesoundWeb.Models;
+
+/// <summary>
+/// JSON converter that handles artist name as either a string or an object with "display" property
+/// </summary>
+public class FlexibleArtistNameConverter : JsonConverter<string?>
+{
+    public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            return reader.GetString();
+        }
+        else if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            // Parse the object and extract the "display" property
+            string? displayName = null;
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                    break;
+
+                if (reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    var propertyName = reader.GetString();
+                    reader.Read();
+                    if (propertyName == "display" && reader.TokenType == JsonTokenType.String)
+                    {
+                        displayName = reader.GetString();
+                    }
+                    else if (reader.TokenType == JsonTokenType.StartObject || reader.TokenType == JsonTokenType.StartArray)
+                    {
+                        // Skip nested objects/arrays
+                        reader.Skip();
+                    }
+                }
+            }
+            return displayName;
+        }
+        else if (reader.TokenType == JsonTokenType.Null)
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
+    {
+        if (value == null)
+            writer.WriteNullValue();
+        else
+            writer.WriteStringValue(value);
+    }
+}
 
 /// <summary>
 /// Qobuz user profile
@@ -215,6 +270,7 @@ public class QobuzArtist
     public long Id { get; set; }
 
     [JsonPropertyName("name")]
+    [JsonConverter(typeof(FlexibleArtistNameConverter))]
     public string? Name { get; set; }
 
     [JsonPropertyName("image")]
@@ -232,8 +288,23 @@ public class QobuzImage
     [JsonPropertyName("thumbnail")]
     public string? Thumbnail { get; set; }
 
+    [JsonPropertyName("medium")]
+    public string? Medium { get; set; }
+
     [JsonPropertyName("large")]
     public string? Large { get; set; }
+
+    [JsonPropertyName("extralarge")]
+    public string? ExtraLarge { get; set; }
+
+    [JsonPropertyName("mega")]
+    public string? Mega { get; set; }
+
+    /// <summary>
+    /// Get the best available image URL
+    /// </summary>
+    public string? GetBestUrl() =>
+        Large ?? ExtraLarge ?? Mega ?? Medium ?? Small ?? Thumbnail;
 }
 
 /// <summary>
@@ -270,6 +341,15 @@ public class QobuzAlbum
 
     [JsonPropertyName("maximum_sampling_rate")]
     public double? MaxSamplingRate { get; set; }
+
+    [JsonPropertyName("release_type")]
+    public string? ReleaseType { get; set; }
+
+    /// <summary>
+    /// Hi-Res streamable flag (set manually from nested rights.hires_streamable)
+    /// </summary>
+    [JsonIgnore]
+    public bool IsHiRes { get; set; }
 
     /// <summary>
     /// Get the best available cover image URL
@@ -449,7 +529,7 @@ public class QobuzAlbumWithTracks : QobuzAlbum
     public string? Description { get; set; }
 
     [JsonPropertyName("hires")]
-    public bool IsHiRes { get; set; }
+    public new bool IsHiRes { get; set; }
 
     [JsonPropertyName("hires_streamable")]
     public bool IsHiResStreamable { get; set; }
@@ -605,4 +685,230 @@ public class QobuzFavoriteArtistsResponse
 {
     [JsonPropertyName("artists")]
     public QobuzArtistsContainer? Artists { get; set; }
+}
+
+// ==================== Artist Page Models ====================
+
+/// <summary>
+/// Basic artist info from artist/get endpoint (for image)
+/// </summary>
+public class QobuzArtistBasicInfo
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("picture")]
+    public string? Picture { get; set; }
+
+    [JsonPropertyName("image")]
+    public QobuzImage? Image { get; set; }
+}
+
+/// <summary>
+/// Response from artist/page endpoint
+/// </summary>
+public class QobuzArtistPageResponse
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public QobuzArtistName? Name { get; set; }
+
+    [JsonPropertyName("artist_category")]
+    public string? ArtistCategory { get; set; }
+
+    [JsonPropertyName("biography")]
+    public QobuzArtistBiography? Biography { get; set; }
+
+    [JsonPropertyName("images")]
+    public QobuzArtistImages? Images { get; set; }
+
+    // Alternative image formats (same as favorite artists)
+    [JsonPropertyName("picture")]
+    public string? Picture { get; set; }
+
+    [JsonPropertyName("image")]
+    public QobuzImage? Image { get; set; }
+
+    [JsonPropertyName("similar_artists")]
+    public QobuzSimilarArtistsContainer? SimilarArtists { get; set; }
+
+    [JsonPropertyName("top_tracks")]
+    public List<QobuzTrack>? TopTracks { get; set; }
+
+    [JsonPropertyName("last_release")]
+    public QobuzAlbum? LastRelease { get; set; }
+
+    [JsonPropertyName("releases")]
+    public List<QobuzReleaseCategory>? Releases { get; set; }
+
+    [JsonPropertyName("tracks_appears_on")]
+    public List<QobuzTrack>? TracksAppearsOn { get; set; }
+
+    /// <summary>
+    /// Get the best available image URL from all possible sources
+    /// </summary>
+    public string? GetBestImageUrl()
+    {
+        // Try direct picture URL first
+        if (!string.IsNullOrEmpty(Picture)) return Picture;
+
+        // Try Image object (like favorite artists)
+        if (Image != null)
+        {
+            return Image.GetBestUrl();
+        }
+
+        // Try Images object (portrait hash)
+        return Images?.GetBestImageUrl(600);
+    }
+}
+
+/// <summary>
+/// Artist name with display format
+/// </summary>
+public class QobuzArtistName
+{
+    [JsonPropertyName("display")]
+    public string? Display { get; set; }
+}
+
+/// <summary>
+/// Artist biography content
+/// </summary>
+public class QobuzArtistBiography
+{
+    [JsonPropertyName("content")]
+    public string? Content { get; set; }
+
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    [JsonPropertyName("source")]
+    public string? Source { get; set; }
+}
+
+/// <summary>
+/// Artist images including portrait - can be hash-based or direct URLs
+/// </summary>
+public class QobuzArtistImages
+{
+    [JsonPropertyName("portrait")]
+    public QobuzImageHash? Portrait { get; set; }
+
+    // Some responses include direct URL fields
+    [JsonPropertyName("small")]
+    public string? Small { get; set; }
+
+    [JsonPropertyName("medium")]
+    public string? Medium { get; set; }
+
+    [JsonPropertyName("large")]
+    public string? Large { get; set; }
+
+    /// <summary>
+    /// Get the best available image URL
+    /// </summary>
+    public string? GetBestImageUrl(int preferredSize = 600)
+    {
+        // First try direct URLs
+        if (!string.IsNullOrEmpty(Large)) return Large;
+        if (!string.IsNullOrEmpty(Medium)) return Medium;
+        if (!string.IsNullOrEmpty(Small)) return Small;
+
+        // Then try hash-based construction
+        return Portrait?.GetImageUrl(preferredSize);
+    }
+}
+
+/// <summary>
+/// Image with hash and format for building URLs
+/// </summary>
+public class QobuzImageHash
+{
+    [JsonPropertyName("hash")]
+    public string? Hash { get; set; }
+
+    [JsonPropertyName("format")]
+    public string? Format { get; set; }
+
+    // Direct URL if available
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    /// <summary>
+    /// Build the full image URL from the hash or return direct URL
+    /// </summary>
+    public string? GetImageUrl(int size = 600)
+    {
+        // Return direct URL if available
+        if (!string.IsNullOrEmpty(Url)) return Url;
+
+        if (string.IsNullOrEmpty(Hash)) return null;
+        var format = Format ?? "jpg";
+        // Qobuz artist image URL pattern
+        return $"https://static.qobuz.com/images/covers/{Hash}_{size}.{format}";
+    }
+}
+
+/// <summary>
+/// Container for similar artists
+/// </summary>
+public class QobuzSimilarArtistsContainer
+{
+    [JsonPropertyName("items")]
+    public List<QobuzSimilarArtist>? Items { get; set; }
+}
+
+/// <summary>
+/// Similar artist info
+/// </summary>
+public class QobuzSimilarArtist
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    // Name can be a string OR an object with "display" property depending on endpoint
+    [JsonPropertyName("name")]
+    [JsonConverter(typeof(FlexibleArtistNameConverter))]
+    public string? Name { get; set; }
+
+    // Direct image URL
+    [JsonPropertyName("picture")]
+    public string? Picture { get; set; }
+
+    // Image object with multiple sizes
+    [JsonPropertyName("image")]
+    public QobuzImage? Image { get; set; }
+
+    /// <summary>
+    /// Get display name
+    /// </summary>
+    public string? DisplayName => Name;
+
+    /// <summary>
+    /// Get portrait image URL - tries multiple sources
+    /// </summary>
+    public string? ImageUrl =>
+        Picture ??
+        Image?.GetBestUrl();
+}
+
+/// <summary>
+/// Category of releases (albums, singles, live, etc.)
+/// </summary>
+public class QobuzReleaseCategory
+{
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("has_more")]
+    public bool HasMore { get; set; }
+
+    [JsonPropertyName("items")]
+    public List<QobuzAlbum>? Items { get; set; }
 }

@@ -642,17 +642,15 @@
                         <span id="detail-duration"></span>
                     </div>
                     <div class="detail-actions">
-                        <button type="button" class="btn-play-all" onclick="playAll()">
+                        <button type="button" class="btn-play-all" onclick="playAll()" title="Alle abspielen">
                             <svg viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M8 5v14l11-7z"/>
                             </svg>
-                            <span>Alle abspielen</span>
                         </button>
-                        <button type="button" class="btn-album-info" id="btn-album-info" onclick="fetchAlbumInfo()">
+                        <button type="button" class="btn-album-info" id="btn-album-info" onclick="fetchAlbumInfo()" title="Album-Info">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
                             </svg>
-                            <span>Album-Info</span>
                         </button>
                     </div>
                 </div>
@@ -677,6 +675,116 @@
             </div>
         </div>
 
+        <!-- Artist Detail Section -->
+        <div id="artist-detail-section" class="artist-detail-section" style="display: none;">
+            <!-- Header with Back Button -->
+            <div class="artist-detail-header">
+                <button type="button" class="btn-back" onclick="backFromArtist()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Zurück</span>
+                </button>
+            </div>
+
+            <!-- Hero: Portrait + Name -->
+            <div class="artist-hero">
+                <div class="artist-portrait">
+                    <img id="artist-portrait-img" src="" alt="Artist Portrait">
+                    <div class="artist-portrait-placeholder" id="artist-portrait-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="artist-hero-info">
+                    <span class="artist-category" id="artist-category"></span>
+                    <h1 id="artist-name-display"></h1>
+                </div>
+            </div>
+
+            <!-- Biography (expandable) -->
+            <div class="artist-biography" id="artist-biography" style="display: none;">
+                <div class="biography-content" id="biography-content"></div>
+                <button type="button" class="btn-expand-bio" id="btn-expand-bio" onclick="toggleBiography()">
+                    <span>Mehr anzeigen</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Top Tracks -->
+            <div class="artist-section" id="artist-top-tracks-section" style="display: none;">
+                <h2>Beliebte Titel</h2>
+                <div class="artist-top-tracks" id="artist-top-tracks"></div>
+            </div>
+
+            <!-- Discography with Tabs -->
+            <div class="artist-section" id="artist-discography-section" style="display: none;">
+                <h2>Diskografie</h2>
+                <div class="discography-sub-nav" id="discography-sub-nav"></div>
+                <div class="discography-grid" id="discography-grid"></div>
+            </div>
+
+            <!-- Similar Artists (horizontal scroll) -->
+            <div class="artist-section" id="similar-artists-section" style="display: none;">
+                <h2>Ähnliche Künstler</h2>
+                <div class="similar-artists-scroll" id="similar-artists-scroll"></div>
+            </div>
+
+            <!-- Appears On -->
+            <div class="artist-section" id="appears-on-section" style="display: none;">
+                <h2>Tritt auf in</h2>
+                <div class="appears-on-grid" id="appears-on-grid"></div>
+            </div>
+        </div>
+
+        <!-- Artist Discography Full Page -->
+        <div id="artist-discography-page" class="artist-discography-page" style="display: none;">
+            <!-- Header with Back Button -->
+            <div class="discography-page-header">
+                <button type="button" class="btn-back" onclick="backFromDiscography()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Zurück</span>
+                </button>
+                <div class="discography-page-title-area">
+                    <h1 id="discography-page-title">Diskografie</h1>
+                    <span id="discography-artist-name" class="discography-artist-subtitle"></span>
+                </div>
+            </div>
+
+            <!-- Filter & Sort Controls -->
+            <div class="discography-controls">
+                <div class="discography-filters" id="discography-filters">
+                    <!-- Filter buttons rendered by JavaScript -->
+                </div>
+                <div class="discography-sort">
+                    <select id="discography-sort-select" onchange="changeDiscographySort(this.value)">
+                        <option value="release_date">Erscheinungsdatum</option>
+                        <option value="relevant">Beliebtheit</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Album Grid -->
+            <div class="discography-page-grid" id="discography-page-grid">
+                <!-- Albums rendered by JavaScript -->
+            </div>
+
+            <!-- Loading Indicator for Endless Scroll -->
+            <div class="discography-loading" id="discography-loading" style="display: none;">
+                <div class="loading-spinner-small"></div>
+                <span>Lade weitere Alben...</span>
+            </div>
+
+            <!-- Sentinel Element for Intersection Observer -->
+            <div id="discography-scroll-sentinel"></div>
+        </div>
+
     </main>
 
 </div>
@@ -694,11 +802,13 @@
 </div>
 
 <!-- user-profiles.js and hamburger-menu.js are loaded in _Layout.cshtml -->
-<!-- Qobuz modules (order matters: auth, search, ratings, browse, playback, lightbox, then core) -->
+<!-- Qobuz modules (order matters: auth, search, ratings, browse, artist, playback, lightbox, then core) -->
 <script src="~/js/qobuz/qobuz-auth.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-search.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-ratings.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-browse.js" asp-append-version="true"></script>
+<script src="~/js/qobuz/qobuz-artist.js" asp-append-version="true"></script>
+<script src="~/js/qobuz/qobuz-discography.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-playback.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-lightbox.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-core.js" asp-append-version="true"></script>

@@ -98,6 +98,22 @@ public interface IQobuzApiService
     Task<List<QobuzFavoriteArtist>> GetFavoriteArtistsAsync(string authToken, int limit = 100);
 
     /// <summary>
+    /// Get artist page with biography, top tracks, discography, and similar artists
+    /// </summary>
+    Task<QobuzArtistPageResponse?> GetArtistPageAsync(long artistId, string? authToken = null);
+
+    /// <summary>
+    /// Get artist releases list with pagination and filtering
+    /// </summary>
+    Task<(List<QobuzAlbum> Albums, bool HasMore)> GetArtistReleasesListAsync(
+        long artistId,
+        string? releaseType = null,
+        string sort = "release_date",
+        int offset = 0,
+        int limit = 20,
+        string? authToken = null);
+
+    /// <summary>
     /// Check if app credentials are available
     /// </summary>
     bool HasAppCredentials { get; }
@@ -1483,6 +1499,285 @@ public class QobuzApiService : IQobuzApiService
         }
 
         return artists;
+    }
+
+    /// <summary>
+    /// Get artist page with biography, top tracks, discography, and similar artists
+    /// </summary>
+    public async Task<QobuzArtistPageResponse?> GetArtistPageAsync(long artistId, string? authToken = null)
+    {
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get artist page: app credentials not available");
+                return null;
+            }
+
+            var url = $"{QobuzApiBase}/artist/page" +
+                      $"?artist_id={artistId}" +
+                      $"&sort=release_date" +
+                      $"&app_id={credentials.AppId}" +
+                      (string.IsNullOrEmpty(authToken) ? "" : $"&user_auth_token={authToken}");
+
+            _logger.LogDebug("Fetching artist page for artist {ArtistId}", artistId);
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get artist page: {Status}", response.StatusCode);
+                return null;
+            }
+
+            var artistPage = JsonSerializer.Deserialize<QobuzArtistPageResponse>(responseContent);
+            _logger.LogInformation("Retrieved artist page for {ArtistId}: {ArtistName}",
+                artistId, artistPage?.Name?.Display);
+
+            if (artistPage != null)
+            {
+                // If image is missing, fetch basic artist info to get the image
+                if (string.IsNullOrEmpty(artistPage.Picture) && artistPage.Image == null)
+                {
+                    var basicInfo = await GetArtistBasicInfoAsync(artistId);
+                    if (basicInfo != null)
+                    {
+                        artistPage.Picture = basicInfo.Picture;
+                        artistPage.Image = basicInfo.Image;
+                    }
+                }
+
+                // Always fetch similar artists from dedicated endpoint (artist/page often lacks images)
+                var similarArtists = await GetSimilarArtistsAsync(artistId, 12);
+                if (similarArtists != null && similarArtists.Count > 0)
+                {
+                    artistPage.SimilarArtists = new QobuzSimilarArtistsContainer { Items = similarArtists };
+                }
+            }
+
+            return artistPage;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get artist page for {ArtistId}", artistId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Get basic artist info (for image)
+    /// </summary>
+    private async Task<QobuzArtistBasicInfo?> GetArtistBasicInfoAsync(long artistId)
+    {
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null) return null;
+
+            var url = $"{QobuzApiBase}/artist/get?artist_id={artistId}&app_id={credentials.AppId}";
+
+            var response = await _httpClient.GetAsync(url);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<QobuzArtistBasicInfo>(content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get basic artist info for {ArtistId}", artistId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Get similar artists for an artist
+    /// </summary>
+    private async Task<List<QobuzSimilarArtist>?> GetSimilarArtistsAsync(long artistId, int limit = 12)
+    {
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null) return null;
+
+            var url = $"{QobuzApiBase}/artist/getSimilarArtists" +
+                      $"?artist_id={artistId}" +
+                      $"&limit={limit}" +
+                      $"&app_id={credentials.AppId}";
+
+            var response = await _httpClient.GetAsync(url);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var content = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(content);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("artists", out var artistsElement) &&
+                artistsElement.TryGetProperty("items", out var itemsElement))
+            {
+                var artists = JsonSerializer.Deserialize<List<QobuzSimilarArtist>>(itemsElement.GetRawText());
+                _logger.LogInformation("Retrieved {Count} similar artists for {ArtistId}", artists?.Count ?? 0, artistId);
+                return artists;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get similar artists for {ArtistId}", artistId);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Get artist releases list with pagination and filtering
+    /// </summary>
+    public async Task<(List<QobuzAlbum> Albums, bool HasMore)> GetArtistReleasesListAsync(
+        long artistId,
+        string? releaseType = null,
+        string sort = "release_date",
+        int offset = 0,
+        int limit = 20,
+        string? authToken = null)
+    {
+        var albums = new List<QobuzAlbum>();
+        var hasMore = false;
+
+        try
+        {
+            var credentials = await ExtractAppCredentialsAsync();
+            if (credentials == null)
+            {
+                _logger.LogError("Cannot get artist releases: app credentials not available");
+                return (albums, hasMore);
+            }
+
+            var url = $"{QobuzApiBase}/artist/getReleasesList" +
+                      $"?artist_id={artistId}" +
+                      $"&sort={sort}" +
+                      $"&offset={offset}" +
+                      $"&limit={limit}" +
+                      $"&track_size=15" +
+                      $"&app_id={credentials.AppId}";
+
+            if (!string.IsNullOrEmpty(releaseType))
+                url += $"&release_type={releaseType}";
+            if (!string.IsNullOrEmpty(authToken))
+                url += $"&user_auth_token={authToken}";
+
+            _logger.LogDebug("Fetching artist releases for artist {ArtistId} (type={Type}, sort={Sort}, offset={Offset})",
+                artistId, releaseType ?? "all", sort, offset);
+
+            var response = await _httpClient.GetAsync(url);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get artist releases: {Status}", response.StatusCode);
+                return (albums, hasMore);
+            }
+
+            // Parse JSON response: { has_more: bool, items: [...] }
+            using var doc = JsonDocument.Parse(responseContent);
+            var root = doc.RootElement;
+
+            hasMore = root.TryGetProperty("has_more", out var hasMoreElement) && hasMoreElement.GetBoolean();
+
+            if (root.TryGetProperty("items", out var items))
+            {
+                foreach (var item in items.EnumerateArray())
+                {
+                    try
+                    {
+                        var album = new QobuzAlbum
+                        {
+                            // ID can be string in this endpoint
+                            Id = item.TryGetProperty("id", out var id)
+                                ? (id.ValueKind == JsonValueKind.String ? id.GetString() ?? "" : id.GetRawText())
+                                : "",
+                            Title = item.TryGetProperty("title", out var title) ? title.GetString() ?? "" : ""
+                        };
+
+                        // Get artist info - nested structure: artist.name.display
+                        if (item.TryGetProperty("artist", out var artist))
+                        {
+                            album.Artist = new QobuzArtist
+                            {
+                                Id = artist.TryGetProperty("id", out var artistId2) ? artistId2.GetInt64() : 0
+                            };
+
+                            // Artist name can be nested in name.display
+                            if (artist.TryGetProperty("name", out var nameObj))
+                            {
+                                if (nameObj.ValueKind == JsonValueKind.Object && nameObj.TryGetProperty("display", out var displayName))
+                                {
+                                    album.Artist.Name = displayName.GetString() ?? "";
+                                }
+                                else if (nameObj.ValueKind == JsonValueKind.String)
+                                {
+                                    album.Artist.Name = nameObj.GetString() ?? "";
+                                }
+                            }
+                        }
+
+                        // Get cover image
+                        if (item.TryGetProperty("image", out var image))
+                        {
+                            album.Image = new QobuzImage
+                            {
+                                Small = image.TryGetProperty("small", out var small) ? small.GetString() : null,
+                                Thumbnail = image.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null,
+                                Large = image.TryGetProperty("large", out var large) ? large.GetString() : null
+                            };
+                        }
+
+                        // Get release date from dates.original (ISO string)
+                        if (item.TryGetProperty("dates", out var dates) && dates.TryGetProperty("original", out var originalDate))
+                        {
+                            var dateStr = originalDate.GetString();
+                            if (!string.IsNullOrEmpty(dateStr) && DateTime.TryParse(dateStr, out var parsedDate))
+                            {
+                                album.ReleasedAt = new DateTimeOffset(parsedDate).ToUnixTimeSeconds();
+                            }
+                        }
+
+                        // Get tracks count
+                        if (item.TryGetProperty("tracks_count", out var tracksCount))
+                        {
+                            album.TracksCount = tracksCount.GetInt32();
+                        }
+
+                        // Get Hi-Res info from rights.hires_streamable
+                        if (item.TryGetProperty("rights", out var rights) &&
+                            rights.TryGetProperty("hires_streamable", out var hiresStreamable))
+                        {
+                            album.IsHiRes = hiresStreamable.GetBoolean();
+                        }
+
+                        // Get release type
+                        if (item.TryGetProperty("release_type", out var releaseTypeElement))
+                        {
+                            album.ReleaseType = releaseTypeElement.GetString();
+                        }
+
+                        albums.Add(album);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse album item in artist releases");
+                    }
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} releases for artist {ArtistId} (offset: {Offset}, hasMore: {HasMore})",
+                albums.Count, artistId, offset, hasMore);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get artist releases for {ArtistId}", artistId);
+        }
+
+        return (albums, hasMore);
     }
 
     private static string ComputeMd5Hash(string input)

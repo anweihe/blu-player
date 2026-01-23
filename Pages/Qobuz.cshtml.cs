@@ -515,6 +515,116 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
+    /// Get artist page with biography, top tracks, discography, and similar artists
+    /// </summary>
+    public async Task<IActionResult> OnGetArtistPageAsync(long artistId, string? authToken = null)
+    {
+        _logger.LogInformation("Fetching artist page for artist {ArtistId}", artistId);
+
+        var artistPage = await _qobuzService.GetArtistPageAsync(artistId, authToken);
+
+        if (artistPage == null)
+        {
+            return new JsonResult(new { success = false, error = "Künstler nicht gefunden" });
+        }
+
+        return new JsonResult(new
+        {
+            success = true,
+            artist = new
+            {
+                id = artistPage.Id,
+                name = artistPage.Name?.Display,
+                category = artistPage.ArtistCategory,
+                biography = artistPage.Biography?.Content,
+                biographySource = artistPage.Biography?.Source,
+                portraitUrl = artistPage.GetBestImageUrl()
+            },
+            topTracks = artistPage.TopTracks?.Take(10).Select(t => new
+            {
+                id = t.Id,
+                title = t.Title,
+                duration = t.Duration,
+                formattedDuration = t.FormattedDuration,
+                artistName = t.Performer?.Name,
+                albumTitle = t.Album?.Title,
+                albumId = t.Album?.Id,
+                coverUrl = t.Album?.CoverUrl,
+                isHiRes = t.IsHiRes,
+                isStreamable = t.IsStreamable
+            }),
+            releases = artistPage.Releases?
+                .Where(r => r.Type != "download" && r.Type != "next")
+                .Select(r => new
+                {
+                    type = r.Type,
+                    hasMore = r.HasMore,
+                    items = r.Items?.Take(20).Select(a => new
+                    {
+                        id = a.Id,
+                        title = a.Title,
+                        artistName = a.Artist?.Name,
+                        coverUrl = a.CoverUrl,
+                        releasedAt = a.ReleasedAt,
+                        tracksCount = a.TracksCount,
+                        typeLabel = a.TypeLabel
+                    })
+                }),
+            similarArtists = artistPage.SimilarArtists?.Items?.Take(12).Select(a => new
+            {
+                id = a.Id,
+                name = a.DisplayName,
+                imageUrl = a.ImageUrl
+            }),
+            appearsOn = artistPage.TracksAppearsOn?.Take(20).Select(t => new
+            {
+                id = t.Id,
+                title = t.Title,
+                albumTitle = t.Album?.Title,
+                albumId = t.Album?.Id,
+                coverUrl = t.Album?.CoverUrl,
+                artistName = t.Performer?.Name
+            })
+        });
+    }
+
+    /// <summary>
+    /// Get artist discography with pagination and filtering
+    /// </summary>
+    public async Task<IActionResult> OnGetArtistDiscographyAsync(
+        long artistId,
+        string? releaseType = null,
+        string sort = "release_date",
+        int offset = 0,
+        int limit = 20,
+        string? authToken = null)
+    {
+        _logger.LogInformation("Fetching artist discography for artist {ArtistId} (type={Type}, sort={Sort}, offset={Offset})",
+            artistId, releaseType ?? "all", sort, offset);
+
+        var (albums, hasMore) = await _qobuzService.GetArtistReleasesListAsync(
+            artistId, releaseType, sort, offset, limit, authToken);
+
+        return new JsonResult(new
+        {
+            success = true,
+            hasMore,
+            offset,
+            albums = albums.Select(a => new
+            {
+                id = a.Id,
+                title = a.Title,
+                coverUrl = a.CoverUrl,
+                releasedAt = a.ReleasedAt,
+                tracksCount = a.TracksCount,
+                isHiRes = a.IsHiRes,
+                artistName = a.Artist?.Name,
+                releaseType = a.ReleaseType
+            })
+        });
+    }
+
+    /// <summary>
     /// Get album with tracks
     /// </summary>
     public async Task<IActionResult> OnGetAlbumTracksAsync(string albumId, string authToken)

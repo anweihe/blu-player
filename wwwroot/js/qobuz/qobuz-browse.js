@@ -837,7 +837,7 @@
                     if (emptyState) emptyState.style.display = 'none';
                     const escape = QobuzApp.core.escapeHtml;
                     grid.innerHTML = data.artists.map(artist => `
-                        <div class="artist-card" onclick="searchArtist('${escape(artist.name)}')">
+                        <div class="artist-card" onclick="showArtistPage(${artist.id})">
                             <div class="artist-avatar">
                                 ${artist.imageUrl
                                     ? `<img src="${artist.imageUrl}" alt="${escape(artist.name)}" loading="lazy">`
@@ -1025,7 +1025,6 @@
         const infoBtn = document.getElementById('btn-album-info');
         if (infoBtn) {
             infoBtn.disabled = false;
-            infoBtn.querySelector('span').textContent = 'Album-Info';
         }
 
         document.getElementById('detail-name').textContent = album.title;
@@ -1049,6 +1048,11 @@
 
         QobuzApp.dom.loggedInSection.style.display = 'none';
         QobuzApp.dom.playlistDetailSection.style.display = 'block';
+
+        // Hide artist section if visible
+        if (QobuzApp.dom.artistDetailSection) {
+            QobuzApp.dom.artistDetailSection.style.display = 'none';
+        }
 
         if (highlightTrackIndex !== null) {
             setTimeout(() => {
@@ -1096,6 +1100,11 @@
         QobuzApp.dom.loggedInSection.style.display = 'none';
         QobuzApp.dom.playlistDetailSection.style.display = 'block';
 
+        // Hide artist section if visible
+        if (QobuzApp.dom.artistDetailSection) {
+            QobuzApp.dom.artistDetailSection.style.display = 'none';
+        }
+
         if (highlightTrackIndex !== null) {
             setTimeout(() => {
                 const trackItem = document.querySelector(`.track-item[data-index="${highlightTrackIndex}"]`);
@@ -1136,6 +1145,10 @@
     function backToPlaylists() {
         QobuzApp.dom.playlistDetailSection.style.display = 'none';
         QobuzApp.dom.loggedInSection.style.display = 'block';
+
+        // Also hide artist section if visible
+        const artistSection = document.getElementById('artist-detail-section');
+        if (artistSection) artistSection.style.display = 'none';
 
         setTimeout(() => {
             window.scrollTo(0, QobuzApp.savedScrollPosition);
@@ -1234,6 +1247,8 @@
         loadPlaylists,
         selectAlbum,
         selectPlaylist,
+        showAlbumDetail,
+        showPlaylistDetail,
         backToPlaylists,
         playAll,
         fetchAlbumInfo,
