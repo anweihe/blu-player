@@ -1018,13 +1018,14 @@
             artistName: album.artistName
         };
 
-        // Reset album info container
+        // Reset album info container and show button for albums
         const infoContainer = document.getElementById('album-info-container');
         if (infoContainer) {
             infoContainer.style.display = 'none';
         }
         const infoBtn = document.getElementById('btn-album-info');
         if (infoBtn) {
+            infoBtn.style.display = '';
             infoBtn.disabled = false;
         }
 
@@ -1077,6 +1078,16 @@
         // Reset history tracking for new source
         if (QobuzApp.playbackFn?.resetHistoryTracking) {
             QobuzApp.playbackFn.resetHistoryTracking();
+        }
+
+        // Hide album-info button for playlists
+        const infoBtn = document.getElementById('btn-album-info');
+        if (infoBtn) {
+            infoBtn.style.display = 'none';
+        }
+        const infoContainer = document.getElementById('album-info-container');
+        if (infoContainer) {
+            infoContainer.style.display = 'none';
         }
 
         document.getElementById('detail-name').textContent = playlist.name;
