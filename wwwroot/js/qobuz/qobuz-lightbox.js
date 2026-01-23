@@ -19,13 +19,21 @@
     function openCoverLightbox() {
         const coverImg = document.getElementById('detail-cover');
         if (!coverImg || !coverImg.src) return;
+        openImageLightbox(coverImg.src);
+    }
+
+    /**
+     * Open lightbox with any image URL
+     */
+    function openImageLightbox(imageUrl) {
+        if (!imageUrl) return;
 
         lightbox = document.getElementById('cover-lightbox');
         lightboxImage = document.getElementById('lightbox-image');
 
         if (!lightbox || !lightboxImage) return;
 
-        lightboxImage.src = coverImg.src;
+        lightboxImage.src = imageUrl;
         lightbox.classList.add('active');
         document.body.style.overflow = 'hidden';
 
@@ -122,11 +130,13 @@
 
     QobuzApp.lightbox = {
         openCoverLightbox,
+        openImageLightbox,
         closeCoverLightbox
     };
 
     // Global exports
     window.openCoverLightbox = openCoverLightbox;
+    window.openImageLightbox = openImageLightbox;
     window.closeCoverLightbox = closeCoverLightbox;
 
 })();

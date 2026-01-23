@@ -16,6 +16,7 @@
         loginSection: null,
         loggedInSection: null,
         playlistDetailSection: null,
+        artistDetailSection: null,
         userMenu: null,
         errorMessage: null,
         errorText: null
@@ -93,6 +94,7 @@
         QobuzApp.dom.loginSection = document.getElementById('login-section');
         QobuzApp.dom.loggedInSection = document.getElementById('logged-in-section');
         QobuzApp.dom.playlistDetailSection = document.getElementById('playlist-detail-section');
+        QobuzApp.dom.artistDetailSection = document.getElementById('artist-detail-section');
         QobuzApp.dom.userMenu = document.getElementById('user-menu');
         QobuzApp.dom.errorMessage = document.getElementById('error-message');
         QobuzApp.dom.errorText = document.getElementById('error-text');
@@ -253,10 +255,11 @@
 
                     await QobuzApp.auth.syncBluesoundQobuzQuality();
 
-                    // Check for URL parameters (album or playlist from history)
+                    // Check for URL parameters (album, playlist, or artist from history)
                     const urlParams = new URLSearchParams(window.location.search);
                     const albumId = urlParams.get('album');
                     const playlistId = urlParams.get('playlist');
+                    const artistId = urlParams.get('artist');
 
                     if (albumId && typeof window.selectAlbum === 'function') {
                         console.log('initQobuz: Opening album from URL parameter:', albumId);
@@ -264,6 +267,9 @@
                     } else if (playlistId && typeof window.selectPlaylist === 'function') {
                         console.log('initQobuz: Opening playlist from URL parameter:', playlistId);
                         setTimeout(() => window.selectPlaylist(playlistId), 100);
+                    } else if (artistId && typeof window.showArtistPage === 'function') {
+                        console.log('initQobuz: Opening artist from URL parameter:', artistId);
+                        setTimeout(() => window.showArtistPage(parseInt(artistId)), 100);
                     } else if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.hasPendingNavigation()) {
                         setTimeout(() => {
                             GlobalPlayer.executePendingNavigation();
