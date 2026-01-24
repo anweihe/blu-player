@@ -74,7 +74,7 @@
 
     // ==================== Main Functions ====================
 
-    async function showDiscographyPage(artistId, artistName, initialType = null) {
+    async function showDiscographyPage(artistId, artistName, initialType = null, skipHistory = false) {
         currentArtistId = artistId;
         currentArtistName = artistName;
         // Map the initial type to a valid API parameter
@@ -82,6 +82,14 @@
         currentOffset = 0;
         hasMore = true;
         currentSort = 'release_date';
+
+        // Push state to browser history (unless restoring from popstate)
+        if (!skipHistory && QobuzApp.core?.pushState) {
+            QobuzApp.core.pushState('discography', artistId, {
+                artistName: artistName,
+                releaseType: currentReleaseType
+            });
+        }
 
         // Set title and artist name
         const titleEl = document.getElementById('discography-page-title');
@@ -268,20 +276,8 @@
 
     function backFromDiscography() {
         cleanupScrollObserver();
-
-        // Return to artist page
-        const artistSection = document.getElementById('artist-detail-section');
-        const discographyPage = document.getElementById('artist-discography-page');
-
-        if (discographyPage) discographyPage.style.display = 'none';
-        if (artistSection) artistSection.style.display = 'block';
-
-        // Restore scroll position (if available)
-        if (QobuzApp.discographyScrollPosition) {
-            setTimeout(() => {
-                window.scrollTo(0, QobuzApp.discographyScrollPosition);
-            }, 50);
-        }
+        // Use browser history for navigation
+        history.back();
     }
 
     // ==================== Exports ====================
@@ -294,10 +290,10 @@
     };
 
     // Global exports for onclick handlers
-    window.showDiscographyPage = function(artistId, artistName, initialType) {
+    window.showDiscographyPage = function(artistId, artistName, initialType, skipHistory = false) {
         // Save current scroll position before navigating
         QobuzApp.discographyScrollPosition = window.scrollY || document.documentElement.scrollTop;
-        showDiscographyPage(artistId, artistName, initialType);
+        showDiscographyPage(artistId, artistName, initialType, skipHistory);
     };
     window.backFromDiscography = backFromDiscography;
     window.changeDiscographySort = changeSort;

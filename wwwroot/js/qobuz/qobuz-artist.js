@@ -19,7 +19,7 @@
 
     // ==================== Show Artist Page ====================
 
-    async function showArtistPage(artistId) {
+    async function showArtistPage(artistId, skipHistory = false) {
         // Save current scroll position to global state
         QobuzApp.savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
         previousScrollPosition = QobuzApp.savedScrollPosition;
@@ -34,6 +34,16 @@
         } else {
             previousView = 'favorites';
             artistNavigationStack = [];
+        }
+
+        // Sync artist stack to global navigation state for history
+        if (QobuzApp.navigation) {
+            QobuzApp.navigation.artistStack = [...artistNavigationStack];
+        }
+
+        // Push state to browser history (unless restoring from popstate)
+        if (!skipHistory && QobuzApp.core.pushState) {
+            QobuzApp.core.pushState('artist', artistId);
         }
 
         QobuzApp.core.showLoading();
@@ -491,30 +501,16 @@
     // ==================== Navigation ====================
 
     function backFromArtist() {
-        const artistSection = document.getElementById('artist-detail-section');
-        if (artistSection) artistSection.style.display = 'none';
+        // Use browser history for navigation
+        history.back();
+    }
 
-        // Check if we have artists in the navigation stack
-        if (artistNavigationStack.length > 0) {
-            const previousArtist = artistNavigationStack.pop();
-            // Navigate back to previous artist
-            currentArtistData = null; // Clear current data so we don't push it again
-            showArtistPage(previousArtist.artistId);
-            return;
-        }
-
-        // Otherwise go back to main view
+    /**
+     * Clear artist data (called when navigating away via history)
+     */
+    function clearArtistData() {
         currentArtistData = null;
         artistNavigationStack = [];
-
-        if (QobuzApp.dom.loggedInSection) {
-            QobuzApp.dom.loggedInSection.style.display = 'block';
-        }
-
-        // Restore scroll position
-        setTimeout(() => {
-            window.scrollTo(0, QobuzApp.savedScrollPosition || 0);
-        }, 50);
     }
 
     // ==================== Export Functions ====================
@@ -522,6 +518,7 @@
     QobuzApp.artist = {
         showArtistPage,
         backFromArtist,
+        clearArtistData,
         toggleBiography,
         toggleTopTracks,
         switchDiscographyType,

@@ -952,8 +952,13 @@
 
     // ==================== Select Album/Playlist ====================
 
-    async function selectAlbum(albumId, highlightTrackIndex = null) {
+    async function selectAlbum(albumId, highlightTrackIndex = null, skipHistory = false) {
         QobuzApp.savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+
+        // Push state to browser history (unless restoring from popstate)
+        if (!skipHistory && QobuzApp.core.pushState) {
+            QobuzApp.core.pushState('album', albumId);
+        }
 
         const creds = await QobuzApp.auth.getQobuzCredentials();
         const authToken = creds?.authToken;
@@ -978,8 +983,13 @@
         QobuzApp.core.hideLoading();
     }
 
-    async function selectPlaylist(playlistId, highlightTrackIndex = null) {
+    async function selectPlaylist(playlistId, highlightTrackIndex = null, skipHistory = false) {
         QobuzApp.savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+
+        // Push state to browser history (unless restoring from popstate)
+        if (!skipHistory && QobuzApp.core.pushState) {
+            QobuzApp.core.pushState('playlist', playlistId);
+        }
 
         const creds = await QobuzApp.auth.getQobuzCredentials();
         const authToken = creds?.authToken;
@@ -1201,16 +1211,8 @@
     }
 
     function backToPlaylists() {
-        QobuzApp.dom.playlistDetailSection.style.display = 'none';
-        QobuzApp.dom.loggedInSection.style.display = 'block';
-
-        // Also hide artist section if visible
-        const artistSection = document.getElementById('artist-detail-section');
-        if (artistSection) artistSection.style.display = 'none';
-
-        setTimeout(() => {
-            window.scrollTo(0, QobuzApp.savedScrollPosition);
-        }, 50);
+        // Use browser history for navigation
+        history.back();
     }
 
     function playAll() {
