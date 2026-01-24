@@ -569,6 +569,12 @@ public class BluesoundApiService : IBluesoundApiService
                 StreamUrl = status.Element("streamUrl")?.Value
             };
 
+            // Parse artist ID (available when playing from Qobuz)
+            if (long.TryParse(status.Element("artistid")?.Value, out var artistId))
+            {
+                playbackStatus.ArtistId = artistId;
+            }
+
             // Parse image URL
             var image = status.Element("image")?.Value;
             if (!string.IsNullOrEmpty(image))

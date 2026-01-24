@@ -193,6 +193,7 @@ public class QobuzModel : PageModel
                 artistName = t.Performer?.Name,
                 artistId = t.Performer?.Id,
                 albumTitle = t.Album?.Title,
+                albumId = t.Album?.Id,
                 albumCover = t.Album?.CoverUrl,
                 isHiRes = t.IsHiRes,
                 qualityLabel = t.QualityLabel,
@@ -245,6 +246,7 @@ public class QobuzModel : PageModel
                 id = a.Id,
                 title = a.Title,
                 artistName = a.Artist?.Name,
+                artistId = a.Artist?.Id,
                 coverUrl = a.CoverUrl,
                 tracksCount = a.TracksCount,
                 duration = a.Duration,
@@ -272,6 +274,7 @@ public class QobuzModel : PageModel
                 id = a.Id,
                 title = a.Title,
                 artistName = a.Artist?.Name,
+                artistId = a.Artist?.Id,
                 coverUrl = a.CoverUrl,
                 tracksCount = a.TracksCount,
                 duration = a.Duration,
@@ -356,6 +359,7 @@ public class QobuzModel : PageModel
                 id = a.Id,
                 title = a.Title,
                 artistName = a.Artist?.Name,
+                artistId = a.Artist?.Id,
                 coverUrl = a.CoverUrl,
                 tracksCount = a.TracksCount,
                 duration = a.Duration,
@@ -457,6 +461,7 @@ public class QobuzModel : PageModel
                 id = a.Id,
                 title = a.Title,
                 artistName = a.Artist?.Name,
+                artistId = a.Artist?.Id,
                 coverUrl = a.CoverUrl,
                 tracksCount = a.TracksCount,
                 duration = a.Duration,
@@ -588,7 +593,8 @@ public class QobuzModel : PageModel
                 albumTitle = t.Album?.Title,
                 albumId = t.Album?.Id,
                 coverUrl = t.Album?.CoverUrl,
-                artistName = t.Performer?.Name
+                artistName = t.Performer?.Name,
+                artistId = t.Performer?.Id
             })
         });
     }
@@ -670,6 +676,7 @@ public class QobuzModel : PageModel
                 artistName = t.Performer?.Name ?? album.Artist?.Name,
                 artistId = t.Performer?.Id ?? album.Artist?.Id,
                 albumTitle = album.Title,
+                albumId = album.Id,
                 albumCover = album.CoverUrl,
                 isHiRes = t.IsHiRes,
                 qualityLabel = t.QualityLabel,
@@ -1008,6 +1015,7 @@ public class QobuzModel : PageModel
                 state = status.State,
                 title = status.Title,
                 artist = status.Artist,
+                artistId = status.ArtistId,
                 album = status.Album,
                 imageUrl = imageUrl,
                 currentSeconds = status.CurrentSeconds,

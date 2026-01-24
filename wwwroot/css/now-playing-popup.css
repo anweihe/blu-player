@@ -274,6 +274,16 @@
   text-overflow: ellipsis;
 }
 
+.global-np-popup-artist.clickable-artist {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.global-np-popup-artist.clickable-artist:hover {
+  color: var(--np-sheet-accent, #1db954);
+  text-decoration: underline;
+}
+
 .global-np-popup-album {
   font-size: 0.8rem;
   color: var(--np-sheet-text-muted);

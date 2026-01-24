@@ -360,7 +360,10 @@
         globalCurrentTrack = track;
 
         document.getElementById('global-np-title').textContent = track.title || 'Unbekannt';
-        document.getElementById('global-np-artist').textContent = track.artist || track.artistName || '-';
+        const artistEl = document.getElementById('global-np-artist');
+        artistEl.textContent = track.artist || track.artistName || '-';
+        // Store artistId for navigation
+        artistEl.dataset.artistId = track.artistId || '';
 
         const cover = document.getElementById('global-np-cover');
         const placeholder = document.getElementById('global-np-cover-placeholder');
@@ -661,20 +664,30 @@
                 placeholder.style.display = 'flex';
             }
 
-            // Store current track info
+            // Store current track info (use artistId from status if available, otherwise preserve existing)
+            const existingArtistId = globalCurrentTrack?.artistId;
             globalCurrentTrack = {
                 title: status.title,
                 artist: status.artist,
                 album: status.album,
-                imageUrl: status.imageUrl
+                imageUrl: status.imageUrl,
+                artistId: status.artistId || existingArtistId
             };
+
+            // Update artist element with artistId for navigation
+            const artistEl = document.getElementById('global-np-artist');
+            if (artistEl) {
+                artistEl.dataset.artistId = globalCurrentTrack.artistId || '';
+            }
 
             lastTrackTitle = status.title;
 
             // Update popup if open
             if (popup && popup.style.display === 'flex') {
                 document.getElementById('global-popup-title').textContent = status.title;
-                document.getElementById('global-popup-artist').textContent = status.artist || '-';
+                const popupArtistEl = document.getElementById('global-popup-artist');
+                popupArtistEl.textContent = status.artist || '-';
+                popupArtistEl.dataset.artistId = globalCurrentTrack.artistId || '';
                 document.getElementById('global-popup-album').textContent = status.album || '';
 
                 const popupCover = document.getElementById('global-popup-cover');
@@ -902,7 +915,11 @@
     // ==================== Now Playing Popup ====================
 
     window.openGlobalNowPlayingPopup = async function() {
-        if (!popup || !globalCurrentTrack) return;
+        console.log('openGlobalNowPlayingPopup called, popup=', popup, 'globalCurrentTrack=', globalCurrentTrack);
+        if (!popup || !globalCurrentTrack) {
+            console.log('openGlobalNowPlayingPopup: returning early because popup or globalCurrentTrack is falsy');
+            return;
+        }
 
         // Sync cover
         const cover = document.getElementById('global-popup-cover');
@@ -919,7 +936,20 @@
 
         // Sync track info
         document.getElementById('global-popup-title').textContent = globalCurrentTrack.title || 'Unbekannt';
-        document.getElementById('global-popup-artist').textContent = globalCurrentTrack.artist || '-';
+        const popupArtistEl = document.getElementById('global-popup-artist');
+        popupArtistEl.textContent = globalCurrentTrack.artist || globalCurrentTrack.artistName || '-';
+
+        // Try to get artistId from track, or from current queue track
+        let artistId = globalCurrentTrack.artistId;
+        console.log('openGlobalNowPlayingPopup: globalCurrentTrack.artistId =', artistId);
+        if (!artistId && currentQueue?.tracks && currentQueue.currentIndex >= 0) {
+            const queueTrack = currentQueue.tracks[currentQueue.currentIndex];
+            artistId = queueTrack?.artistId;
+            console.log('openGlobalNowPlayingPopup: artistId from queue =', artistId);
+        }
+        popupArtistEl.dataset.artistId = artistId || '';
+        console.log('openGlobalNowPlayingPopup: set dataset.artistId =', popupArtistEl.dataset.artistId);
+
         document.getElementById('global-popup-album').textContent = globalCurrentTrack.album || '';
 
         // Sync progress
@@ -944,6 +974,23 @@
         if (popup) {
             popup.style.display = 'none';
             document.body.style.overflow = '';
+        }
+    };
+
+    window.navigateToPopupArtist = function() {
+        const artistEl = document.getElementById('global-popup-artist');
+        const artistId = artistEl?.dataset?.artistId;
+        if (!artistId) return;
+
+        // Close popup
+        closeGlobalNowPlayingPopup();
+
+        // Navigate to artist page
+        if (typeof window.showArtistPage === 'function') {
+            window.showArtistPage(artistId);
+        } else {
+            // If not on Qobuz page, navigate there with artist parameter
+            window.location.href = `/Qobuz?artist=${artistId}`;
         }
     };
 
@@ -1682,7 +1729,9 @@
             globalCurrentTrack = track;
             if (track) {
                 document.getElementById('global-np-title').textContent = track.title || 'Unbekannt';
-                document.getElementById('global-np-artist').textContent = track.artistName || track.artist || '-';
+                const artistEl = document.getElementById('global-np-artist');
+                artistEl.textContent = track.artistName || track.artist || '-';
+                artistEl.dataset.artistId = track.artistId || '';
 
                 const cover = document.getElementById('global-np-cover');
                 const placeholder = document.getElementById('global-np-cover-placeholder');

@@ -160,6 +160,7 @@ public class QueueTrackDto
     public long Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? ArtistName { get; set; }
+    public long? ArtistId { get; set; }
     public string? AlbumTitle { get; set; }
     public string? AlbumCover { get; set; }
     public int Duration { get; set; }

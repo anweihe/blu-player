@@ -638,6 +638,7 @@
                 title: track.title,
                 artist: track.artistName,
                 artistName: track.artistName,
+                artistId: track.artistId,
                 album: track.albumTitle,
                 imageUrl: track.albumCover,
                 albumCover: track.albumCover

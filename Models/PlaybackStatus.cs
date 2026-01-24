@@ -8,6 +8,7 @@ public class PlaybackStatus
     public string State { get; set; } = "stop"; // play, pause, stop, stream
     public string? Title { get; set; }
     public string? Artist { get; set; }
+    public long? ArtistId { get; set; }
     public string? Album { get; set; }
     public string? ImageUrl { get; set; }
     public string? Service { get; set; } // Spotify, TuneIn, etc.

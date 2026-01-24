@@ -216,7 +216,7 @@
                 </div>
                 ${track.isHiRes ? '<span class="track-quality">Hi-Res</span>' : ''}
                 <span class="track-duration">${track.formattedDuration || ''}</span>
-                ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName) : ''}
+                ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName, track.albumId, track.albumTitle) : ''}
             </div>
         `).join('');
 
@@ -451,7 +451,8 @@
                     id: track.albumId,
                     title: track.albumTitle,
                     coverUrl: track.coverUrl,
-                    artistName: track.artistName
+                    artistName: track.artistName,
+                    artistId: track.artistId
                 });
             }
         });
@@ -477,6 +478,7 @@
                             </svg>
                            </div>`
                     }
+                    ${QobuzApp.contextMenu?.createAlbumMenuButton(album.artistId, album.artistName, album.id) || ''}
                 </div>
                 <div class="playlist-info">
                     <h3 class="playlist-name">${escape(album.title)}</h3>

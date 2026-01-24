@@ -150,6 +150,7 @@ window.QueueApi = (function() {
             id: dto.id,
             title: dto.title,
             artistName: dto.artistName,
+            artistId: dto.artistId,
             albumTitle: dto.albumTitle,
             albumCover: dto.albumCover,
             duration: dto.duration,

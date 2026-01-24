@@ -10,20 +10,25 @@
     let activeMenu = null;
 
     /**
-     * Creates the HTML for a context menu button
+     * Creates the HTML for a context menu button (for track rows)
      * @param {number|string} artistId - The artist ID
      * @param {string} artistName - The artist name for display
+     * @param {number|string} albumId - The album ID (optional)
+     * @param {string} albumTitle - The album title for display (optional)
      * @returns {string} HTML string for the button
      */
-    function createMenuButton(artistId, artistName) {
-        if (!artistId) return '';
+    function createMenuButton(artistId, artistName, albumId, albumTitle) {
+        if (!artistId && !albumId) return '';
 
-        const escapedName = (artistName || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const escapedArtistName = (artistName || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const escapedAlbumTitle = (albumTitle || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
         return `
             <button type="button" class="track-menu-btn"
-                    data-artist-id="${artistId}"
-                    data-artist-name="${escapedName}"
+                    data-artist-id="${artistId || ''}"
+                    data-artist-name="${escapedArtistName}"
+                    data-album-id="${albumId || ''}"
+                    data-album-title="${escapedAlbumTitle}"
                     onclick="QobuzApp.contextMenu.toggleMenu(event, this)"
                     title="Mehr Optionen">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -36,6 +41,32 @@
     }
 
     /**
+     * Creates the HTML for an album card menu button
+     * @param {number|string} artistId - The artist ID
+     * @param {string} artistName - The artist name for display
+     * @param {number|string} albumId - The album ID (optional)
+     * @returns {string} HTML string for the button
+     */
+    function createAlbumMenuButton(artistId, artistName, albumId) {
+        if (!artistId && !albumId) return '';
+
+        const escapedName = (artistName || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+        return `<button type="button" class="album-menu-btn"
+                data-artist-id="${artistId || ''}"
+                data-artist-name="${escapedName}"
+                data-album-id="${albumId || ''}"
+                onclick="event.stopPropagation(); QobuzApp.contextMenu.toggleAlbumArtistMenu(event, this)"
+                title="Mehr Optionen">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+            </svg>
+        </button>`;
+    }
+
+    /**
      * Toggle the context menu open/closed
      * @param {Event} event - Click event
      * @param {HTMLElement} button - The menu button element
@@ -45,28 +76,48 @@
         event.preventDefault();
 
         const artistId = button.dataset.artistId;
-        const artistName = button.dataset.artistName;
+        const albumId = button.dataset.albumId;
 
         // Close any existing menu
         closeMenu();
 
+        // Build menu items based on available data
+        let menuItems = '';
+
+        if (albumId) {
+            menuItems += `
+                <button type="button" class="track-context-menu-item" onclick="QobuzApp.contextMenu.goToAlbum(event, '${albumId}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span>Zum Album</span>
+                </button>
+            `;
+        }
+
+        if (artistId) {
+            menuItems += `
+                <button type="button" class="track-context-menu-item" onclick="QobuzApp.contextMenu.goToArtist(event, ${artistId})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>Zur Künstlerseite</span>
+                </button>
+            `;
+        }
+
         // Create new menu
         const menu = document.createElement('div');
         menu.className = 'track-context-menu';
-        menu.innerHTML = `
-            <button type="button" class="track-context-menu-item" onclick="QobuzApp.contextMenu.goToArtist(event, ${artistId})">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <span>Zur Künstlerseite</span>
-            </button>
-        `;
+        menu.innerHTML = menuItems;
 
         // Position the menu
         const rect = button.getBoundingClientRect();
         const menuWidth = 200;
-        const menuHeight = 48;
+        const itemCount = (albumId ? 1 : 0) + (artistId ? 1 : 0);
+        const menuHeight = itemCount * 44; // ~44px per item
 
         // Check if menu would overflow right edge
         let left = rect.right - menuWidth;
@@ -144,7 +195,22 @@
     }
 
     /**
-     * Toggle artist menu for album header button
+     * Navigate to album page
+     * @param {Event} event - Click event
+     * @param {string} albumId - The album ID
+     */
+    function goToAlbum(event, albumId) {
+        event.stopPropagation();
+        event.preventDefault();
+        closeMenu();
+
+        if (albumId && typeof selectAlbum === 'function') {
+            selectAlbum(albumId);
+        }
+    }
+
+    /**
+     * Toggle artist menu for album card button
      * @param {Event} event - Click event
      * @param {HTMLElement} button - The menu button element
      */
@@ -153,30 +219,50 @@
         event.preventDefault();
 
         const artistId = button.dataset.artistId;
-        const artistName = button.dataset.artistName;
+        const albumId = button.dataset.albumId;
 
-        if (!artistId) return;
+        if (!artistId && !albumId) return;
 
         // Close any existing menu
         closeMenu();
 
+        // Build menu items based on available data
+        let menuItems = '';
+
+        if (albumId) {
+            menuItems += `
+                <button type="button" class="track-context-menu-item" onclick="QobuzApp.contextMenu.goToAlbum(event, '${albumId}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span>Zum Album</span>
+                </button>
+            `;
+        }
+
+        if (artistId) {
+            menuItems += `
+                <button type="button" class="track-context-menu-item" onclick="QobuzApp.contextMenu.goToArtist(event, ${artistId})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>Zur Künstlerseite</span>
+                </button>
+            `;
+        }
+
         // Create new menu
         const menu = document.createElement('div');
         menu.className = 'track-context-menu';
-        menu.innerHTML = `
-            <button type="button" class="track-context-menu-item" onclick="QobuzApp.contextMenu.goToArtist(event, ${artistId})">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <span>Zur Künstlerseite</span>
-            </button>
-        `;
+        menu.innerHTML = menuItems;
 
         // Position the menu
         const rect = button.getBoundingClientRect();
         const menuWidth = 200;
-        const menuHeight = 48;
+        const itemCount = (albumId ? 1 : 0) + (artistId ? 1 : 0);
+        const menuHeight = itemCount * 44;
 
         // Position below the button, aligned right
         let left = rect.right - menuWidth;
@@ -213,10 +299,12 @@
     // Export functions
     QobuzApp.contextMenu = {
         createMenuButton,
+        createAlbumMenuButton,
         toggleMenu,
         toggleAlbumArtistMenu,
         closeMenu,
-        goToArtist
+        goToArtist,
+        goToAlbum
     };
 
     // Global exports

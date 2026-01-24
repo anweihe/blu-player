@@ -173,6 +173,7 @@
                             </svg>
                            </div>`
                     }
+                    ${QobuzApp.contextMenu?.createAlbumMenuButton(album.artistId, album.artistName, album.id) || ''}
                 </div>
                 <div class="playlist-info">
                     <h3 class="playlist-name">${escape(album.title)}</h3>
@@ -215,6 +216,7 @@
                             </svg>
                            </div>`
                     }
+                    ${QobuzApp.contextMenu?.createAlbumMenuButton(album.artistId, album.artistName, album.id) || ''}
                 </div>
                 <div class="playlist-info">
                     <h3 class="playlist-name">${escape(album.title)}</h3>
@@ -299,6 +301,7 @@
                             </svg>
                            </div>`
                     }
+                    ${QobuzApp.contextMenu?.createAlbumMenuButton(album.artistId, album.artistName, album.id) || ''}
                 </div>
                 <div class="playlist-info">
                     <h3 class="playlist-name">${escape(album.title)}</h3>
@@ -341,6 +344,7 @@
                             </svg>
                            </div>`
                     }
+                    ${QobuzApp.contextMenu?.createAlbumMenuButton(album.artistId, album.artistName, album.id) || ''}
                 </div>
                 <div class="playlist-info">
                     <h3 class="playlist-name">${escape(album.title)}</h3>
@@ -722,6 +726,7 @@
                                         </svg>
                                        </div>`
                                 }
+                                ${QobuzApp.contextMenu?.createAlbumMenuButton(album.artistId, album.artistName, album.id) || ''}
                             </div>
                             <div class="playlist-info">
                                 <h3 class="playlist-name">${escape(album.title)}</h3>
@@ -793,7 +798,7 @@
                             </div>
                             ${track.isHiRes ? '<span class="track-quality">Hi-Res</span>' : ''}
                             <span class="track-duration">${track.formattedDuration || ''}</span>
-                            ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName) : ''}
+                            ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName, track.albumId, track.albumTitle) : ''}
                         </div>
                     `).join('');
 
@@ -1038,7 +1043,24 @@
         }
 
         document.getElementById('detail-name').textContent = album.title;
-        document.getElementById('detail-description').textContent = album.artistName || '';
+
+        // Set artist name as clickable link
+        const detailArtist = document.getElementById('detail-artist');
+        const detailDescription = document.getElementById('detail-description');
+        if (detailArtist) {
+            if (album.artistName) {
+                detailArtist.textContent = album.artistName;
+                detailArtist.dataset.artistId = album.artistId || '';
+                detailArtist.style.display = '';
+                detailArtist.onclick = album.artistId ? () => showArtistPage(album.artistId) : null;
+                detailArtist.style.cursor = album.artistId ? 'pointer' : 'default';
+            } else {
+                detailArtist.style.display = 'none';
+            }
+        }
+        if (detailDescription) {
+            detailDescription.style.display = 'none';
+        }
         document.getElementById('detail-tracks-count').textContent = `${album.tracksCount} Titel`;
         document.getElementById('detail-duration').textContent = album.formattedDuration || '';
 
@@ -1103,7 +1125,18 @@
         }
 
         document.getElementById('detail-name').textContent = playlist.name;
-        document.getElementById('detail-description').textContent = playlist.description || '';
+
+        // Hide artist element for playlists, show description
+        const detailArtist = document.getElementById('detail-artist');
+        const detailDescription = document.getElementById('detail-description');
+        if (detailArtist) {
+            detailArtist.style.display = 'none';
+        }
+        if (detailDescription) {
+            detailDescription.textContent = playlist.description || '';
+            detailDescription.style.display = playlist.description ? '' : 'none';
+        }
+
         document.getElementById('detail-tracks-count').textContent = `${playlist.tracksCount} Titel`;
         document.getElementById('detail-duration').textContent = playlist.formattedDuration;
 
@@ -1162,7 +1195,7 @@
                 </div>
                 ${track.isHiRes ? '<span class="track-quality">Hi-Res</span>' : ''}
                 <span class="track-duration">${track.formattedDuration}</span>
-                ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName) : ''}
+                ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName, track.albumId, track.albumTitle) : ''}
             </div>
         `).join('');
     }

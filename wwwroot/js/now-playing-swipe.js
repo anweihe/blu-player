@@ -128,7 +128,9 @@
             }
 
             document.getElementById('global-popup-title').textContent = track.title || 'Unbekannt';
-            document.getElementById('global-popup-artist').textContent = track.artist || track.artistName || '-';
+            const popupArtistEl = document.getElementById('global-popup-artist');
+            popupArtistEl.textContent = track.artist || track.artistName || '-';
+            popupArtistEl.dataset.artistId = track.artistId || '';
             document.getElementById('global-popup-album').textContent = track.album || track.albumTitle || '';
         }
 

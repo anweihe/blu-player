@@ -140,6 +140,7 @@
                     <div class="search-card-cover">
                         ${album.coverUrl ? `<img src="${album.coverUrl}" alt="" loading="lazy">` : ''}
                         <span class="search-card-type ${album.isSingle ? 'single' : (album.typeLabel === 'EP' ? 'ep' : 'album')}">${album.typeLabel}</span>
+                        ${QobuzApp.contextMenu?.createAlbumMenuButton(album.artistId, album.artistName, album.id) || ''}
                     </div>
                     <div class="search-card-info">
                         <h4 class="search-card-title">${escapeHtml(album.title)}</h4>
@@ -188,7 +189,7 @@
                     </div>
                     ${track.isHiRes ? '<span class="search-track-badge">Hi-Res</span>' : ''}
                     <span class="search-track-duration">${track.formattedDuration}</span>
-                    ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName) : ''}
+                    ${QobuzApp.contextMenu ? QobuzApp.contextMenu.createMenuButton(track.artistId, track.artistName, track.albumId, track.albumTitle) : ''}
                 </div>
             `).join('');
         } else {
