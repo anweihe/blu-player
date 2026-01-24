@@ -11,25 +11,32 @@ A modern web application for controlling Bluesound/BluOS players on your local n
 - **Automatic Discovery** - Finds all Bluesound players on your network via mDNS/Bonjour
 - **Player Grouping** - View and manage grouped players
 - **Stereo Pair Support** - Properly handles stereo paired speakers
-- **Volume Control** - Adjust volume for individual players or groups with a dedicated volume panel
+- **Volume Control** - Adjust volume for individual players or groups
 - **Playback Control** - Play, pause, skip tracks on any player
-- **Now Playing Bar** - Global persistent playback bar with full-screen popup view
+- **Now Playing Popup** - Full-screen view with album art, progress, and queue
 - **Playback Handoff** - Seamlessly switch playback between browser and Bluesound players
 
 ### Qobuz Integration
 - **Secure Login** - Login with your Qobuz credentials
 - **Multi-User Profiles** - Support for multiple user profiles with separate Qobuz accounts
-- **Playlist Browser** - View all your Qobuz playlists with cover art
-- **Album Browser** - Browse new releases, top playlists, and personalized recommendations
-- **Search** - Search for albums, playlists, and tracks
-- **Favorites** - Quick access to your favorite albums, playlists, and tracks
-- **Playback Queue** - View and manage the current playback queue with persistence
-- **Hi-Res Support** - Shows quality indicators for high-resolution tracks
-- **Quality Selection** - Choose streaming quality (MP3, CD, Hi-Res)
-- **Player Selection** - Stream to browser or directly to Bluesound players
+- **Browse Content**
+  - New Releases & Album Charts
+  - Personalized Recommendations
+  - Your Playlists, Albums, Tracks & Artists
+- **Artist Pages** - Biography, top tracks, discography with filtering
+- **Album Detail** - Track listing with Hi-Res badges, album info
+- **Search** - Find albums, tracks, artists, and playlists
+- **Context Menus** - Quick navigation to album or artist from any track
+- **Playback Queue** - View and manage the current queue
+- **Hi-Res Support** - Quality indicators and streaming quality selection (MP3, CD, Hi-Res)
+
+### Navigation
+- **Clickable Artists** - Click artist names anywhere to open artist page
+- **Context Menus** - Right-click or tap menu button for "Go to Album" / "Go to Artist"
+- **Album Cards** - Quick access to album and artist from cover art menus
 
 ### Technical Features
-- **SPA Navigation** - Fast single-page app navigation between pages
+- **SPA Navigation** - Fast single-page app navigation
 - **Responsive Design** - Works on desktop, tablet, and mobile
 - **Dark Mode** - Beautiful dark theme (light mode via system preference)
 - **Persistent State** - Queue and settings persist across sessions
@@ -74,10 +81,6 @@ The application supports Docker deployment with PostgreSQL for production use.
    ```
    ConnectionStrings__DefaultConnection=${COOLIFY_POSTGRES_CONNECTION_STRING}
    ```
-   Or construct it manually:
-   ```
-   ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-   ```
 
 **Manual Docker:**
 ```bash
@@ -89,29 +92,47 @@ docker run -e "ConnectionStrings__DefaultConnection=Host=...;Database=...;Userna
 
 ```
 ├── Data/
-│   └── BluesoundDbContext.cs     # Entity Framework database context
+│   └── BluesoundDbContext.cs        # Entity Framework database context
 ├── Models/
-│   ├── BluesoundPlayer.cs        # Player model with group/stereo pair info
-│   ├── PlayerGroup.cs            # ViewModel for grouped display
-│   ├── PlaybackStatus.cs         # Current playback state
-│   ├── UserProfile.cs            # Multi-user profile model
-│   ├── PlaybackQueue.cs          # Queue persistence model
-│   └── QobuzModels.cs            # Qobuz API models
+│   ├── BluesoundPlayer.cs           # Player model with group/stereo pair info
+│   ├── PlayerGroup.cs               # ViewModel for grouped display
+│   ├── PlaybackStatus.cs            # Current playback state (incl. ArtistId)
+│   ├── UserProfile.cs               # Multi-user profile model
+│   ├── PlaybackQueue.cs             # Queue persistence model
+│   ├── SettingsDtos.cs              # DTOs for queue, settings
+│   └── QobuzModels.cs               # Qobuz API models
 ├── Services/
-│   ├── BluesoundApiService.cs    # BluOS API communication
-│   ├── PlayerDiscoveryService.cs # mDNS-based player discovery
-│   ├── QobuzApiService.cs        # Qobuz API integration
-│   ├── SettingsService.cs        # User settings management
-│   └── QueueService.cs           # Playback queue management
+│   ├── BluesoundApiService.cs       # BluOS API communication
+│   ├── PlayerDiscoveryService.cs    # mDNS-based player discovery
+│   ├── QobuzApiService.cs           # Qobuz API integration
+│   ├── SettingsService.cs           # User settings management
+│   └── QueueService.cs              # Playback queue management
 ├── Pages/
-│   ├── Index.cshtml              # Home page
-│   ├── Players.cshtml            # Player control UI
-│   ├── Qobuz.cshtml              # Qobuz streaming UI
-│   └── Api/                      # API endpoints
+│   ├── Index.cshtml                 # Home page (player selection)
+│   ├── Players.cshtml               # Player control UI
+│   ├── Qobuz.cshtml                 # Qobuz streaming UI
+│   ├── Qobuz.cshtml.cs              # Qobuz API handlers
+│   ├── _QobuzContent.cshtml         # Qobuz HTML structure
+│   └── Shared/_Layout.cshtml        # Layout with global player
 ├── wwwroot/
-│   ├── css/                      # Stylesheets
-│   └── js/                       # JavaScript modules
-└── Program.cs                    # Application setup
+│   ├── css/
+│   │   ├── qobuz.css                # Main Qobuz styles
+│   │   └── now-playing-popup.css    # Now Playing popup styles
+│   └── js/
+│       ├── global-player.js         # Global mini-player
+│       ├── now-playing-swipe.js     # Now Playing popup (swipe & tabs)
+│       ├── queue-api.js             # Queue management
+│       └── qobuz/
+│           ├── qobuz-core.js        # Init, DOM refs, utilities
+│           ├── qobuz-auth.js        # Login/logout, token management
+│           ├── qobuz-tabs.js        # Tab navigation
+│           ├── qobuz-browse.js      # Browse tabs, album/playlist detail
+│           ├── qobuz-search.js      # Search functionality
+│           ├── qobuz-artist.js      # Artist page
+│           ├── qobuz-discography.js # Full discography page
+│           ├── qobuz-playback.js    # Playback control
+│           └── qobuz-context-menu.js # Context menus (track/album)
+└── Program.cs                       # Application setup
 ```
 
 ## BluOS API Reference
@@ -123,21 +144,42 @@ The application communicates with Bluesound players via the BluOS HTTP API on po
 | Endpoint | Description |
 |----------|-------------|
 | `/SyncStatus` | Player info, group status, volume |
-| `/Status` | Playback status (play/pause, track info) |
+| `/Status` | Playback status (play/pause, track info, artistid) |
+| `/Playlist` | Current playback queue |
 | `/Volume?level=<0-100>` | Set volume |
 | `/Play`, `/Pause`, `/Stop` | Playback control |
 | `/Skip`, `/Back` | Track navigation |
 | `/AddSlave?slave=<IP>` | Add player to group |
 | `/RemoveSlave?slave=<IP>` | Remove player from group |
 
+### Status Response Elements
+
+| Element | Description |
+|---------|-------------|
+| `state` | Playback state: "play", "pause", "stop", "stream" |
+| `title1` | Track title |
+| `title2` | Artist name |
+| `title3` | Album title |
+| `image` | Album cover URL |
+| `service` | Streaming service (Spotify, Qobuz, TuneIn, etc.) |
+| `artistid` | Qobuz artist ID (when playing from Qobuz) |
+
 ## Technology Stack
 
 - **Backend:** ASP.NET Core 9.0 with Razor Pages
 - **Database:** SQLite (development) / PostgreSQL (production)
 - **ORM:** Entity Framework Core 9.0
-- **Frontend:** Vanilla JavaScript with CSS custom properties
+- **Frontend:** Vanilla JavaScript (ES6+) with CSS custom properties
 - **Player Discovery:** Zeroconf (mDNS/Bonjour)
 - **Qobuz Integration:** Custom implementation based on public API
+
+## Development
+
+See [CLAUDE.md](CLAUDE.md) for detailed development documentation including:
+- JavaScript architecture (IIFE pattern, QobuzApp namespace)
+- Static asset caching workarounds
+- Context menu system
+- Debugging tips
 
 ## Contributing
 
