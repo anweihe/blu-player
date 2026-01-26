@@ -94,6 +94,7 @@ export class PlaybackService implements OnDestroy {
 
   /**
    * Play a single track
+   * For Bluesound playback, a context (album or playlist) is required for native playback
    */
   async playTrack(track: QobuzTrack, context?: PlaybackContext): Promise<void> {
     this.isLoading.set(true);
@@ -116,7 +117,7 @@ export class PlaybackService implements OnDestroy {
       if (mode === 'browser') {
         await this.playTrackInBrowser(track);
       } else {
-        await this.playTrackOnBluesound(track);
+        await this.playTrackOnBluesound(track, context);
       }
     } catch (error) {
       console.error('Failed to play track:', error);
@@ -128,10 +129,17 @@ export class PlaybackService implements OnDestroy {
 
   /**
    * Play an album starting from a specific track index
+   * Uses native BluOS /ui/prf endpoint for Bluesound players
    */
   async playAlbum(album: QobuzAlbum, tracks: QobuzTrack[], startIndex = 0): Promise<void> {
     if (!album.id) {
       console.error('Album has no ID');
+      return;
+    }
+
+    const startTrack = tracks[startIndex];
+    if (!startTrack) {
+      console.error('Invalid start index');
       return;
     }
 
@@ -146,16 +154,15 @@ export class PlaybackService implements OnDestroy {
     const player = this.playerState.selectedPlayer();
 
     if (mode === 'bluesound' && player) {
-      // Use native Bluesound album playback
+      // Use native Bluesound album playback via /ui/prf
       this.isLoading.set(true);
       try {
         // Set the starting track as current
-        if (tracks[startIndex]) {
-          this.playerState.currentTrack.set(tracks[startIndex]);
-          this.playerState.setCurrentPlayingTrackId(tracks[startIndex].id);
-        }
+        this.playerState.currentTrack.set(startTrack);
+        this.playerState.setCurrentPlayingTrackId(startTrack.id);
+
         await firstValueFrom(
-          this.bluesoundApi.playQobuzAlbum(player.ipAddress, album.id, startIndex)
+          this.bluesoundApi.playQobuzAlbum(player.ipAddress, album.id, startIndex, startTrack.id)
         );
         this.currentContext = context;
         this.startPolling();
@@ -164,16 +171,21 @@ export class PlaybackService implements OnDestroy {
       }
     } else {
       // Browser playback - play first track and set context
-      if (tracks[startIndex]) {
-        await this.playTrack(tracks[startIndex], context);
-      }
+      await this.playTrack(startTrack, context);
     }
   }
 
   /**
    * Play a playlist starting from a specific track index
+   * Uses native BluOS /ui/prf endpoint for Bluesound players
    */
   async playPlaylist(playlist: QobuzPlaylist, tracks: QobuzTrack[], startIndex = 0): Promise<void> {
+    const startTrack = tracks[startIndex];
+    if (!startTrack) {
+      console.error('Invalid start index');
+      return;
+    }
+
     const context: PlaybackContext = {
       type: 'playlist',
       id: playlist.id,
@@ -185,16 +197,15 @@ export class PlaybackService implements OnDestroy {
     const player = this.playerState.selectedPlayer();
 
     if (mode === 'bluesound' && player) {
-      // Use native Bluesound playlist playback
+      // Use native Bluesound playlist playback via /ui/prf
       this.isLoading.set(true);
       try {
         // Set the starting track as current
-        if (tracks[startIndex]) {
-          this.playerState.currentTrack.set(tracks[startIndex]);
-          this.playerState.setCurrentPlayingTrackId(tracks[startIndex].id);
-        }
+        this.playerState.currentTrack.set(startTrack);
+        this.playerState.setCurrentPlayingTrackId(startTrack.id);
+
         await firstValueFrom(
-          this.bluesoundApi.playQobuzPlaylist(player.ipAddress, playlist.id, startIndex)
+          this.bluesoundApi.playQobuzPlaylist(player.ipAddress, playlist.id, startIndex, startTrack.id)
         );
         this.currentContext = context;
         this.startPolling();
@@ -203,9 +214,7 @@ export class PlaybackService implements OnDestroy {
       }
     } else {
       // Browser playback - play first track and set context
-      if (tracks[startIndex]) {
-        await this.playTrack(tracks[startIndex], context);
-      }
+      await this.playTrack(startTrack, context);
     }
   }
 
@@ -242,20 +251,35 @@ export class PlaybackService implements OnDestroy {
 
   // ==================== Bluesound Playback ====================
 
-  private async playTrackOnBluesound(track: QobuzTrack): Promise<void> {
+  private async playTrackOnBluesound(track: QobuzTrack, context?: PlaybackContext): Promise<void> {
     const player = this.playerState.selectedPlayer();
     if (!player) {
       console.error('No Bluesound player selected');
       return;
     }
 
+    if (!context) {
+      console.error('No playback context provided - Bluesound native playback requires album/playlist context');
+      return;
+    }
+
     try {
+      // Build the native playback context
+      const nativeContext = context.type === 'album'
+        ? { type: 'album' as const, albumId: String(context.id) }
+        : { type: 'playlist' as const, playlistId: Number(context.id) };
+
       const success = await firstValueFrom(
-        this.bluesoundApi.playQobuzTrack(player.ipAddress, track.id, track)
+        this.bluesoundApi.playQobuzTrackNative(
+          player.ipAddress,
+          track.id,
+          context.startIndex,
+          nativeContext
+        )
       );
 
       if (!success) {
-        console.error('Bluesound playback returned false');
+        console.error('Bluesound native playback returned false');
       }
 
       // Start polling for status updates

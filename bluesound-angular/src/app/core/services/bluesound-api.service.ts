@@ -178,32 +178,41 @@ export class BluesoundApiService {
   // ==================== Queue Management ====================
 
   /**
-   * Play a Qobuz track on the player using stream URL
-   * This uses the web app's Qobuz auth token to get the stream URL,
-   * then sends it to the Bluesound player (doesn't require Bluesound to be logged into Qobuz)
+   * Play a Qobuz track on the player using native BluOS Qobuz integration via /ui/prf
+   * This uses the Bluesound's built-in Qobuz integration for proper queue management
+   *
+   * @param playerIp - Player IP address
+   * @param trackId - Qobuz track ID
+   * @param trackIndex - Index of track in album/playlist (0-based)
+   * @param context - Playback context (album or playlist)
    */
-  playQobuzTrack(playerIp: string, trackId: number, track?: QobuzTrack): Observable<boolean> {
-    const authToken = this.auth.authToken();
-    const formatId = this.playerState.streamingQuality();
-
-    if (!authToken) {
-      console.error('No auth token available for Qobuz playback');
-      return of(false);
-    }
+  playQobuzTrackNative(
+    playerIp: string,
+    trackId: number,
+    trackIndex: number,
+    context: { type: 'album'; albumId: string } | { type: 'playlist'; playlistId: number }
+  ): Observable<boolean> {
+    const body = context.type === 'album'
+      ? {
+          ip: playerIp,
+          port: 11000,
+          sourceType: 'album',
+          albumId: context.albumId,
+          trackId,
+          trackIndex
+        }
+      : {
+          ip: playerIp,
+          port: 11000,
+          sourceType: 'playlist',
+          playlistId: context.playlistId,
+          trackId,
+          trackIndex
+        };
 
     return this.http.post<{ success: boolean }>(
-      `${this.qobuzApiUrl}/play-on-bluesound`,
-      {
-        ip: playerIp,
-        port: 11000,
-        trackId,
-        authToken,
-        formatId,
-        title: track?.title,
-        artist: track?.performer?.name,
-        album: track?.album?.title,
-        imageUrl: track?.album?.image?.large
-      }
+      `${this.qobuzApiUrl}/play-native-on-bluesound`,
+      body
     ).pipe(
       map(response => response.success),
       catchError(error => {
@@ -214,28 +223,75 @@ export class BluesoundApiService {
   }
 
   /**
-   * Play a Qobuz album on the player
+   * @deprecated Use playQobuzTrackNative with context instead
    */
-  playQobuzAlbum(playerIp: string, albumId: string, startTrackIndex = 0): Observable<boolean> {
-    return this.http.post<void>(
-      `${this.apiBaseUrl}/player/${encodeURIComponent(playerIp)}/play-qobuz-album`,
-      { albumId, startTrackIndex }
+  playQobuzTrack(playerIp: string, trackId: number, track?: QobuzTrack): Observable<boolean> {
+    // Fallback: if no context, try to play with just track ID (may not work well)
+    console.warn('playQobuzTrack called without context - native playback requires album/playlist context');
+    return of(false);
+  }
+
+  /**
+   * Play a Qobuz album on the player using native BluOS /ui/prf endpoint
+   * @param playerIp - Player IP address
+   * @param albumId - Qobuz album ID
+   * @param startTrackIndex - Index of track to start from (0-based)
+   * @param trackId - Qobuz track ID of the starting track
+   */
+  playQobuzAlbum(playerIp: string, albumId: string, startTrackIndex = 0, trackId?: number): Observable<boolean> {
+    // If trackId is not provided, we can't use native playback properly
+    // The native /ui/prf endpoint requires both album ID and track ID
+    if (!trackId) {
+      console.warn('playQobuzAlbum called without trackId - native playback may not work correctly');
+    }
+
+    return this.http.post<{ success: boolean }>(
+      `${this.qobuzApiUrl}/play-native-on-bluesound`,
+      {
+        ip: playerIp,
+        port: 11000,
+        sourceType: 'album',
+        albumId,
+        trackId: trackId ?? 0,
+        trackIndex: startTrackIndex
+      }
     ).pipe(
-      map(() => true),
-      catchError(() => of(false))
+      map(response => response.success),
+      catchError(error => {
+        console.error('Failed to play album on Bluesound:', error);
+        return of(false);
+      })
     );
   }
 
   /**
-   * Play a Qobuz playlist on the player
+   * Play a Qobuz playlist on the player using native BluOS /ui/prf endpoint
+   * @param playerIp - Player IP address
+   * @param playlistId - Qobuz playlist ID
+   * @param startTrackIndex - Index of track to start from (0-based)
+   * @param trackId - Qobuz track ID of the starting track
    */
-  playQobuzPlaylist(playerIp: string, playlistId: number, startTrackIndex = 0): Observable<boolean> {
-    return this.http.post<void>(
-      `${this.apiBaseUrl}/player/${encodeURIComponent(playerIp)}/play-qobuz-playlist`,
-      { playlistId, startTrackIndex }
+  playQobuzPlaylist(playerIp: string, playlistId: number, startTrackIndex = 0, trackId?: number): Observable<boolean> {
+    if (!trackId) {
+      console.warn('playQobuzPlaylist called without trackId - native playback may not work correctly');
+    }
+
+    return this.http.post<{ success: boolean }>(
+      `${this.qobuzApiUrl}/play-native-on-bluesound`,
+      {
+        ip: playerIp,
+        port: 11000,
+        sourceType: 'playlist',
+        playlistId,
+        trackId: trackId ?? 0,
+        trackIndex: startTrackIndex
+      }
     ).pipe(
-      map(() => true),
-      catchError(() => of(false))
+      map(response => response.success),
+      catchError(error => {
+        console.error('Failed to play playlist on Bluesound:', error);
+        return of(false);
+      })
     );
   }
 
