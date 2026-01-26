@@ -12,9 +12,20 @@ RUN apt-get update && apt-get install -y curl \
 COPY *.csproj ./
 RUN dotnet restore
 
-# Copy source code and build
+# Copy source code
 COPY . ./
-RUN dotnet publish -c Release -o /app/publish
+
+# Install Angular dependencies and build
+WORKDIR /src/bluesound-angular
+RUN npm ci
+RUN npm run build
+
+# Copy Angular build to wwwroot
+WORKDIR /src
+RUN rm -rf wwwroot/* && cp -r bluesound-angular/dist/bluesound-angular/browser/* wwwroot/
+
+# Publish .NET app (skip Angular build since we did it manually)
+RUN dotnet publish -c Release -o /app/publish -p:SkipAngularBuild=true
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
