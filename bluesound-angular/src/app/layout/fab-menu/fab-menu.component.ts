@@ -119,7 +119,7 @@ export class FabMenuComponent {
   readonly fabBottomPosition = computed(() => {
     const isVolumePanelOpen = this.playerState.isVolumePanelVisible();
     const basePosition = window.innerWidth >= 768 ? 116 : 100; // md:bottom-[116px] : bottom-[100px]
-    const extraOffset = isVolumePanelOpen ? 180 : 0; // Move up when volume panel is open
+    const extraOffset = isVolumePanelOpen ? 320 : 0; // Move up when volume panel is open
     return basePosition + extraOffset;
   });
 
