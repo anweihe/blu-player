@@ -92,21 +92,24 @@ import { PlaybackService } from '../../core/services/playback.service';
             </div>
           </div>
 
-          <!-- Preset Buttons -->
-          <div class="grid grid-cols-4 gap-3">
-            @for (preset of presets; track preset) {
-              <button
-                class="py-3 rounded-lg text-sm font-medium transition-colors"
-                [class.bg-accent-qobuz]="playerState.volume() === preset"
-                [class.text-white]="playerState.volume() === preset"
-                [class.bg-bg-card]="playerState.volume() !== preset"
-                [class.text-text-secondary]="playerState.volume() !== preset"
-                [class.hover:bg-bg-card-hover]="playerState.volume() !== preset"
-                (click)="setVolume(preset)"
-              >
-                {{ preset }}%
-              </button>
-            }
+          <!-- Volume +/- Buttons -->
+          <div class="flex items-center justify-center gap-6">
+            <button
+              class="w-16 h-16 rounded-2xl bg-bg-card text-text-primary flex items-center justify-center text-3xl font-medium hover:bg-bg-card-hover active:scale-95 transition-all"
+              (click)="decreaseVolume()"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
+              </svg>
+            </button>
+            <button
+              class="w-16 h-16 rounded-2xl bg-bg-card text-text-primary flex items-center justify-center text-3xl font-medium hover:bg-bg-card-hover active:scale-95 transition-all"
+              (click)="increaseVolume()"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
           </div>
         }
 
@@ -156,8 +159,7 @@ export class VolumePanelComponent {
   readonly playerState = inject(PlayerStateService);
   private readonly playback = inject(PlaybackService);
 
-  readonly presets = [25, 50, 75, 100];
-
+  private readonly volumeStep = 2; // Volume change per button press
   private isDragging = false;
 
   close(): void {
@@ -170,6 +172,18 @@ export class VolumePanelComponent {
 
   setVolume(level: number): void {
     this.playback.setVolume(level);
+  }
+
+  increaseVolume(): void {
+    const currentVolume = this.playerState.volume();
+    const newVolume = Math.min(100, currentVolume + this.volumeStep);
+    this.playback.setVolume(newVolume);
+  }
+
+  decreaseVolume(): void {
+    const currentVolume = this.playerState.volume();
+    const newVolume = Math.max(0, currentVolume - this.volumeStep);
+    this.playback.setVolume(newVolume);
   }
 
   // Mouse drag handling
