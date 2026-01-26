@@ -75,7 +75,7 @@ public interface IQobuzApiService
     /// <summary>
     /// Search for albums, tracks, and playlists
     /// </summary>
-    Task<QobuzSearchResult> SearchAsync(string query, int limit = 20);
+    Task<QobuzSearchResult> SearchAsync(string query, int limit = 20, int offset = 0);
 
     /// <summary>
     /// Get personalized recommendations for the user
@@ -1241,7 +1241,7 @@ public class QobuzApiService : IQobuzApiService
     /// <summary>
     /// Search for albums, tracks, and playlists
     /// </summary>
-    public async Task<QobuzSearchResult> SearchAsync(string query, int limit = 20)
+    public async Task<QobuzSearchResult> SearchAsync(string query, int limit = 20, int offset = 0)
     {
         var result = new QobuzSearchResult();
 
@@ -1258,6 +1258,7 @@ public class QobuzApiService : IQobuzApiService
             var url = $"{QobuzApiBase}/catalog/search" +
                       $"?query={encodedQuery}" +
                       $"&limit={limit}" +
+                      $"&offset={offset}" +
                       $"&app_id={credentials.AppId}";
 
             _logger.LogDebug("Searching for: {Query}", query);
@@ -1276,20 +1277,29 @@ public class QobuzApiService : IQobuzApiService
             if (searchResponse?.Albums?.Items != null)
             {
                 result.Albums = searchResponse.Albums.Items;
+                result.AlbumsTotal = searchResponse.Albums.Total;
+            }
+
+            if (searchResponse?.Artists?.Items != null)
+            {
+                result.Artists = searchResponse.Artists.Items;
+                result.ArtistsTotal = searchResponse.Artists.Total;
             }
 
             if (searchResponse?.Playlists?.Items != null)
             {
                 result.Playlists = searchResponse.Playlists.Items;
+                result.PlaylistsTotal = searchResponse.Playlists.Total;
             }
 
             if (searchResponse?.Tracks?.Items != null)
             {
                 result.Tracks = searchResponse.Tracks.Items;
+                result.TracksTotal = searchResponse.Tracks.Total;
             }
 
-            _logger.LogInformation("Search for '{Query}' returned {Albums} albums, {Playlists} playlists, {Tracks} tracks",
-                query, result.Albums.Count, result.Playlists.Count, result.Tracks.Count);
+            _logger.LogInformation("Search for '{Query}' (offset={Offset}) returned {Albums}/{AlbumsTotal} albums, {Artists}/{ArtistsTotal} artists, {Playlists}/{PlaylistsTotal} playlists, {Tracks}/{TracksTotal} tracks",
+                query, offset, result.Albums.Count, result.AlbumsTotal, result.Artists.Count, result.ArtistsTotal, result.Playlists.Count, result.PlaylistsTotal, result.Tracks.Count, result.TracksTotal);
         }
         catch (Exception ex)
         {

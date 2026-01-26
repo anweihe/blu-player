@@ -391,19 +391,20 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
-    /// Search for albums, playlists, and tracks
+    /// Search for albums, playlists, tracks, and artists
     /// </summary>
-    public async Task<IActionResult> OnGetSearchAsync(string query, int limit = 20)
+    public async Task<IActionResult> OnGetSearchAsync(string query, int limit = 20, int offset = 0)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
             return new JsonResult(new { success = false, error = "Suchbegriff erforderlich" });
         }
 
-        _logger.LogInformation("Searching for: {Query}", query);
+        _logger.LogInformation("Searching for: {Query} (offset={Offset}, limit={Limit})", query, offset, limit);
 
-        var result = await _qobuzService.SearchAsync(query, limit);
+        var result = await _qobuzService.SearchAsync(query, limit, offset);
         var albumItems = result.Albums.ToList();
+        var artistItems = result.Artists.ToList();
         var playlistItems = result.Playlists.ToList();
         var trackItems = result.Tracks.ToList();
 
@@ -422,8 +423,21 @@ public class QobuzModel : PageModel
                     duration = a.Duration,
                     product_type = a.TypeLabel
                 }),
-                total = albumItems.Count,
-                offset = 0,
+                total = result.AlbumsTotal,
+                offset,
+                limit
+            },
+            artists = new
+            {
+                items = artistItems.Select(a => new
+                {
+                    id = a.Id,
+                    name = a.Name,
+                    picture = a.ImageUrl,
+                    albums_count = a.AlbumsCount
+                }),
+                total = result.ArtistsTotal,
+                offset,
                 limit
             },
             playlists = new
@@ -440,8 +454,8 @@ public class QobuzModel : PageModel
                     owner = new { id = 0, name = p.Owner?.Name },
                     images300 = !string.IsNullOrEmpty(p.CoverUrl) ? new[] { p.CoverUrl } : Array.Empty<string>()
                 }),
-                total = playlistItems.Count,
-                offset = 0,
+                total = result.PlaylistsTotal,
+                offset,
                 limit
             },
             tracks = new
@@ -461,8 +475,8 @@ public class QobuzModel : PageModel
                     },
                     hires = t.IsHiRes
                 }),
-                total = trackItems.Count,
-                offset = 0,
+                total = result.TracksTotal,
+                offset,
                 limit
             }
         });
@@ -1470,22 +1484,22 @@ public class QobuzModel : PageModel
     /// </summary>
     public IActionResult OnGetGenres()
     {
-        // Static list of Qobuz genres (commonly used for filtering)
+        // Genre IDs müssen mit Qobuz API übereinstimmen (von _QobuzContent.cshtml)
         var genres = new[]
         {
-            new { id = 10, name = "Pop/Rock" },
-            new { id = 6, name = "Jazz" },
-            new { id = 98, name = "Klassik" },
-            new { id = 21, name = "Electronic" },
-            new { id = 2, name = "Blues" },
-            new { id = 91, name = "Soul/Funk/R&B" },
-            new { id = 64, name = "Hip-Hop/Rap" },
-            new { id = 52, name = "Reggae" },
-            new { id = 87, name = "Weltmusik" },
-            new { id = 3, name = "Country" },
-            new { id = 56, name = "Metal" },
-            new { id = 80, name = "Chanson française" },
-            new { id = 73, name = "Film/Soundtrack" }
+            new { id = 112, name = "Pop/Rock" },
+            new { id = 80, name = "Jazz" },
+            new { id = 10, name = "Klassik" },
+            new { id = 160, name = "Deutsche Musik" },
+            new { id = 64, name = "Electronic" },
+            new { id = 127, name = "Soul/Funk/R&B" },
+            new { id = 116, name = "Metal" },
+            new { id = 133, name = "Hip-Hop/Rap" },
+            new { id = 2, name = "Blues/Country/Folk" },
+            new { id = 91, name = "Soundtracks" },
+            new { id = 94, name = "World Music" },
+            new { id = 167, name = "Kinder" },
+            new { id = 59, name = "Hörbücher" }
         };
 
         return new JsonResult(new { success = true, genres });

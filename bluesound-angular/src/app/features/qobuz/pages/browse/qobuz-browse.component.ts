@@ -584,6 +584,11 @@ export class QobuzBrowseComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Check if user is logged in, redirect to login if not
+    if (!this.auth.isLoggedIn()) {
+      this.router.navigate(['/qobuz/login']);
+      return;
+    }
     this.loadContent();
   }
 

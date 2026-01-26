@@ -271,8 +271,11 @@ export class PlaylistDetailComponent implements OnInit {
   }
 
   isTrackPlaying(track: QobuzTrack): boolean {
+    // Check both currentPlayingTrackId (for Bluesound) and currentTrack (for browser)
+    const playingTrackId = this.playerState.currentPlayingTrackId();
     const current = this.playerState.currentTrack();
-    return current?.id === track.id && this.playerState.isPlaying();
+    const isThisTrack = playingTrackId === track.id || current?.id === track.id;
+    return isThisTrack && this.playerState.isPlaying();
   }
 
   goBack(): void {

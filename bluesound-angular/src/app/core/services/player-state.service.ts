@@ -58,6 +58,11 @@ export class PlayerStateService {
   readonly currentTrack = signal<QobuzTrack | null>(null);
 
   /**
+   * Currently playing Qobuz track ID (works for both browser and Bluesound)
+   */
+  readonly currentPlayingTrackId = signal<number | null>(null);
+
+  /**
    * Is currently playing
    */
   readonly isPlaying = computed(() => {
@@ -290,11 +295,19 @@ export class PlayerStateService {
   }
 
   /**
+   * Set the currently playing track ID
+   */
+  setCurrentPlayingTrackId(trackId: number | null): void {
+    this.currentPlayingTrackId.set(trackId);
+  }
+
+  /**
    * Reset all state
    */
   reset(): void {
     this.playbackStatus.set(null);
     this.currentTrack.set(null);
+    this.currentPlayingTrackId.set(null);
     this.progress.set(0);
     this.duration.set(0);
     this.queue.set([]);

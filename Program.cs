@@ -6,7 +6,6 @@ using BluesoundWeb.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // For API controllers
 
 // Register database context - PostgreSQL for production, SQLite for development
@@ -83,10 +82,8 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 app.MapControllers(); // API endpoints
-app.MapRazorPages()
-   .WithStaticAssets();
 
-// SPA fallback - serve index.html for Angular routes
+// SPA fallback - serve index.html for all non-API routes (Angular handles routing)
 app.MapFallbackToFile("index.html");
 
 app.Run();

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, catchError, of } from 'rxjs';
 import { AuthService } from './auth.service';
 import {
   QobuzAlbum,
@@ -16,7 +16,6 @@ import {
   QobuzPlaylistWithTracks,
   QobuzPlaylistsContainer,
   QobuzSearchResponse,
-  QobuzSearchResult,
   QobuzTrack,
   BackendArtistPageResponse,
   BackendDiscographyResponse
@@ -39,13 +38,13 @@ export type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
 
 /**
  * Qobuz API Service
- * Handles all API calls to the Qobuz backend through the .NET proxy
+ * Handles all API calls to the Qobuz backend through the .NET REST API
  */
 @Injectable({ providedIn: 'root' })
 export class QobuzApiService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
-  private readonly apiBaseUrl = '/Qobuz'; // Razor Pages handler
+  private readonly apiBaseUrl = '/api/qobuz'; // REST API Controller
 
   // ==================== Albums ====================
 
@@ -54,13 +53,17 @@ export class QobuzApiService {
    */
   getNewReleases(offset = 0, limit = 50): Observable<QobuzAlbumsContainer> {
     return this.http.get<QobuzFeaturedAlbumsResponse>(
-      `${this.apiBaseUrl}?handler=NewReleases`,
+      `${this.apiBaseUrl}/new-releases`,
       {
         params: { offset: offset.toString(), limit: limit.toString() },
         headers: this.auth.getAuthHeaders()
       }
     ).pipe(
-      map(response => response.albums ?? { items: [], total: 0, offset: 0, limit })
+      map(response => response?.albums ?? { items: [], total: 0, offset: 0, limit }),
+      catchError(error => {
+        console.error('Failed to load new releases:', error);
+        return of({ items: [], total: 0, offset: 0, limit });
+      })
     );
   }
 
@@ -69,13 +72,17 @@ export class QobuzApiService {
    */
   getAlbumCharts(offset = 0, limit = 50): Observable<QobuzAlbumsContainer> {
     return this.http.get<QobuzFeaturedAlbumsResponse>(
-      `${this.apiBaseUrl}?handler=AlbumCharts`,
+      `${this.apiBaseUrl}/album-charts`,
       {
         params: { offset: offset.toString(), limit: limit.toString() },
         headers: this.auth.getAuthHeaders()
       }
     ).pipe(
-      map(response => response.albums ?? { items: [], total: 0, offset: 0, limit })
+      map(response => response?.albums ?? { items: [], total: 0, offset: 0, limit }),
+      catchError(error => {
+        console.error('Failed to load album charts:', error);
+        return of({ items: [], total: 0, offset: 0, limit });
+      })
     );
   }
 
@@ -84,9 +91,8 @@ export class QobuzApiService {
    */
   getAlbum(albumId: string): Observable<QobuzAlbumWithTracks> {
     return this.http.get<QobuzAlbumWithTracks>(
-      `${this.apiBaseUrl}?handler=Album`,
+      `${this.apiBaseUrl}/album/${encodeURIComponent(albumId)}`,
       {
-        params: { albumId },
         headers: this.auth.getAuthHeaders()
       }
     );
@@ -113,7 +119,7 @@ export class QobuzApiService {
     }
 
     return this.http.get<QobuzFeaturedPlaylistsResponse>(
-      `${this.apiBaseUrl}?handler=FeaturedPlaylists`,
+      `${this.apiBaseUrl}/featured-playlists`,
       { params, headers: this.auth.getAuthHeaders() }
     ).pipe(
       map(response => response.playlists ?? { items: [], total: 0, offset: 0, limit })
@@ -125,7 +131,7 @@ export class QobuzApiService {
    */
   getUserPlaylists(offset = 0, limit = 50): Observable<QobuzPlaylistsContainer> {
     return this.http.get<{ playlists: QobuzPlaylistsContainer }>(
-      `${this.apiBaseUrl}?handler=UserPlaylists`,
+      `${this.apiBaseUrl}/user-playlists`,
       {
         params: { offset: offset.toString(), limit: limit.toString() },
         headers: this.auth.getAuthHeaders()
@@ -140,9 +146,8 @@ export class QobuzApiService {
    */
   getPlaylist(playlistId: number): Observable<QobuzPlaylistWithTracks> {
     return this.http.get<QobuzPlaylistWithTracks>(
-      `${this.apiBaseUrl}?handler=Playlist`,
+      `${this.apiBaseUrl}/playlist/${playlistId}`,
       {
-        params: { playlistId: playlistId.toString() },
         headers: this.auth.getAuthHeaders()
       }
     );
@@ -156,9 +161,8 @@ export class QobuzApiService {
    */
   getArtistPage(artistId: number): Observable<BackendArtistPageResponse> {
     return this.http.get<BackendArtistPageResponse>(
-      `${this.apiBaseUrl}?handler=ArtistPage`,
+      `${this.apiBaseUrl}/artist/${artistId}`,
       {
-        params: { artistId: artistId.toString() },
         headers: this.auth.getAuthHeaders()
       }
     );
@@ -176,10 +180,9 @@ export class QobuzApiService {
     sort = 'release_date'
   ): Observable<QobuzAlbumsContainer> {
     return this.http.get<BackendDiscographyResponse>(
-      `${this.apiBaseUrl}?handler=ArtistDiscography`,
+      `${this.apiBaseUrl}/artist/${artistId}/discography`,
       {
         params: {
-          artistId: artistId.toString(),
           releaseType,
           offset: offset.toString(),
           limit: limit.toString(),
@@ -214,7 +217,7 @@ export class QobuzApiService {
    */
   getFavoriteAlbums(offset = 0, limit = 50): Observable<QobuzAlbumsContainer> {
     return this.http.get<QobuzFavoriteAlbumsResponse>(
-      `${this.apiBaseUrl}?handler=FavoriteAlbums`,
+      `${this.apiBaseUrl}/favorites/albums`,
       {
         params: { offset: offset.toString(), limit: limit.toString() },
         headers: this.auth.getAuthHeaders()
@@ -229,7 +232,7 @@ export class QobuzApiService {
    */
   getFavoriteTracks(offset = 0, limit = 50): Observable<QobuzTrack[]> {
     return this.http.get<QobuzFavoriteTracksResponse>(
-      `${this.apiBaseUrl}?handler=FavoriteTracks`,
+      `${this.apiBaseUrl}/favorites/tracks`,
       {
         params: { offset: offset.toString(), limit: limit.toString() },
         headers: this.auth.getAuthHeaders()
@@ -244,7 +247,7 @@ export class QobuzApiService {
    */
   getFavoriteArtists(offset = 0, limit = 50): Observable<QobuzFavoriteArtistsResponse> {
     return this.http.get<QobuzFavoriteArtistsResponse>(
-      `${this.apiBaseUrl}?handler=FavoriteArtists`,
+      `${this.apiBaseUrl}/favorites/artists`,
       {
         params: { offset: offset.toString(), limit: limit.toString() },
         headers: this.auth.getAuthHeaders()
@@ -257,20 +260,17 @@ export class QobuzApiService {
   /**
    * Search for albums, tracks, artists, and playlists
    */
-  search(query: string, limit = 20): Observable<QobuzSearchResult> {
+  search(query: string, limit = 20, offset = 0): Observable<QobuzSearchResponse> {
     return this.http.get<QobuzSearchResponse>(
-      `${this.apiBaseUrl}?handler=Search`,
+      `${this.apiBaseUrl}/search`,
       {
-        params: { query, limit: limit.toString() },
+        params: {
+          query,
+          limit: limit.toString(),
+          offset: offset.toString()
+        },
         headers: this.auth.getAuthHeaders()
       }
-    ).pipe(
-      map(response => ({
-        albums: response.albums?.items ?? [],
-        artists: response.artists?.items ?? [],
-        playlists: response.playlists?.items ?? [],
-        tracks: response.tracks?.items ?? []
-      }))
     );
   }
 
@@ -281,7 +281,7 @@ export class QobuzApiService {
    */
   getTrackStreamUrl(trackId: number, formatId = 27): Observable<string> {
     return this.http.get<{ url: string }>(
-      `${this.apiBaseUrl}?handler=TrackStreamUrl`,
+      `${this.apiBaseUrl}/track-stream-url`,
       {
         params: {
           trackId: trackId.toString(),
@@ -301,7 +301,7 @@ export class QobuzApiService {
    */
   getAlbumInfo(albumId: string, albumTitle: string, artistName: string): Observable<{ style: string; summary: string }> {
     return this.http.get<{ success: boolean; style?: string; summary?: string; error?: string }>(
-      `${this.apiBaseUrl}?handler=AlbumInfo`,
+      `${this.apiBaseUrl}/album-info`,
       {
         params: { albumId, albumTitle, artistName },
         headers: this.auth.getAuthHeaders()
@@ -323,7 +323,7 @@ export class QobuzApiService {
    */
   getGenres(): Observable<{ id: number; name: string }[]> {
     return this.http.get<{ genres: { id: number; name: string }[] }>(
-      `${this.apiBaseUrl}?handler=Genres`,
+      `${this.apiBaseUrl}/genres`,
       { headers: this.auth.getAuthHeaders() }
     ).pipe(
       map(response => response.genres ?? [])

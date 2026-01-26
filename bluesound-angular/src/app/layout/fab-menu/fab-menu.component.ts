@@ -1,15 +1,15 @@
-import { Component, inject, signal, computed, HostListener } from '@angular/core';
+import { Component, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { PlayerStateService } from '../../core/services/player-state.service';
-import { AuthService } from '../../core/services/auth.service';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 interface FabAction {
   id: string;
   label: string;
-  icon: string;
-  action: () => void;
-  color?: string;
+  iconHtml: SafeHtml;
+  route?: string;
+  action?: () => void;
+  color: string;
 }
 
 @Component({
@@ -17,120 +17,184 @@ interface FabAction {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <!-- FAB Container - positioned above global player -->
-    <div class="fixed right-4 z-40 transition-all duration-300" [style.bottom]="fabBottom()">
-      <!-- Mini Action Buttons -->
-      @if (isOpen()) {
-        <div class="flex flex-col-reverse items-end gap-3 mb-3">
-          @for (action of visibleActions(); track action.id; let i = $index) {
-            <div
-              class="flex items-center gap-3 animate-fab-item"
-              [style.animation-delay]="(i * 50) + 'ms'"
-            >
-              <!-- Label -->
-              <span class="px-3 py-1.5 bg-bg-card rounded-lg text-sm font-medium shadow-lg whitespace-nowrap">
-                {{ action.label }}
-              </span>
-              <!-- Button -->
-              <button
-                class="w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110"
-                [class]="action.color || 'bg-bg-card text-text-primary'"
-                (click)="executeAction(action)"
-              >
-                <span [innerHTML]="action.icon" class="w-6 h-6"></span>
-              </button>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- Main FAB Button -->
-      <button
-        class="w-14 h-14 rounded-full bg-accent-qobuz text-white shadow-xl flex items-center justify-center transition-all duration-300 hover:shadow-2xl"
-        [class.rotate-45]="isOpen()"
-        (click)="toggle()"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
-    </div>
-
     <!-- Backdrop when open -->
     @if (isOpen()) {
       <div
-        class="fixed inset-0 bg-black/30 z-30"
+        class="fab-overlay fixed inset-0 bg-black/40 z-[449]"
         (click)="close()"
       ></div>
     }
+
+    <!-- FAB Container -->
+    <div class="fab-container fixed z-[450] right-4 md:right-6 bottom-[100px] md:bottom-[116px]">
+      <!-- Mini FABs -->
+      <div class="fab-actions absolute bottom-[68px] right-0 flex flex-col items-end gap-3"
+           [class.pointer-events-none]="!isOpen()"
+           [class.pointer-events-auto]="isOpen()">
+        @for (action of actions; track action.id; let i = $index) {
+          <button
+            class="fab-mini flex items-center gap-3 h-12 px-4 pl-3 rounded-[14px] bg-bg-secondary border border-border-subtle text-text-primary text-sm font-medium whitespace-nowrap cursor-pointer shadow-lg transition-all"
+            [class.fab-mini-visible]="isOpen()"
+            [style.transition-delay]="getTransitionDelay(i)"
+            [style.--icon-color]="action.color"
+            (click)="executeAction(action)"
+          >
+            <span class="fab-icon w-6 h-6 flex-shrink-0" [innerHTML]="action.iconHtml"></span>
+            <span class="fab-label">{{ action.label }}</span>
+          </button>
+        }
+      </div>
+
+      <!-- Main FAB Button -->
+      <button
+        class="fab-main w-14 h-14 rounded-2xl bg-accent-qobuz border-none cursor-pointer flex items-center justify-center shadow-xl transition-all duration-200 hover:shadow-2xl active:scale-95 relative z-[2]"
+        [attr.aria-expanded]="isOpen()"
+        aria-haspopup="true"
+        aria-label="Menü öffnen"
+        (click)="toggle()"
+      >
+        <svg
+          class="fab-plus-icon w-6 h-6 text-white transition-transform duration-300"
+          [class.rotate-45]="isOpen()"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+    </div>
   `,
   styles: [`
-    @keyframes fab-item-enter {
-      from {
-        opacity: 0;
-        transform: translateY(10px) scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+    .fab-mini {
+      opacity: 0;
+      transform: scale(0.3) translateY(20px);
+      transition: opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+                  transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+                  background 0.15s ease,
+                  border-color 0.15s ease;
     }
 
-    .animate-fab-item {
-      animation: fab-item-enter 0.2s ease-out forwards;
-      opacity: 0;
+    .fab-mini-visible {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    .fab-mini:hover {
+      background: var(--color-bg-primary);
+      border-color: var(--icon-color);
+    }
+
+    .fab-mini:active {
+      transform: scale(0.97) translateY(0) !important;
+    }
+
+    .fab-icon {
+      color: var(--icon-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .fab-icon :deep(svg) {
+      width: 100%;
+      height: 100%;
     }
   `]
 })
 export class FabMenuComponent {
   private readonly router = inject(Router);
-  private readonly playerState = inject(PlayerStateService);
-  private readonly auth = inject(AuthService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly isOpen = signal(false);
 
-  // Calculate bottom position - global player is always visible now
-  readonly fabBottom = computed(() => {
-    // Player bar is always visible (~100px height + safe area)
-    return 'calc(100px + env(safe-area-inset-bottom, 0px))';
-  });
+  // Service colors
+  private readonly colors = {
+    tunein: '#f97316',
+    radioparadise: '#f97316',
+    qobuz: '#1db954',
+    player: '#a1a1aa'
+  };
 
-  // Define all possible actions
-  private readonly allActions: FabAction[] = [
+  // Icons as SafeHtml
+  private readonly icons = {
+    tunein: this.sanitizer.bypassSecurityTrustHtml(`
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
+        <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
+        <circle cx="12" cy="12" r="2"/>
+        <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
+        <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>
+      </svg>
+    `),
+    radioparadise: this.sanitizer.bypassSecurityTrustHtml(`
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="2"/>
+        <path d="M16.24 7.76a6 6 0 0 1 0 8.49"/>
+        <path d="M7.76 16.24a6 6 0 0 1 0-8.49"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        <path d="M4.93 19.07a10 10 0 0 1 0-14.14"/>
+      </svg>
+    `),
+    qobuz: this.sanitizer.bypassSecurityTrustHtml(`
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"/>
+        <circle cx="6" cy="18" r="3"/>
+        <circle cx="18" cy="16" r="3"/>
+      </svg>
+    `),
+    player: this.sanitizer.bypassSecurityTrustHtml(`
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="4" width="16" height="16" rx="2"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    `)
+  };
+
+  // Define actions matching Razor version
+  readonly actions: FabAction[] = [
     {
-      id: 'search',
-      label: 'Suchen',
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>`,
-      action: () => this.router.navigate(['/qobuz/search']),
-      color: 'bg-accent-qobuz text-white'
+      id: 'tunein',
+      label: 'TuneIn',
+      iconHtml: this.icons.tunein,
+      route: '/tunein',
+      color: this.colors.tunein
     },
     {
-      id: 'volume',
-      label: 'Lautstärke',
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>`,
-      action: () => this.playerState.isVolumePanelVisible.set(true)
+      id: 'radio-paradise',
+      label: 'Radio Paradise',
+      iconHtml: this.icons.radioparadise,
+      route: '/radioparadise',
+      color: this.colors.radioparadise
     },
     {
-      id: 'quality',
-      label: 'Qualität',
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>`,
-      action: () => this.showQualitySelector()
+      id: 'qobuz',
+      label: 'Qobuz',
+      iconHtml: this.icons.qobuz,
+      route: '/qobuz/browse',
+      color: this.colors.qobuz
     },
     {
       id: 'player',
-      label: 'Gerät wählen',
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>`,
-      action: () => this.router.navigate(['/players'])
+      label: 'Player',
+      iconHtml: this.icons.player,
+      route: '/players',
+      color: this.colors.player
     }
   ];
 
-  // Only show relevant actions based on auth state
-  readonly visibleActions = computed(() => {
-    if (!this.auth.isLoggedIn()) {
-      return this.allActions.filter(a => a.id === 'player');
+  // Staggered animation - Player (last/4th) appears first, TuneIn (first/1st) last
+  getTransitionDelay(index: number): string {
+    if (this.isOpen()) {
+      return `${(this.actions.length - 1 - index) * 50}ms`;
+    } else {
+      return `${index * 30}ms`;
     }
-    return this.allActions;
-  });
+  }
 
   toggle(): void {
     this.isOpen.update(v => !v);
@@ -141,12 +205,15 @@ export class FabMenuComponent {
   }
 
   executeAction(action: FabAction): void {
-    action.action();
     this.close();
-  }
 
-  private showQualitySelector(): void {
-    // TODO: Open quality selector modal
+    setTimeout(() => {
+      if (action.route) {
+        this.router.navigate([action.route]);
+      } else if (action.action) {
+        action.action();
+      }
+    }, 100);
   }
 
   @HostListener('document:keydown.escape')

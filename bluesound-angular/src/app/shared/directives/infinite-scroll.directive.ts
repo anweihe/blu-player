@@ -22,9 +22,10 @@ export class InfiniteScrollDirective implements OnInit, OnDestroy {
   @Input() scrollThreshold = 200;
 
   /**
-   * Whether to listen to window scroll or element scroll
+   * Selector for the scroll container (default: 'main' element)
+   * Use 'window' to listen to window scroll, 'self' for the directive element
    */
-  @Input() scrollWindow = true;
+  @Input() scrollContainer: string = 'main';
 
   /**
    * Disable scroll listener
@@ -37,25 +38,32 @@ export class InfiniteScrollDirective implements OnInit, OnDestroy {
   @Output() scrolled = new EventEmitter<void>();
 
   private scrollListener?: () => void;
+  private scrollElement?: Element | Window;
 
   ngOnInit(): void {
     this.scrollListener = this.onScroll.bind(this);
+    this.scrollElement = this.resolveScrollElement();
 
-    if (this.scrollWindow) {
-      window.addEventListener('scroll', this.scrollListener, { passive: true });
-    } else {
-      this.elementRef.nativeElement.addEventListener('scroll', this.scrollListener, { passive: true });
+    if (this.scrollElement) {
+      this.scrollElement.addEventListener('scroll', this.scrollListener, { passive: true });
     }
   }
 
   ngOnDestroy(): void {
-    if (this.scrollListener) {
-      if (this.scrollWindow) {
-        window.removeEventListener('scroll', this.scrollListener);
-      } else {
-        this.elementRef.nativeElement.removeEventListener('scroll', this.scrollListener);
-      }
+    if (this.scrollListener && this.scrollElement) {
+      this.scrollElement.removeEventListener('scroll', this.scrollListener);
     }
+  }
+
+  private resolveScrollElement(): Element | Window | undefined {
+    if (this.scrollContainer === 'window') {
+      return window;
+    }
+    if (this.scrollContainer === 'self') {
+      return this.elementRef.nativeElement;
+    }
+    // Query selector - find the closest matching ancestor or document element
+    return document.querySelector(this.scrollContainer) || undefined;
   }
 
   private onScroll(): void {
@@ -63,15 +71,14 @@ export class InfiniteScrollDirective implements OnInit, OnDestroy {
 
     let shouldEmit = false;
 
-    if (this.scrollWindow) {
+    if (this.scrollElement === window) {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
-
       shouldEmit = (scrollTop + windowHeight) >= (documentHeight - this.scrollThreshold);
-    } else {
-      const element = this.elementRef.nativeElement;
-      shouldEmit = (element.scrollTop + element.clientHeight) >= (element.scrollHeight - this.scrollThreshold);
+    } else if (this.scrollElement instanceof Element) {
+      const el = this.scrollElement;
+      shouldEmit = (el.scrollTop + el.clientHeight) >= (el.scrollHeight - this.scrollThreshold);
     }
 
     if (shouldEmit) {

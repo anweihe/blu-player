@@ -570,6 +570,9 @@ public class QobuzSearchResponse
     [JsonPropertyName("albums")]
     public QobuzAlbumsContainer? Albums { get; set; }
 
+    [JsonPropertyName("artists")]
+    public QobuzArtistsContainer? Artists { get; set; }
+
     [JsonPropertyName("playlists")]
     public QobuzPlaylistsContainer? Playlists { get; set; }
 
@@ -583,8 +586,15 @@ public class QobuzSearchResponse
 public class QobuzSearchResult
 {
     public List<QobuzAlbum> Albums { get; set; } = new();
+    public List<QobuzFavoriteArtist> Artists { get; set; } = new();
     public List<QobuzPlaylist> Playlists { get; set; } = new();
     public List<QobuzTrack> Tracks { get; set; } = new();
+
+    // Totals for pagination
+    public int AlbumsTotal { get; set; }
+    public int ArtistsTotal { get; set; }
+    public int PlaylistsTotal { get; set; }
+    public int TracksTotal { get; set; }
 }
 
 /// <summary>

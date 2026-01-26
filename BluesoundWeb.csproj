@@ -4,6 +4,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Angular build paths -->
+    <AngularProjectDir>bluesound-angular</AngularProjectDir>
+    <AngularBuildDir>$(AngularProjectDir)/dist/bluesound-angular/browser</AngularBuildDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,5 +18,27 @@
     </PackageReference>
     <PackageReference Include="Zeroconf" Version="3.7.16" />
   </ItemGroup>
+
+  <!-- Angular Build Integration -->
+  <Target Name="CleanAngularFiles" BeforeTargets="BuildAngular">
+    <Message Importance="high" Text="Cleaning old Angular files from wwwroot..." />
+    <ItemGroup>
+      <OldAngularFiles Include="wwwroot/chunk-*.js;wwwroot/main-*.js;wwwroot/styles-*.css;wwwroot/index.html" />
+    </ItemGroup>
+    <Delete Files="@(OldAngularFiles)" />
+  </Target>
+
+  <Target Name="BuildAngular" BeforeTargets="Build" Condition="Exists('$(AngularProjectDir)/package.json')">
+    <Message Importance="high" Text="Building Angular app..." />
+    <Exec Command="npm run build" WorkingDirectory="$(AngularProjectDir)" />
+  </Target>
+
+  <Target Name="CopyAngularBuild" AfterTargets="BuildAngular" Condition="Exists('$(AngularBuildDir)')">
+    <Message Importance="high" Text="Copying Angular build to wwwroot..." />
+    <ItemGroup>
+      <AngularBuildFiles Include="$(AngularBuildDir)/**/*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AngularBuildFiles)" DestinationFolder="wwwroot/%(RecursiveDir)" />
+  </Target>
 
 </Project>

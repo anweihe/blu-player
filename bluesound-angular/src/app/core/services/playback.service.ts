@@ -100,8 +100,9 @@ export class PlaybackService implements OnDestroy {
     this.loadingTrackId.set(track.id);
 
     try {
-      // Set current track in state
+      // Set current track in state (for both browser and Bluesound)
       this.playerState.currentTrack.set(track);
+      this.playerState.setCurrentPlayingTrackId(track.id);
       this.playerState.duration.set(track.duration || 0);
       this.playerState.progress.set(0);
 
@@ -148,9 +149,15 @@ export class PlaybackService implements OnDestroy {
       // Use native Bluesound album playback
       this.isLoading.set(true);
       try {
+        // Set the starting track as current
+        if (tracks[startIndex]) {
+          this.playerState.currentTrack.set(tracks[startIndex]);
+          this.playerState.setCurrentPlayingTrackId(tracks[startIndex].id);
+        }
         await firstValueFrom(
           this.bluesoundApi.playQobuzAlbum(player.ipAddress, album.id, startIndex)
         );
+        this.currentContext = context;
         this.startPolling();
       } finally {
         this.isLoading.set(false);
@@ -181,9 +188,15 @@ export class PlaybackService implements OnDestroy {
       // Use native Bluesound playlist playback
       this.isLoading.set(true);
       try {
+        // Set the starting track as current
+        if (tracks[startIndex]) {
+          this.playerState.currentTrack.set(tracks[startIndex]);
+          this.playerState.setCurrentPlayingTrackId(tracks[startIndex].id);
+        }
         await firstValueFrom(
           this.bluesoundApi.playQobuzPlaylist(player.ipAddress, playlist.id, startIndex)
         );
+        this.currentContext = context;
         this.startPolling();
       } finally {
         this.isLoading.set(false);

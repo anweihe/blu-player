@@ -17,7 +17,7 @@ import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
 import { ContextMenuService } from '../../../../shared/services/context-menu.service';
 import {
-  QobuzSearchResult,
+  QobuzSearchResponse,
   QobuzAlbum,
   QobuzTrack,
   QobuzPlaylist,
@@ -31,6 +31,7 @@ import {
   PlaylistCardComponent,
   ArtistCardComponent
 } from '../../../../shared/components';
+import { InfiniteScrollDirective } from '../../../../shared/directives';
 
 /**
  * Search result tabs
@@ -40,6 +41,15 @@ type SearchTab = 'all' | 'albums' | 'artists' | 'tracks' | 'playlists';
 interface TabConfig {
   value: SearchTab;
   label: string;
+}
+
+/**
+ * Pagination state for each result category
+ */
+interface TabPaginationState {
+  offset: number;
+  total: number;
+  hasMore: boolean;
 }
 
 const TABS: TabConfig[] = [
@@ -52,6 +62,7 @@ const TABS: TabConfig[] = [
 
 const RECENT_SEARCHES_KEY = 'qobuz_recent_searches';
 const MAX_RECENT_SEARCHES = 8;
+const SEARCH_LIMIT = 20;
 
 @Component({
   selector: 'app-search',
@@ -62,7 +73,8 @@ const MAX_RECENT_SEARCHES = 8;
     AlbumCardComponent,
     TrackItemComponent,
     PlaylistCardComponent,
-    ArtistCardComponent
+    ArtistCardComponent,
+    InfiniteScrollDirective
   ],
   template: `
     <div class="search-page bg-bg-primary min-h-screen pb-28">
@@ -140,7 +152,11 @@ const MAX_RECENT_SEARCHES = 8;
       </div>
 
       <!-- Content -->
-      <div class="p-4">
+      <div class="p-4"
+           appInfiniteScroll
+           [scrollThreshold]="500"
+           [scrollDisabled]="!canLoadMore()"
+           (scrolled)="loadMore()">
         <!-- Initial State / Recent Searches -->
         @if (!query && !loading()) {
           @if (recentSearches().length > 0) {
@@ -232,21 +248,21 @@ const MAX_RECENT_SEARCHES = 8;
           <!-- All Tab -->
           @if (currentTab() === 'all') {
             <!-- Albums -->
-            @if (results()!.albums.length > 0) {
+            @if (albums().length > 0) {
               <section class="mb-8">
                 <div class="flex items-center justify-between mb-4">
                   <h2 class="text-lg font-semibold">Alben</h2>
-                  @if (results()!.albums.length > 4) {
+                  @if (albumsPagination().total > 4) {
                     <button
                       class="text-sm text-accent-qobuz hover:underline"
                       (click)="currentTab.set('albums')"
                     >
-                      Alle anzeigen
+                      Alle anzeigen ({{ albumsPagination().total }})
                     </button>
                   }
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  @for (album of results()!.albums.slice(0, 4); track album.id) {
+                  @for (album of albums().slice(0, 4); track album.id) {
                     <app-album-card
                       [album]="album"
                       (play)="playAlbum(album)"
@@ -257,21 +273,21 @@ const MAX_RECENT_SEARCHES = 8;
             }
 
             <!-- Artists -->
-            @if (results()!.artists.length > 0) {
+            @if (artists().length > 0) {
               <section class="mb-8">
                 <div class="flex items-center justify-between mb-4">
                   <h2 class="text-lg font-semibold">Künstler</h2>
-                  @if (results()!.artists.length > 4) {
+                  @if (artistsPagination().total > 4) {
                     <button
                       class="text-sm text-accent-qobuz hover:underline"
                       (click)="currentTab.set('artists')"
                     >
-                      Alle anzeigen
+                      Alle anzeigen ({{ artistsPagination().total }})
                     </button>
                   }
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  @for (artist of results()!.artists.slice(0, 4); track artist.id) {
+                  @for (artist of artists().slice(0, 4); track artist.id) {
                     <app-artist-card [artist]="artist" />
                   }
                 </div>
@@ -279,21 +295,21 @@ const MAX_RECENT_SEARCHES = 8;
             }
 
             <!-- Tracks -->
-            @if (results()!.tracks.length > 0) {
+            @if (tracks().length > 0) {
               <section class="mb-8">
                 <div class="flex items-center justify-between mb-4">
                   <h2 class="text-lg font-semibold">Titel</h2>
-                  @if (results()!.tracks.length > 5) {
+                  @if (tracksPagination().total > 5) {
                     <button
                       class="text-sm text-accent-qobuz hover:underline"
                       (click)="currentTab.set('tracks')"
                     >
-                      Alle anzeigen
+                      Alle anzeigen ({{ tracksPagination().total }})
                     </button>
                   }
                 </div>
                 <div class="space-y-1">
-                  @for (track of results()!.tracks.slice(0, 5); track track.id; let i = $index) {
+                  @for (track of tracks().slice(0, 5); track track.id; let i = $index) {
                     <app-track-item
                       [track]="track"
                       [trackNumber]="i + 1"
@@ -313,21 +329,21 @@ const MAX_RECENT_SEARCHES = 8;
             }
 
             <!-- Playlists -->
-            @if (results()!.playlists.length > 0) {
+            @if (playlists().length > 0) {
               <section class="mb-8">
                 <div class="flex items-center justify-between mb-4">
                   <h2 class="text-lg font-semibold">Playlists</h2>
-                  @if (results()!.playlists.length > 4) {
+                  @if (playlistsPagination().total > 4) {
                     <button
                       class="text-sm text-accent-qobuz hover:underline"
                       (click)="currentTab.set('playlists')"
                     >
-                      Alle anzeigen
+                      Alle anzeigen ({{ playlistsPagination().total }})
                     </button>
                   }
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  @for (playlist of results()!.playlists.slice(0, 4); track playlist.id) {
+                  @for (playlist of playlists().slice(0, 4); track playlist.id) {
                     <app-playlist-card
                       [playlist]="playlist"
                       (play)="playPlaylist(playlist)"
@@ -341,7 +357,7 @@ const MAX_RECENT_SEARCHES = 8;
           <!-- Albums Tab -->
           @if (currentTab() === 'albums') {
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              @for (album of results()!.albums; track album.id) {
+              @for (album of albums(); track album.id) {
                 <app-album-card
                   [album]="album"
                   [showYear]="true"
@@ -349,7 +365,7 @@ const MAX_RECENT_SEARCHES = 8;
                 />
               }
             </div>
-            @if (results()!.albums.length === 0) {
+            @if (albums().length === 0) {
               <div class="text-center py-8 text-text-muted">Keine Alben gefunden</div>
             }
           }
@@ -357,11 +373,11 @@ const MAX_RECENT_SEARCHES = 8;
           <!-- Artists Tab -->
           @if (currentTab() === 'artists') {
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              @for (artist of results()!.artists; track artist.id) {
+              @for (artist of artists(); track artist.id) {
                 <app-artist-card [artist]="artist" />
               }
             </div>
-            @if (results()!.artists.length === 0) {
+            @if (artists().length === 0) {
               <div class="text-center py-8 text-text-muted">Keine Künstler gefunden</div>
             }
           }
@@ -369,7 +385,7 @@ const MAX_RECENT_SEARCHES = 8;
           <!-- Tracks Tab -->
           @if (currentTab() === 'tracks') {
             <div class="space-y-1">
-              @for (track of results()!.tracks; track track.id; let i = $index) {
+              @for (track of tracks(); track track.id; let i = $index) {
                 <app-track-item
                   [track]="track"
                   [trackNumber]="i + 1"
@@ -385,7 +401,7 @@ const MAX_RECENT_SEARCHES = 8;
                 />
               }
             </div>
-            @if (results()!.tracks.length === 0) {
+            @if (tracks().length === 0) {
               <div class="text-center py-8 text-text-muted">Keine Titel gefunden</div>
             }
           }
@@ -393,7 +409,7 @@ const MAX_RECENT_SEARCHES = 8;
           <!-- Playlists Tab -->
           @if (currentTab() === 'playlists') {
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              @for (playlist of results()!.playlists; track playlist.id) {
+              @for (playlist of playlists(); track playlist.id) {
                 <app-playlist-card
                   [playlist]="playlist"
                   [showOwner]="true"
@@ -401,9 +417,17 @@ const MAX_RECENT_SEARCHES = 8;
                 />
               }
             </div>
-            @if (results()!.playlists.length === 0) {
+            @if (playlists().length === 0) {
               <div class="text-center py-8 text-text-muted">Keine Playlists gefunden</div>
             }
+          }
+
+          <!-- Loading More Indicator -->
+          @if (loadingMore()) {
+            <div class="flex items-center justify-center gap-3 py-8 text-text-muted">
+              <div class="w-5 h-5 border-2 border-border-accent border-t-accent-qobuz rounded-full animate-spin"></div>
+              <span>Lade mehr...</span>
+            </div>
           }
         }
       </div>
@@ -431,19 +455,52 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   query = '';
+  private currentQuery = '';
+
   readonly loading = signal(false);
-  readonly results = signal<QobuzSearchResult | null>(null);
+  readonly loadingMore = signal(false);
   readonly currentTab = signal<SearchTab>('all');
   readonly recentSearches = signal<string[]>([]);
+
+  // Result data signals
+  readonly albums = signal<QobuzAlbum[]>([]);
+  readonly artists = signal<QobuzFavoriteArtist[]>([]);
+  readonly tracks = signal<QobuzTrack[]>([]);
+  readonly playlists = signal<QobuzPlaylist[]>([]);
+
+  // Pagination state for each category
+  readonly albumsPagination = signal<TabPaginationState>({ offset: 0, total: 0, hasMore: false });
+  readonly artistsPagination = signal<TabPaginationState>({ offset: 0, total: 0, hasMore: false });
+  readonly tracksPagination = signal<TabPaginationState>({ offset: 0, total: 0, hasMore: false });
+  readonly playlistsPagination = signal<TabPaginationState>({ offset: 0, total: 0, hasMore: false });
 
   readonly tabs = TABS;
 
   // Computed
   readonly hasResults = computed(() => {
-    const r = this.results();
-    if (!r) return false;
-    return r.albums.length > 0 || r.artists.length > 0 ||
-           r.tracks.length > 0 || r.playlists.length > 0;
+    return this.albums().length > 0 || this.artists().length > 0 ||
+           this.tracks().length > 0 || this.playlists().length > 0;
+  });
+
+  readonly canLoadMore = computed(() => {
+    if (this.loading() || this.loadingMore()) return false;
+    const tab = this.currentTab();
+
+    // Für "all" Tab: true wenn IRGENDEINE Kategorie mehr hat
+    if (tab === 'all') {
+      return this.albumsPagination().hasMore ||
+             this.artistsPagination().hasMore ||
+             this.tracksPagination().hasMore ||
+             this.playlistsPagination().hasMore;
+    }
+
+    switch (tab) {
+      case 'albums': return this.albumsPagination().hasMore;
+      case 'artists': return this.artistsPagination().hasMore;
+      case 'tracks': return this.tracksPagination().hasMore;
+      case 'playlists': return this.playlistsPagination().hasMore;
+      default: return false;
+    }
   });
 
   ngOnInit(): void {
@@ -458,6 +515,8 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
       tap(query => {
         if (query.trim()) {
           this.loading.set(true);
+          this.currentQuery = query;
+          this.resetAllPagination();
           this.addToRecentSearches(query);
         }
       }),
@@ -465,15 +524,17 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!query.trim()) {
           return of(null);
         }
-        return this.qobuzApi.search(query, 20).pipe(
-          catchError(() => of({ albums: [], artists: [], tracks: [], playlists: [] }))
+        return this.qobuzApi.search(query, SEARCH_LIMIT, 0).pipe(
+          catchError(() => of(null))
         );
       })
-    ).subscribe(results => {
-      this.results.set(results);
+    ).subscribe(response => {
+      if (response) {
+        this.processSearchResponse(response, false);
+      }
       this.loading.set(false);
       // Reset to All tab when new results come in
-      if (results) {
+      if (response) {
         this.currentTab.set('all');
       }
     });
@@ -495,7 +556,7 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
     if (query.trim()) {
       this.searchSubject.next(query);
     } else {
-      this.results.set(null);
+      this.resetAllPagination();
       this.loading.set(false);
     }
   }
@@ -507,9 +568,212 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
 
   clearSearch(): void {
     this.query = '';
-    this.results.set(null);
+    this.currentQuery = '';
+    this.resetAllPagination();
     this.loading.set(false);
     this.searchInputEl?.nativeElement.focus();
+  }
+
+  /**
+   * Reset all pagination states and clear results
+   */
+  private resetAllPagination(): void {
+    this.albums.set([]);
+    this.artists.set([]);
+    this.tracks.set([]);
+    this.playlists.set([]);
+    this.albumsPagination.set({ offset: 0, total: 0, hasMore: false });
+    this.artistsPagination.set({ offset: 0, total: 0, hasMore: false });
+    this.tracksPagination.set({ offset: 0, total: 0, hasMore: false });
+    this.playlistsPagination.set({ offset: 0, total: 0, hasMore: false });
+  }
+
+  /**
+   * Process search response and update results + pagination
+   */
+  private processSearchResponse(response: QobuzSearchResponse, append: boolean): void {
+    // Albums
+    const albumItems = response.albums?.items ?? [];
+    const albumsTotal = response.albums?.total ?? 0;
+    const albumsOffset = response.albums?.offset ?? 0;
+    if (append) {
+      this.albums.update(current => [...current, ...albumItems]);
+    } else {
+      this.albums.set(albumItems);
+    }
+    this.albumsPagination.set({
+      offset: albumsOffset + albumItems.length,
+      total: albumsTotal,
+      hasMore: (albumsOffset + albumItems.length) < albumsTotal
+    });
+
+    // Artists
+    const artistItems = response.artists?.items ?? [];
+    const artistsTotal = response.artists?.total ?? 0;
+    const artistsOffset = response.artists?.offset ?? 0;
+    if (append) {
+      this.artists.update(current => [...current, ...artistItems]);
+    } else {
+      this.artists.set(artistItems);
+    }
+    this.artistsPagination.set({
+      offset: artistsOffset + artistItems.length,
+      total: artistsTotal,
+      hasMore: (artistsOffset + artistItems.length) < artistsTotal
+    });
+
+    // Tracks
+    const trackItems = response.tracks?.items ?? [];
+    const tracksTotal = response.tracks?.total ?? 0;
+    const tracksOffset = response.tracks?.offset ?? 0;
+    if (append) {
+      this.tracks.update(current => [...current, ...trackItems]);
+    } else {
+      this.tracks.set(trackItems);
+    }
+    this.tracksPagination.set({
+      offset: tracksOffset + trackItems.length,
+      total: tracksTotal,
+      hasMore: (tracksOffset + trackItems.length) < tracksTotal
+    });
+
+    // Playlists
+    const playlistItems = response.playlists?.items ?? [];
+    const playlistsTotal = response.playlists?.total ?? 0;
+    const playlistsOffset = response.playlists?.offset ?? 0;
+    if (append) {
+      this.playlists.update(current => [...current, ...playlistItems]);
+    } else {
+      this.playlists.set(playlistItems);
+    }
+    this.playlistsPagination.set({
+      offset: playlistsOffset + playlistItems.length,
+      total: playlistsTotal,
+      hasMore: (playlistsOffset + playlistItems.length) < playlistsTotal
+    });
+  }
+
+  /**
+   * Load more results for the current tab
+   */
+  loadMore(): void {
+    if (!this.canLoadMore() || !this.currentQuery) return;
+
+    const tab = this.currentTab();
+    this.loadingMore.set(true);
+
+    // Für "all" Tab: Alle Kategorien gleichzeitig nachladen
+    if (tab === 'all') {
+      // Offset basierend auf erster Kategorie mit hasMore
+      let offset = 0;
+      if (this.albumsPagination().hasMore) {
+        offset = this.albumsPagination().offset;
+      } else if (this.artistsPagination().hasMore) {
+        offset = this.artistsPagination().offset;
+      } else if (this.tracksPagination().hasMore) {
+        offset = this.tracksPagination().offset;
+      } else if (this.playlistsPagination().hasMore) {
+        offset = this.playlistsPagination().offset;
+      }
+
+      this.qobuzApi.search(this.currentQuery, SEARCH_LIMIT, offset).pipe(
+        takeUntil(this.destroy$),
+        catchError(() => of(null))
+      ).subscribe(response => {
+        if (response) {
+          this.processSearchResponse(response, true); // append=true
+        }
+        this.loadingMore.set(false);
+      });
+      return;
+    }
+
+    // Spezifische Tabs
+    let offset = 0;
+    switch (tab) {
+      case 'albums':
+        offset = this.albumsPagination().offset;
+        break;
+      case 'artists':
+        offset = this.artistsPagination().offset;
+        break;
+      case 'tracks':
+        offset = this.tracksPagination().offset;
+        break;
+      case 'playlists':
+        offset = this.playlistsPagination().offset;
+        break;
+      default:
+        this.loadingMore.set(false);
+        return;
+    }
+
+    this.qobuzApi.search(this.currentQuery, SEARCH_LIMIT, offset).pipe(
+      takeUntil(this.destroy$),
+      catchError(() => of(null))
+    ).subscribe(response => {
+      if (response) {
+        // Only update the current tab's data
+        this.processTabResponse(tab, response);
+      }
+      this.loadingMore.set(false);
+    });
+  }
+
+  /**
+   * Process response for a specific tab (when loading more)
+   */
+  private processTabResponse(tab: SearchTab, response: QobuzSearchResponse): void {
+    switch (tab) {
+      case 'albums': {
+        const items = response.albums?.items ?? [];
+        const total = response.albums?.total ?? 0;
+        const offset = response.albums?.offset ?? 0;
+        this.albums.update(current => [...current, ...items]);
+        this.albumsPagination.set({
+          offset: offset + items.length,
+          total,
+          hasMore: (offset + items.length) < total
+        });
+        break;
+      }
+      case 'artists': {
+        const items = response.artists?.items ?? [];
+        const total = response.artists?.total ?? 0;
+        const offset = response.artists?.offset ?? 0;
+        this.artists.update(current => [...current, ...items]);
+        this.artistsPagination.set({
+          offset: offset + items.length,
+          total,
+          hasMore: (offset + items.length) < total
+        });
+        break;
+      }
+      case 'tracks': {
+        const items = response.tracks?.items ?? [];
+        const total = response.tracks?.total ?? 0;
+        const offset = response.tracks?.offset ?? 0;
+        this.tracks.update(current => [...current, ...items]);
+        this.tracksPagination.set({
+          offset: offset + items.length,
+          total,
+          hasMore: (offset + items.length) < total
+        });
+        break;
+      }
+      case 'playlists': {
+        const items = response.playlists?.items ?? [];
+        const total = response.playlists?.total ?? 0;
+        const offset = response.playlists?.offset ?? 0;
+        this.playlists.update(current => [...current, ...items]);
+        this.playlistsPagination.set({
+          offset: offset + items.length,
+          total,
+          hasMore: (offset + items.length) < total
+        });
+        break;
+      }
+    }
   }
 
   goBack(): void {
@@ -517,15 +781,12 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getTabCount(tab: SearchTab): number {
-    const r = this.results();
-    if (!r) return 0;
-
     switch (tab) {
       case 'all': return 0; // Don't show count for All tab
-      case 'albums': return r.albums.length;
-      case 'artists': return r.artists.length;
-      case 'tracks': return r.tracks.length;
-      case 'playlists': return r.playlists.length;
+      case 'albums': return this.albumsPagination().total;
+      case 'artists': return this.artistsPagination().total;
+      case 'tracks': return this.tracksPagination().total;
+      case 'playlists': return this.playlistsPagination().total;
     }
   }
 
@@ -573,8 +834,11 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   isTrackPlaying(track: QobuzTrack): boolean {
+    // Check both currentPlayingTrackId (for Bluesound) and currentTrack (for browser)
+    const playingTrackId = this.playerState.currentPlayingTrackId();
     const current = this.playerState.currentTrack();
-    return current?.id === track.id && this.playerState.isPlaying();
+    const isThisTrack = playingTrackId === track.id || current?.id === track.id;
+    return isThisTrack && this.playerState.isPlaying();
   }
 
   playTrack(track: QobuzTrack): void {
