@@ -1,7 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
-import { BluesoundPlayer, PlaybackStatus, QueueItem } from '../models';
+import { BluesoundPlayer, PlaybackStatus, QueueItem, QobuzTrack } from '../models';
+import { AuthService } from './auth.service';
+import { PlayerStateService } from './player-state.service';
 
 /**
  * Bluesound/BluOS API Service
@@ -10,7 +12,10 @@ import { BluesoundPlayer, PlaybackStatus, QueueItem } from '../models';
 @Injectable({ providedIn: 'root' })
 export class BluesoundApiService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+  private readonly playerState = inject(PlayerStateService);
   private readonly apiBaseUrl = '/api';
+  private readonly qobuzApiUrl = '/api/qobuz';
 
   // ==================== Player Discovery ====================
 
@@ -173,15 +178,38 @@ export class BluesoundApiService {
   // ==================== Queue Management ====================
 
   /**
-   * Play a Qobuz track on the player
+   * Play a Qobuz track on the player using stream URL
+   * This uses the web app's Qobuz auth token to get the stream URL,
+   * then sends it to the Bluesound player (doesn't require Bluesound to be logged into Qobuz)
    */
-  playQobuzTrack(playerIp: string, trackId: number): Observable<boolean> {
-    return this.http.post<void>(
-      `${this.apiBaseUrl}/player/${encodeURIComponent(playerIp)}/play-qobuz`,
-      { trackId }
+  playQobuzTrack(playerIp: string, trackId: number, track?: QobuzTrack): Observable<boolean> {
+    const authToken = this.auth.authToken();
+    const formatId = this.playerState.streamingQuality();
+
+    if (!authToken) {
+      console.error('No auth token available for Qobuz playback');
+      return of(false);
+    }
+
+    return this.http.post<{ success: boolean }>(
+      `${this.qobuzApiUrl}/play-on-bluesound`,
+      {
+        ip: playerIp,
+        port: 11000,
+        trackId,
+        authToken,
+        formatId,
+        title: track?.title,
+        artist: track?.performer?.name,
+        album: track?.album?.title,
+        imageUrl: track?.album?.image?.large
+      }
     ).pipe(
-      map(() => true),
-      catchError(() => of(false))
+      map(response => response.success),
+      catchError(error => {
+        console.error('Failed to play track on Bluesound:', error);
+        return of(false);
+      })
     );
   }
 

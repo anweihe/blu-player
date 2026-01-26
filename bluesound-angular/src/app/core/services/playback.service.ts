@@ -250,9 +250,13 @@ export class PlaybackService implements OnDestroy {
     }
 
     try {
-      await firstValueFrom(
-        this.bluesoundApi.playQobuzTrack(player.ipAddress, track.id)
+      const success = await firstValueFrom(
+        this.bluesoundApi.playQobuzTrack(player.ipAddress, track.id, track)
       );
+
+      if (!success) {
+        console.error('Bluesound playback returned false');
+      }
 
       // Start polling for status updates
       this.startPolling();
