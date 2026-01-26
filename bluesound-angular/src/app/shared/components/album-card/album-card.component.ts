@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { QobuzAlbum } from '../../../core/models';
 import { ContextMenuService } from '../../services/context-menu.service';
+import { AlbumRatingService } from '../../../core/services/album-rating.service';
 
 @Component({
   selector: 'app-album-card',
@@ -59,6 +60,26 @@ import { ContextMenuService } from '../../services/context-menu.service';
           }
         </div>
 
+        <!-- Rating Badge - Bottom Right on Cover -->
+        @if (rating(); as r) {
+          @if (r.userScore !== null || r.criticsScore !== null) {
+            <div class="absolute bottom-2 right-2 flex gap-1 z-[2]">
+              <!-- User Score (Green) -->
+              <span class="min-w-[24px] h-6 px-1.5 rounded-md text-xs font-bold
+                           flex items-center justify-center backdrop-blur-sm
+                           bg-green-500/90 text-white shadow-sm">
+                {{ r.userScore ?? '-' }}
+              </span>
+              <!-- Critics Score (Gold) -->
+              <span class="min-w-[24px] h-6 px-1.5 rounded-md text-xs font-bold
+                           flex items-center justify-center backdrop-blur-sm
+                           bg-yellow-500/90 text-gray-900 shadow-sm">
+                {{ r.criticsScore ?? '-' }}
+              </span>
+            </div>
+          }
+        }
+
         <!-- Play Overlay -->
         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
           <button
@@ -101,6 +122,7 @@ import { ContextMenuService } from '../../services/context-menu.service';
 })
 export class AlbumCardComponent {
   private readonly contextMenu = inject(ContextMenuService);
+  private readonly ratingService = inject(AlbumRatingService);
 
   @Input({ required: true }) album!: QobuzAlbum;
   @Input() compact = false;
@@ -109,6 +131,16 @@ export class AlbumCardComponent {
   @Input() showYear = false;
 
   @Output() play = new EventEmitter<QobuzAlbum>();
+
+  /**
+   * Computed signal that gets rating from cache
+   * Automatically updates when ratingsUpdated signal changes
+   */
+  readonly rating = computed(() => {
+    // Subscribe to ratingsUpdated to trigger re-computation
+    this.ratingService.ratingsUpdated();
+    return this.ratingService.getRating(this.album?.id?.toString() ?? '');
+  });
 
   onPlayClick(event: Event): void {
     event.preventDefault();

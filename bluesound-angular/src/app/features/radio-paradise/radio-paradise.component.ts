@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, ViewChild, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
@@ -6,11 +6,12 @@ import { RadioParadiseApiService } from '../../core/services/radioparadise-api.s
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { AuthService } from '../../core/services/auth.service';
 import { RadioParadiseItem, RadioParadiseSection } from '../../core/models';
+import { PlayerSelectorComponent } from '../../layout/player-selector/player-selector.component';
 
 @Component({
   selector: 'app-radio-paradise',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, PlayerSelectorComponent],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -58,12 +59,12 @@ import { RadioParadiseItem, RadioParadiseSection } from '../../core/models';
             <p class="text-text-secondary mb-6 max-w-sm">
               Radio Paradise verwendet die integrierte Radio-Funktion deines Bluesound Players. Bitte wähle einen Player aus.
             </p>
-            <a
-              routerLink="/players"
+            <button
               class="px-5 py-2.5 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors"
+              (click)="openPlayerSelector()"
             >
               Player auswählen
-            </a>
+            </button>
           </div>
         } @else {
           <!-- Hero Banner -->
@@ -177,6 +178,9 @@ import { RadioParadiseItem, RadioParadiseSection } from '../../core/models';
           }
         }
       </main>
+
+      <!-- Player Selector -->
+      <app-player-selector #playerSelector></app-player-selector>
     </div>
   `,
   styles: [`
@@ -189,6 +193,7 @@ import { RadioParadiseItem, RadioParadiseSection } from '../../core/models';
   `]
 })
 export class RadioParadiseComponent implements OnInit, OnDestroy {
+  @ViewChild('playerSelector') playerSelector!: PlayerSelectorComponent;
   readonly auth = inject(AuthService);
   private readonly rpApi = inject(RadioParadiseApiService);
   private readonly playerState = inject(PlayerStateService);
@@ -202,16 +207,37 @@ export class RadioParadiseComponent implements OnInit, OnDestroy {
   // Status polling
   private statusSubscription?: Subscription;
 
+  // Track previous player to detect changes
+  private previousPlayerId: string | null = null;
+
   // Computed
   readonly hasBluesoundPlayer = computed(() => {
     const player = this.playerState.selectedPlayer();
     return player !== null && player.ipAddress !== undefined;
   });
 
+  constructor() {
+    // React to player changes
+    effect(() => {
+      const player = this.playerState.selectedPlayer();
+      const currentId = player?.id ?? null;
+
+      // Only reload if player actually changed and we have a valid player
+      if (currentId !== this.previousPlayerId && player?.ipAddress) {
+        this.previousPlayerId = currentId;
+        this.loadChannels();
+      }
+    });
+  }
+
   ngOnInit(): void {
     if (this.hasBluesoundPlayer()) {
       this.loadChannels();
     }
+  }
+
+  openPlayerSelector(): void {
+    this.playerSelector?.open();
   }
 
   ngOnDestroy(): void {

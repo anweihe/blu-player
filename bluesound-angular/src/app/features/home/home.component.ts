@@ -178,9 +178,9 @@ interface SourceCard {
         <!-- Players Link -->
         <a
           routerLink="/players"
-          class="flex items-center justify-center gap-2.5 mt-8 px-5 py-3 bg-bg-card border border-border-accent rounded-xl text-text-secondary text-sm hover:bg-bg-card-hover hover:text-text-primary hover:border-white/20 transition-all"
+          class="inline-flex items-center justify-center gap-2 mt-8 mx-auto px-4 py-2 bg-bg-card border border-border-accent rounded-full text-text-secondary text-xs hover:bg-bg-card-hover hover:text-text-primary hover:border-white/20 transition-all"
         >
-          <svg class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="4" y="4" width="16" height="16" rx="2"/>
             <circle cx="12" cy="12" r="3"/>
             <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>

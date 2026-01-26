@@ -2,6 +2,7 @@
  * Core Services - Barrel Export
  */
 
+export * from './album-rating.service';
 export * from './auth.service';
 export * from './bluesound-api.service';
 export * from './history.service';

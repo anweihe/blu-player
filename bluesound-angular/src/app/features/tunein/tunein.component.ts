@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, ViewChild, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
@@ -6,11 +6,12 @@ import { TuneInApiService } from '../../core/services/tunein-api.service';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { AuthService } from '../../core/services/auth.service';
 import { TuneInItem, TuneInSection, TuneInNavigationState, BluesoundPlayer } from '../../core/models';
+import { PlayerSelectorComponent } from '../../layout/player-selector/player-selector.component';
 
 @Component({
   selector: 'app-tunein',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, PlayerSelectorComponent],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -59,12 +60,12 @@ import { TuneInItem, TuneInSection, TuneInNavigationState, BluesoundPlayer } fro
             <p class="text-text-secondary mb-6 max-w-sm">
               TuneIn verwendet die integrierte Radio-Funktion deines Bluesound Players. Bitte wähle einen Player aus.
             </p>
-            <a
-              routerLink="/players"
+            <button
               class="px-5 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+              (click)="openPlayerSelector()"
             >
               Player auswählen
-            </a>
+            </button>
           </div>
         } @else {
           <!-- Breadcrumb -->
@@ -286,6 +287,9 @@ import { TuneInItem, TuneInSection, TuneInNavigationState, BluesoundPlayer } fro
           }
         }
       </main>
+
+      <!-- Player Selector -->
+      <app-player-selector #playerSelector></app-player-selector>
     </div>
   `,
   styles: [`
@@ -298,6 +302,8 @@ import { TuneInItem, TuneInSection, TuneInNavigationState, BluesoundPlayer } fro
   `]
 })
 export class TuneInComponent implements OnInit, OnDestroy {
+  @ViewChild('playerSelector') playerSelector!: PlayerSelectorComponent;
+
   readonly auth = inject(AuthService);
   private readonly tuneInApi = inject(TuneInApiService);
   private readonly playerState = inject(PlayerStateService);
@@ -313,11 +319,28 @@ export class TuneInComponent implements OnInit, OnDestroy {
   // Status polling
   private statusSubscription?: Subscription;
 
+  // Track previous player to detect changes
+  private previousPlayerId: string | null = null;
+
   // Computed
   readonly hasBluesoundPlayer = computed(() => {
     const player = this.playerState.selectedPlayer();
     return player !== null && player.ipAddress !== undefined;
   });
+
+  constructor() {
+    // React to player changes
+    effect(() => {
+      const player = this.playerState.selectedPlayer();
+      const currentId = player?.id ?? null;
+
+      // Only reload if player actually changed and we have a valid player
+      if (currentId !== this.previousPlayerId && player?.ipAddress) {
+        this.previousPlayerId = currentId;
+        this.loadMainMenu();
+      }
+    });
+  }
 
   readonly showCategoryGrid = computed(() => {
     return this.navigationStack().length === 0 && this.currentItems().length > 0;
@@ -338,6 +361,10 @@ export class TuneInComponent implements OnInit, OnDestroy {
     if (this.hasBluesoundPlayer()) {
       this.loadMainMenu();
     }
+  }
+
+  openPlayerSelector(): void {
+    this.playerSelector?.open();
   }
 
   ngOnDestroy(): void {

@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
 import { PlaybackService } from '../../../../core/services/playback.service';
+import { AlbumRatingService, AlbumRating } from '../../../../core/services/album-rating.service';
 import {
   QobuzTrack,
   QobuzAlbum,
@@ -222,15 +223,30 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
                   [routerLink]="['/qobuz/album', album.id]"
                   class="release-card flex flex-col bg-bg-card border border-border-subtle rounded-lg overflow-hidden hover:border-border-accent hover:shadow-md transition-all cursor-pointer"
                 >
-                  @if (album.coverUrl) {
-                    <img [src]="album.coverUrl" [alt]="album.title" class="aspect-square w-full object-cover" loading="lazy" />
-                  } @else {
-                    <div class="aspect-square w-full bg-bg-secondary flex items-center justify-center text-text-muted">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                      </svg>
-                    </div>
-                  }
+                  <div class="relative">
+                    @if (album.coverUrl) {
+                      <img [src]="album.coverUrl" [alt]="album.title" class="aspect-square w-full object-cover" loading="lazy" />
+                    } @else {
+                      <div class="aspect-square w-full bg-bg-secondary flex items-center justify-center text-text-muted">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                      </div>
+                    }
+                    <!-- Rating Badge -->
+                    @if (getRating(album.id); as r) {
+                      @if (r.userScore !== null || r.criticsScore !== null) {
+                        <div class="absolute bottom-2 right-2 flex gap-1 z-[2]">
+                          <span class="min-w-[24px] h-6 px-1.5 rounded-md text-xs font-bold flex items-center justify-center backdrop-blur-sm bg-green-500/90 text-white shadow-sm">
+                            {{ r.userScore ?? '-' }}
+                          </span>
+                          <span class="min-w-[24px] h-6 px-1.5 rounded-md text-xs font-bold flex items-center justify-center backdrop-blur-sm bg-yellow-500/90 text-gray-900 shadow-sm">
+                            {{ r.criticsScore ?? '-' }}
+                          </span>
+                        </div>
+                      }
+                    }
+                  </div>
                   <div class="p-3">
                     <p class="font-medium text-sm truncate">{{ album.title }}</p>
                     <p class="text-xs text-text-muted">{{ getYear(album.releasedAt) }}</p>
@@ -475,6 +491,7 @@ export class ArtistComponent implements OnInit {
   private readonly qobuzApi = inject(QobuzApiService);
   private readonly playerState = inject(PlayerStateService);
   private readonly playback = inject(PlaybackService);
+  private readonly ratingService = inject(AlbumRatingService);
 
   readonly loading = signal(true);
   readonly artist = signal<BackendArtistPageResponse | null>(null);
@@ -542,10 +559,50 @@ export class ArtistComponent implements OnInit {
         if (response.releases?.length) {
           this.currentReleaseType.set(response.releases[0].type ?? 'album');
         }
+        // Fetch ratings for all discography albums
+        this.fetchRatingsForDiscography(response);
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  /**
+   * Fetch ratings for all discography albums
+   */
+  private fetchRatingsForDiscography(response: BackendArtistPageResponse): void {
+    if (!response.releases) return;
+
+    const allAlbums: { albumId: string; artist: string; title: string }[] = [];
+
+    for (const category of response.releases) {
+      if (category.items) {
+        for (const album of category.items) {
+          if (album.id && album.title) {
+            allAlbums.push({
+              albumId: album.id,
+              artist: album.artistName ?? response.artist?.name ?? '',
+              title: album.title
+            });
+          }
+        }
+      }
+    }
+
+    if (allAlbums.length > 0) {
+      this.ratingService.fetchRatings(allAlbums);
+    }
+  }
+
+  /**
+   * Get rating for an album by ID
+   * Used in template to show rating badges
+   */
+  getRating(albumId: string | undefined): AlbumRating | undefined {
+    if (!albumId) return undefined;
+    // Subscribe to ratingsUpdated to trigger re-render
+    this.ratingService.ratingsUpdated();
+    return this.ratingService.getRating(albumId);
   }
 
   goBack(): void {

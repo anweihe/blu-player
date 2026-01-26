@@ -15,6 +15,7 @@ import { debounceTime, distinctUntilChanged, Subject, switchMap, tap, takeUntil,
 import { of } from 'rxjs';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
+import { AlbumRatingService } from '../../../../core/services/album-rating.service';
 import { ContextMenuService } from '../../../../shared/services/context-menu.service';
 import {
   QobuzSearchResponse,
@@ -450,6 +451,7 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly qobuzApi = inject(QobuzApiService);
   private readonly playerState = inject(PlayerStateService);
   private readonly contextMenu = inject(ContextMenuService);
+  private readonly ratingService = inject(AlbumRatingService);
 
   private readonly searchSubject = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
@@ -606,6 +608,9 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
       total: albumsTotal,
       hasMore: (albumsOffset + albumItems.length) < albumsTotal
     });
+
+    // Fetch ratings for albums
+    this.fetchRatingsForAlbums(albumItems);
 
     // Artists
     const artistItems = response.artists?.items ?? [];
@@ -859,6 +864,25 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
       onPlay: () => this.playTrack(event.track),
       onAddToQueue: () => console.log('Add to queue:', event.track.title)
     });
+  }
+
+  /**
+   * Fetch ratings for a list of albums
+   */
+  private fetchRatingsForAlbums(albums: QobuzAlbum[]): void {
+    if (!albums || albums.length === 0) return;
+
+    const ratingRequests = albums
+      .filter(album => album.id && album.title)
+      .map(album => ({
+        albumId: album.id!.toString(),
+        artist: album.artist?.name ?? '',
+        title: album.title!
+      }));
+
+    if (ratingRequests.length > 0) {
+      this.ratingService.fetchRatings(ratingRequests);
+    }
   }
 
   formatDuration = formatDuration;

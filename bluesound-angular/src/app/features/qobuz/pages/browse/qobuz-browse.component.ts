@@ -6,6 +6,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { ProfileService, Profile } from '../../../../core/services/profile.service';
 import { PlaybackService } from '../../../../core/services/playback.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
+import { AlbumRatingService } from '../../../../core/services/album-rating.service';
 import { QobuzAlbum, QobuzPlaylist, QobuzTrack, QobuzFavoriteArtist } from '../../../../core/models';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -540,6 +541,7 @@ export class QobuzBrowseComponent implements OnInit {
   private readonly qobuzApi = inject(QobuzApiService);
   private readonly playback = inject(PlaybackService);
   private readonly playerState = inject(PlayerStateService);
+  private readonly ratingService = inject(AlbumRatingService);
 
   // Profile switcher
   readonly showProfileSwitcher = signal(false);
@@ -739,11 +741,14 @@ export class QobuzBrowseComponent implements OnInit {
     this.qobuzApi.getNewReleases(this.offset, this.limit).subscribe({
       next: container => {
         this.total = container.total ?? 0;
+        const newAlbums = container.items ?? [];
         if (append) {
-          this.albums.update(current => [...current, ...(container.items ?? [])]);
+          this.albums.update(current => [...current, ...newAlbums]);
         } else {
-          this.albums.set(container.items ?? []);
+          this.albums.set(newAlbums);
         }
+        // Fetch ratings for loaded albums
+        this.fetchRatingsForAlbums(newAlbums);
         this.loading.set(false);
         this.loadingMore.set(false);
       },
@@ -758,11 +763,14 @@ export class QobuzBrowseComponent implements OnInit {
     this.qobuzApi.getAlbumCharts(this.offset, this.limit).subscribe({
       next: container => {
         this.total = container.total ?? 0;
+        const newAlbums = container.items ?? [];
         if (append) {
-          this.albums.update(current => [...current, ...(container.items ?? [])]);
+          this.albums.update(current => [...current, ...newAlbums]);
         } else {
-          this.albums.set(container.items ?? []);
+          this.albums.set(newAlbums);
         }
+        // Fetch ratings for loaded albums
+        this.fetchRatingsForAlbums(newAlbums);
         this.loading.set(false);
         this.loadingMore.set(false);
       },
@@ -801,11 +809,14 @@ export class QobuzBrowseComponent implements OnInit {
         this.qobuzApi.getFavoriteAlbums(this.offset, this.limit).subscribe({
           next: container => {
             this.total = container.total ?? 0;
+            const newAlbums = container.items ?? [];
             if (append) {
-              this.albums.update(current => [...current, ...(container.items ?? [])]);
+              this.albums.update(current => [...current, ...newAlbums]);
             } else {
-              this.albums.set(container.items ?? []);
+              this.albums.set(newAlbums);
             }
+            // Fetch ratings for loaded albums
+            this.fetchRatingsForAlbums(newAlbums);
             this.loading.set(false);
             this.loadingMore.set(false);
           },
@@ -877,6 +888,25 @@ export class QobuzBrowseComponent implements OnInit {
       // No Qobuz credentials, redirect to login
       this.auth.logout();
       this.router.navigate(['/qobuz/login']);
+    }
+  }
+
+  /**
+   * Fetch ratings for a list of albums
+   */
+  private fetchRatingsForAlbums(albums: QobuzAlbum[]): void {
+    if (!albums || albums.length === 0) return;
+
+    const ratingRequests = albums
+      .filter(album => album.id && album.title)
+      .map(album => ({
+        albumId: album.id!.toString(),
+        artist: album.artist?.name ?? '',
+        title: album.title!
+      }));
+
+    if (ratingRequests.length > 0) {
+      this.ratingService.fetchRatings(ratingRequests);
     }
   }
 }
