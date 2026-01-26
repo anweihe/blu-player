@@ -185,6 +185,11 @@ export class PlayerStateService {
    */
   readonly isVolumePanelVisible = signal(false);
 
+  /**
+   * Is player selector visible
+   */
+  readonly isPlayerSelectorVisible = signal(false);
+
   // ==================== Methods ====================
 
   /**

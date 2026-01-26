@@ -270,6 +270,9 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
       background: var(--color-bg-primary);
       min-height: 100vh;
       color: var(--color-text-primary);
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
     }
 
     .browse-header {
@@ -365,6 +368,7 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
       padding-bottom: calc(120px + max(20px, env(safe-area-inset-bottom)));
       max-width: 1200px;
       margin: 0 auto;
+      overflow-x: hidden;
     }
 
     .content-tabs {
@@ -447,14 +451,24 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
 
     .content-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 16px;
+      width: 100%;
+    }
+
+    .content-grid > * {
+      min-width: 0;
     }
 
     .artists-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
       gap: 16px;
+      width: 100%;
+    }
+
+    .artists-grid > * {
+      min-width: 0;
     }
 
     .tracks-list {
@@ -521,7 +535,7 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
       to { transform: rotate(360deg); }
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 640px) {
       .content-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
@@ -530,6 +544,23 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
       .artists-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
+      }
+
+      .main-content {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .content-grid,
+      .artists-grid {
+        gap: 8px;
+      }
+
+      .main-content {
+        padding-left: 10px;
+        padding-right: 10px;
       }
     }
   `]

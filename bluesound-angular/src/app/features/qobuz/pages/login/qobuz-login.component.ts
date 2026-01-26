@@ -8,7 +8,7 @@ import { AuthService } from '../../../../core/services/auth.service';
   standalone: true,
   imports: [FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-bg-primary flex items-center justify-center p-4">
+    <div class="min-h-screen bg-bg-primary flex items-center justify-center p-4 safe-area-top">
       <div class="login-card">
         <!-- Back Button -->
         <a routerLink="/" class="back-link mb-4 inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors">
@@ -131,6 +131,10 @@ import { AuthService } from '../../../../core/services/auth.service';
       width: 100%;
       max-width: 420px;
       box-shadow: var(--shadow-card);
+    }
+
+    .safe-area-top {
+      padding-top: env(safe-area-inset-top, 0);
     }
 
     .back-link {

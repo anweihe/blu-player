@@ -80,7 +80,7 @@ const SEARCH_LIMIT = 20;
   template: `
     <div class="search-page bg-bg-primary min-h-screen pb-28">
       <!-- Header -->
-      <div class="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm border-b border-border-subtle">
+      <div class="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm border-b border-border-subtle safe-area-top">
         <div class="p-4 pl-16">
           <!-- Search Input with Close Button -->
           <div class="flex items-center gap-3 mb-4">
@@ -203,7 +203,7 @@ const SEARCH_LIMIT = 20;
             <!-- Albums Skeleton -->
             <section>
               <div class="h-6 w-20 bg-bg-secondary rounded animate-pulse mb-4"></div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 @for (i of [1,2,3,4]; track i) {
                   <div class="bg-bg-card rounded-lg overflow-hidden">
                     <div class="aspect-square bg-bg-secondary animate-pulse"></div>
@@ -262,7 +262,7 @@ const SEARCH_LIMIT = 20;
                     </button>
                   }
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   @for (album of albums().slice(0, 4); track album.id) {
                     <app-album-card
                       [album]="album"
@@ -287,7 +287,7 @@ const SEARCH_LIMIT = 20;
                     </button>
                   }
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   @for (artist of artists().slice(0, 4); track artist.id) {
                     <app-artist-card [artist]="artist" />
                   }
@@ -343,7 +343,7 @@ const SEARCH_LIMIT = 20;
                     </button>
                   }
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   @for (playlist of playlists().slice(0, 4); track playlist.id) {
                     <app-playlist-card
                       [playlist]="playlist"
@@ -357,7 +357,7 @@ const SEARCH_LIMIT = 20;
 
           <!-- Albums Tab -->
           @if (currentTab() === 'albums') {
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               @for (album of albums(); track album.id) {
                 <app-album-card
                   [album]="album"
@@ -373,7 +373,7 @@ const SEARCH_LIMIT = 20;
 
           <!-- Artists Tab -->
           @if (currentTab() === 'artists') {
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               @for (artist of artists(); track artist.id) {
                 <app-artist-card [artist]="artist" />
               }
@@ -409,7 +409,7 @@ const SEARCH_LIMIT = 20;
 
           <!-- Playlists Tab -->
           @if (currentTab() === 'playlists') {
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               @for (playlist of playlists(); track playlist.id) {
                 <app-playlist-card
                   [playlist]="playlist"
@@ -442,6 +442,10 @@ const SEARCH_LIMIT = 20;
 
     .scrollbar-hide::-webkit-scrollbar {
       display: none;
+    }
+
+    .safe-area-top {
+      padding-top: env(safe-area-inset-top, 0);
     }
   `]
 })

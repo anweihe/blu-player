@@ -345,6 +345,33 @@ export class BluesoundApiService {
     );
   }
 
+  // ==================== Quality Control ====================
+
+  /**
+   * Get Qobuz streaming quality setting from player
+   */
+  getQobuzQuality(playerIp: string): Observable<{ quality: string; formatId: number } | null> {
+    return this.http.get<{ success: boolean; quality: string; formatId: number }>(
+      `${this.qobuzApiUrl}/bluesound/quality?playerIp=${encodeURIComponent(playerIp)}`
+    ).pipe(
+      map(response => response.success ? { quality: response.quality, formatId: response.formatId } : null),
+      catchError(() => of(null))
+    );
+  }
+
+  /**
+   * Set Qobuz streaming quality on player
+   */
+  setQobuzQuality(playerIp: string, formatId: number): Observable<boolean> {
+    return this.http.post<{ success: boolean }>(
+      `${this.qobuzApiUrl}/bluesound/quality`,
+      { playerIp, formatId }
+    ).pipe(
+      map(response => response.success),
+      catchError(() => of(false))
+    );
+  }
+
   // ==================== Group Management ====================
 
   /**

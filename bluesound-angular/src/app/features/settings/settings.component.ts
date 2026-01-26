@@ -21,7 +21,7 @@ interface ApiResponse<T> {
     <div class="settings-page min-h-screen bg-bg-primary pb-24">
       <!-- Header -->
       <header class="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur border-b border-border-subtle">
-        <div class="flex items-center gap-4 px-4 py-4 pl-16">
+        <div class="flex items-center gap-4 px-4 py-4">
           <div class="flex items-center gap-3">
             <svg class="w-6 h-6 text-accent-qobuz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"/>

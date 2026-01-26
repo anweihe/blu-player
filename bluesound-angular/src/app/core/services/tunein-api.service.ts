@@ -22,7 +22,7 @@ export class TuneInApiService {
    */
   getMenu(player: BluesoundPlayer): Observable<TuneInMenuResponse> {
     return this.http.get<TuneInMenuResponse>(
-      `/TuneIn?handler=Menu&playerIp=${encodeURIComponent(player.ipAddress)}&port=${player.port || 11000}`
+      `/api/TuneIn?handler=Menu&playerIp=${encodeURIComponent(player.ipAddress)}&port=${player.port || 11000}`
     ).pipe(
       catchError(error => {
         console.error('Failed to get TuneIn menu:', error);
@@ -36,7 +36,7 @@ export class TuneInApiService {
    */
   browse(player: BluesoundPlayer, uri: string): Observable<TuneInBrowseResponse> {
     return this.http.get<TuneInBrowseResponse>(
-      `/TuneIn?handler=Browse&playerIp=${encodeURIComponent(player.ipAddress)}&port=${player.port || 11000}&uri=${encodeURIComponent(uri)}`
+      `/api/TuneIn?handler=Browse&playerIp=${encodeURIComponent(player.ipAddress)}&port=${player.port || 11000}&uri=${encodeURIComponent(uri)}`
     ).pipe(
       catchError(error => {
         console.error('Failed to browse TuneIn:', error);
@@ -69,7 +69,7 @@ export class TuneInApiService {
     };
 
     return this.http.post<{ success: boolean; error?: string }>(
-      '/TuneIn?handler=PlayStation',
+      '/api/TuneIn?handler=PlayStation',
       request
     ).pipe(
       catchError(error => {
@@ -97,7 +97,7 @@ export class TuneInApiService {
     error?: string;
   }> {
     return this.http.get<any>(
-      `/TuneIn?handler=BluesoundStatus&ip=${player.ipAddress}&port=${player.port || 11000}`
+      `/api/TuneIn?handler=BluesoundStatus&ip=${player.ipAddress}&port=${player.port || 11000}`
     ).pipe(
       catchError(error => {
         console.error('Failed to get Bluesound status:', error);
@@ -111,7 +111,7 @@ export class TuneInApiService {
    */
   controlPlayback(player: BluesoundPlayer, action: 'play' | 'pause' | 'stop'): Observable<{ success: boolean }> {
     return this.http.post<{ success: boolean }>(
-      '/TuneIn?handler=BluesoundControl',
+      '/api/TuneIn?handler=BluesoundControl',
       {
         ip: player.ipAddress,
         port: player.port || 11000,
@@ -132,7 +132,7 @@ export class TuneInApiService {
     }
 
     return this.http.post<{ success: boolean }>(
-      '/TuneIn?handler=SaveHistory',
+      '/api/TuneIn?handler=SaveHistory',
       {
         profileId,
         title: item.title,

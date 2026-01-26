@@ -65,7 +65,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
              style="background: linear-gradient(180deg, rgba(29, 185, 84, 0.08) 0%, transparent 100%);">
           <!-- Portrait -->
           <div
-            class="artist-portrait w-44 h-44 rounded-full overflow-hidden bg-bg-secondary shadow-2xl mb-5 flex-shrink-0"
+            class="artist-portrait w-32 h-32 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-bg-secondary shadow-2xl mb-5 flex-shrink-0"
             [class.cursor-pointer]="artistImage()"
             (click)="artistImage() && openImageLightbox()"
           >
@@ -92,7 +92,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
                 {{ artist()?.artist?.category }}
               </span>
             }
-            <h1 class="text-2xl font-bold m-0 leading-tight">
+            <h1 class="text-xl sm:text-2xl font-bold m-0 leading-tight">
               {{ artist()?.artist?.name }}
             </h1>
           </div>
@@ -465,8 +465,8 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
     /* Mobile adjustments */
     @media (max-width: 480px) {
       .artist-portrait {
-        width: 140px !important;
-        height: 140px !important;
+        width: 120px !important;
+        height: 120px !important;
       }
 
       .similar-artist-card {

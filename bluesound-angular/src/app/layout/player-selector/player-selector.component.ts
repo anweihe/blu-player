@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, HostListener } from '@angular/core';
+import { Component, inject, signal, OnInit, HostListener, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { PlaybackService } from '../../core/services/playback.service';
@@ -191,17 +191,31 @@ export class PlayerSelectorComponent implements OnInit {
   readonly isLoading = signal(false);
   readonly players = signal<BluesoundPlayer[]>([]);
 
+  constructor() {
+    // Watch the service signal and open/close accordingly
+    effect(() => {
+      const shouldOpen = this.playerState.isPlayerSelectorVisible();
+      if (shouldOpen && !this.isVisible()) {
+        this.open();
+      } else if (!shouldOpen && this.isVisible()) {
+        this.isVisible.set(false);
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.loadPlayers();
   }
 
   open(): void {
+    this.playerState.isPlayerSelectorVisible.set(true);
     this.isVisible.set(true);
     this.loadPlayers();
   }
 
   close(): void {
     this.isVisible.set(false);
+    this.playerState.isPlayerSelectorVisible.set(false);
   }
 
   async selectBrowser(): Promise<void> {

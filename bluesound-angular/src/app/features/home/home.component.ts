@@ -1,9 +1,11 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HistoryService } from '../../core/services/history.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { HistorySection, HistoryDisplayItem } from '../../core/models';
+import { ProfileSwitcherComponent } from '../../layout';
 
 interface SourceCard {
   id: string;
@@ -18,12 +20,12 @@ interface SourceCard {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ProfileSwitcherComponent],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
       <header class="sticky top-0 z-40 bg-bg-secondary border-b border-border-subtle safe-area-top">
-        <div class="flex items-center justify-between pl-16 pr-4 py-3.5 max-w-5xl mx-auto">
+        <div class="flex items-center justify-between px-4 py-3.5 max-w-5xl mx-auto">
           <!-- Brand -->
           <div class="flex items-center gap-2.5">
             <svg class="w-7 h-7 text-accent-qobuz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -36,14 +38,24 @@ interface SourceCard {
 
           <!-- Profile Indicator -->
           @if (auth.isLoggedIn()) {
-            <div
-              class="w-9 h-9 rounded-full bg-accent-qobuz text-white flex items-center justify-center text-sm font-semibold"
+            <button
+              class="w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:ring-2 hover:ring-accent-qobuz/50 transition-all"
+              [style.background-color]="profileService.activeProfile() ? profileService.getProfileColor(profileService.activeProfile()!.id) : 'var(--color-accent-qobuz)'"
+              (click)="openProfileSwitcher()"
             >
               {{ profileInitial() }}
-            </div>
+            </button>
           }
         </div>
       </header>
+
+      <!-- Profile Switcher Modal -->
+      @if (showProfileSwitcher()) {
+        <app-profile-switcher
+          (closed)="closeProfileSwitcher()"
+          (profileSelected)="onProfileSelected($event)"
+        />
+      }
 
       <!-- Main Content -->
       <main class="px-4 py-8 max-w-xl mx-auto pb-28">
@@ -54,7 +66,7 @@ interface SourceCard {
         </div>
 
         <!-- Source Grid -->
-        <div class="grid grid-cols-3 gap-2 mb-8">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-8">
           @for (source of sources; track source.id) {
             <a
               [routerLink]="source.route"
@@ -101,7 +113,7 @@ interface SourceCard {
             @for (i of [1, 2]; track i) {
               <div class="animate-pulse">
                 <div class="h-4 w-40 bg-bg-secondary rounded mb-3"></div>
-                <div class="grid grid-cols-4 sm:grid-cols-5 gap-2.5">
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
                   @for (j of [1, 2, 3, 4]; track j) {
                     <div class="flex flex-col items-center gap-2">
                       <div class="w-14 h-14 sm:w-16 sm:h-16 bg-bg-secondary rounded-lg"></div>
@@ -120,7 +132,7 @@ interface SourceCard {
                   {{ section.title }}
                   <span class="flex-1 h-px bg-border-subtle"></span>
                 </h3>
-                <div class="grid grid-cols-4 sm:grid-cols-5 gap-2.5">
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
                   @for (item of section.items; track item.id) {
                     <button
                       class="history-item flex flex-col items-center p-2.5 bg-bg-card rounded-lg hover:bg-bg-card-hover transition-all hover:scale-102 active:scale-98"
@@ -176,17 +188,19 @@ interface SourceCard {
         }
 
         <!-- Players Link -->
-        <a
-          routerLink="/players"
-          class="inline-flex items-center justify-center gap-2 mt-8 mx-auto px-4 py-2 bg-bg-card border border-border-accent rounded-full text-text-secondary text-xs hover:bg-bg-card-hover hover:text-text-primary hover:border-white/20 transition-all"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="4" y="4" width="16" height="16" rx="2"/>
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
-          </svg>
-          <span>Bluesound Players verwalten</span>
-        </a>
+        <div class="flex justify-center mt-8">
+          <a
+            routerLink="/players"
+            class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-bg-card border border-border-accent rounded-full text-text-secondary text-xs hover:bg-bg-card-hover hover:text-text-primary hover:border-white/20 transition-all"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="4" width="16" height="16" rx="2"/>
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
+            </svg>
+            <span>Bluesound Players verwalten</span>
+          </a>
+        </div>
       </main>
     </div>
   `,
@@ -265,10 +279,32 @@ export class HomeComponent implements OnInit {
     }
   ];
 
-  readonly profileInitial = () => {
-    // Get first letter of username or "?"
-    return '?';
-  };
+  readonly profileService = inject(ProfileService);
+
+  // Profile switcher
+  readonly showProfileSwitcher = signal(false);
+
+  readonly profileInitial = computed(() => {
+    const profile = this.profileService.activeProfile();
+    if (profile) {
+      return this.profileService.getProfileInitial(profile.name);
+    }
+    return this.auth.userInitial();
+  });
+
+  openProfileSwitcher(): void {
+    this.showProfileSwitcher.set(true);
+  }
+
+  closeProfileSwitcher(): void {
+    this.showProfileSwitcher.set(false);
+  }
+
+  onProfileSelected(profile: { id: string }): void {
+    this.profileService.setActiveProfileId(profile.id);
+    this.closeProfileSwitcher();
+    this.loadHistory();
+  }
 
   ngOnInit(): void {
     this.loadHistory();

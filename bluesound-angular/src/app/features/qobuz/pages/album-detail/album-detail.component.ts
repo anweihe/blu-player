@@ -37,7 +37,7 @@ import { TrackItemComponent } from '../../../../shared/components';
           }
           <div class="absolute inset-0 bg-gradient-to-b from-transparent via-bg-primary/50 to-bg-primary"></div>
 
-          <div class="relative p-6 pt-4 pl-16">
+          <div class="relative p-4 sm:p-6 pt-4 px-4 pl-16">
             <!-- Back button -->
             <button
               (click)="goBack()"
@@ -49,9 +49,9 @@ import { TrackItemComponent } from '../../../../shared/components';
               Zurück
             </button>
 
-            <div class="flex gap-6 flex-col md:flex-row">
+            <div class="flex gap-4 sm:gap-6 flex-col md:flex-row">
               <!-- Album Cover -->
-              <div class="album-cover w-48 h-48 md:w-56 md:h-56 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mx-auto md:mx-0 shadow-2xl">
+              <div class="album-cover w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mx-auto md:mx-0 shadow-2xl">
                 @if (album()?.image?.large) {
                   <img
                     [src]="album()?.image?.large"
@@ -87,7 +87,7 @@ import { TrackItemComponent } from '../../../../shared/components';
                 </div>
 
                 <!-- Title -->
-                <h1 class="text-2xl md:text-3xl font-bold mb-2 line-clamp-2">
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-bold mb-2 line-clamp-2">
                   {{ album()?.title }}
                 </h1>
 
@@ -344,6 +344,14 @@ import { TrackItemComponent } from '../../../../shared/components';
       line-height: 1;
       margin-right: 6px;
       margin-top: 4px;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 380px) {
+      .album-cover {
+        width: 128px !important;
+        height: 128px !important;
+      }
     }
   `]
 })

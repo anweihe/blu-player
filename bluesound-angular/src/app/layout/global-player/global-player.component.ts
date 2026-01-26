@@ -44,6 +44,14 @@ import { PlayerSelectorComponent } from '../player-selector/player-selector.comp
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium truncate text-text-primary">{{ trackTitle() || 'Kein Titel' }}</p>
           <p class="text-xs text-text-muted truncate">{{ artistName() || 'Unbekannter Künstler' }}</p>
+          @if (playerState.selectedPlayer(); as player) {
+            <p class="text-[10px] text-text-muted truncate flex items-center gap-1 mt-0.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+              {{ player.name }}
+            </p>
+          }
         </div>
 
         <!-- Play/Pause Button -->
@@ -62,14 +70,21 @@ import { PlayerSelectorComponent } from '../player-selector/player-selector.comp
           }
         </button>
 
-        <!-- Skip Button (mobile) -->
+        <!-- Volume Button (mobile) -->
         <button
           class="w-10 h-10 rounded-full text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors md:hidden"
-          (click)="skipNext($event)"
+          (click)="toggleVolumePanel($event)"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-          </svg>
+          @if (playerState.isMuted() || playerState.volume() === 0) {
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+            </svg>
+          } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+          }
         </button>
       </div>
 
@@ -217,7 +232,8 @@ export class GlobalPlayerComponent {
     await this.playback.seekToPercent(percent);
   }
 
-  toggleVolumePanel(): void {
+  toggleVolumePanel(event?: Event): void {
+    event?.stopPropagation();
     this.playerState.isVolumePanelVisible.update(v => !v);
   }
 

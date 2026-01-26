@@ -193,7 +193,7 @@ export class FabMenuComponent {
       id: 'player',
       label: 'Player',
       iconHtml: this.icons.player,
-      route: '/players',
+      action: () => this.playerState.isPlayerSelectorVisible.set(true),
       color: this.colors.player
     }
   ];

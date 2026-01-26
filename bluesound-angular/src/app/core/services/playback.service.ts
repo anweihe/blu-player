@@ -506,10 +506,38 @@ export class PlaybackService implements OnDestroy {
 
   /**
    * Set streaming quality
+   * For Bluesound mode, also updates the player's quality setting
    */
-  setQuality(quality: StreamingQuality): void {
+  async setQuality(quality: StreamingQuality): Promise<void> {
+    // Update local state
     this.playerState.setStreamingQuality(quality);
-    // Note: Quality change takes effect on next track
+
+    // If we're in Bluesound mode, also update the player
+    const player = this.playerState.selectedPlayer();
+    if (player && this.playerState.playerMode() === 'bluesound') {
+      try {
+        await firstValueFrom(this.bluesoundApi.setQobuzQuality(player.ipAddress, quality));
+      } catch (error) {
+        console.error('Failed to set quality on Bluesound player:', error);
+      }
+    }
+  }
+
+  /**
+   * Load quality setting from Bluesound player
+   */
+  async loadQualityFromPlayer(): Promise<void> {
+    const player = this.playerState.selectedPlayer();
+    if (player && this.playerState.playerMode() === 'bluesound') {
+      try {
+        const result = await firstValueFrom(this.bluesoundApi.getQobuzQuality(player.ipAddress));
+        if (result) {
+          this.playerState.setStreamingQuality(result.formatId as StreamingQuality);
+        }
+      } catch (error) {
+        console.error('Failed to load quality from Bluesound player:', error);
+      }
+    }
   }
 
   // ==================== Player Mode ====================
@@ -548,6 +576,9 @@ export class PlaybackService implements OnDestroy {
 
     // Start polling for status
     this.startPolling();
+
+    // Load quality setting from player
+    this.loadQualityFromPlayer();
   }
 
   // ==================== Audio Element Events ====================
@@ -613,7 +644,8 @@ export class PlaybackService implements OnDestroy {
   }
 
   private onAudioError(event: Event): void {
-    console.error('Audio playback error:', event);
+    // This is expected for TuneIn/Radio Paradise - they play on Bluesound, not in browser
+    console.debug('Audio element error (expected for device playback):', event);
     this.isBrowserPlaying.set(false);
     this.stopProgressAnimation();
   }

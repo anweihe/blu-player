@@ -5,13 +5,14 @@ import { Subscription, interval } from 'rxjs';
 import { RadioParadiseApiService } from '../../core/services/radioparadise-api.service';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { RadioParadiseItem, RadioParadiseSection } from '../../core/models';
-import { PlayerSelectorComponent } from '../../layout/player-selector/player-selector.component';
+import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout';
 
 @Component({
   selector: 'app-radio-paradise',
   standalone: true,
-  imports: [CommonModule, RouterLink, PlayerSelectorComponent],
+  imports: [CommonModule, RouterLink, PlayerSelectorComponent, ProfileSwitcherComponent],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -35,13 +36,23 @@ import { PlayerSelectorComponent } from '../../layout/player-selector/player-sel
 
           @if (auth.isLoggedIn()) {
             <button
-              class="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-semibold"
+              class="w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:ring-2 hover:ring-emerald-500/50 transition-all"
+              [style.background-color]="profileService.activeProfile() ? profileService.getProfileColor(profileService.activeProfile()!.id) : 'rgb(16 185 129)'"
+              (click)="openProfileSwitcher()"
             >
-              {{ auth.userInitial() }}
+              {{ profileInitial() }}
             </button>
           }
         </div>
       </header>
+
+      <!-- Profile Switcher Modal -->
+      @if (showProfileSwitcher()) {
+        <app-profile-switcher
+          (closed)="closeProfileSwitcher()"
+          (profileSelected)="onProfileSelected($event)"
+        />
+      }
 
       <!-- Main Content -->
       <main class="px-4 py-6 max-w-5xl mx-auto pb-28">
@@ -68,17 +79,17 @@ import { PlayerSelectorComponent } from '../../layout/player-selector/player-sel
           </div>
         } @else {
           <!-- Hero Banner -->
-          <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-6 mb-8">
-            <div class="flex items-center gap-4">
-              <div class="w-16 h-16 rounded-xl bg-white/10 flex items-center justify-center">
-                <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-4 sm:p-6 mb-8">
+            <div class="flex items-center gap-3 sm:gap-4">
+              <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-white/10 flex items-center justify-center">
+                <svg class="w-6 h-6 sm:w-8 sm:h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                   <path d="M2 17l10 5 10-5"/>
                   <path d="M2 12l10 5 10-5"/>
                 </svg>
               </div>
               <div>
-                <h2 class="text-xl font-bold text-white">Radio Paradise</h2>
+                <h2 class="text-lg sm:text-xl font-bold text-white">Radio Paradise</h2>
                 <p class="text-white/70 text-sm">Eclectic Mix - Listener Supported</p>
               </div>
             </div>
@@ -195,8 +206,20 @@ import { PlayerSelectorComponent } from '../../layout/player-selector/player-sel
 export class RadioParadiseComponent implements OnInit, OnDestroy {
   @ViewChild('playerSelector') playerSelector!: PlayerSelectorComponent;
   readonly auth = inject(AuthService);
+  readonly profileService = inject(ProfileService);
   private readonly rpApi = inject(RadioParadiseApiService);
   private readonly playerState = inject(PlayerStateService);
+
+  // Profile switcher
+  readonly showProfileSwitcher = signal(false);
+
+  readonly profileInitial = computed(() => {
+    const profile = this.profileService.activeProfile();
+    if (profile) {
+      return this.profileService.getProfileInitial(profile.name);
+    }
+    return this.auth.userInitial();
+  });
 
   // State
   readonly isLoading = signal(false);
@@ -238,6 +261,19 @@ export class RadioParadiseComponent implements OnInit, OnDestroy {
 
   openPlayerSelector(): void {
     this.playerSelector?.open();
+  }
+
+  openProfileSwitcher(): void {
+    this.showProfileSwitcher.set(true);
+  }
+
+  closeProfileSwitcher(): void {
+    this.showProfileSwitcher.set(false);
+  }
+
+  onProfileSelected(profile: { id: string }): void {
+    this.profileService.setActiveProfileId(profile.id);
+    this.closeProfileSwitcher();
   }
 
   ngOnDestroy(): void {

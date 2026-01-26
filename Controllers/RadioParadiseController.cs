@@ -6,7 +6,7 @@ using System.Xml.Linq;
 namespace BluesoundWeb.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class RadioParadiseController : ControllerBase
 {
     private readonly IBluesoundPlayerService _playerService;
@@ -326,19 +326,37 @@ public class RadioParadiseController : ControllerBase
 // DTOs
 public class PlayRadioParadiseRequest
 {
+    [System.Text.Json.Serialization.JsonPropertyName("ip")]
     public string Ip { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("port")]
     public int Port { get; set; } = 11000;
+
+    [System.Text.Json.Serialization.JsonPropertyName("playUrl")]
     public string PlayUrl { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("title")]
     public string? Title { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("imageUrl")]
     public string? ImageUrl { get; set; }
 }
 
 public class SaveRadioParadiseHistoryRequest
 {
+    [System.Text.Json.Serialization.JsonPropertyName("profileId")]
     public string ProfileId { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("title")]
     public string? Title { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("imageUrl")]
     public string? ImageUrl { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("actionUrl")]
     public string? ActionUrl { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("quality")]
     public string? Quality { get; set; }
 }
 

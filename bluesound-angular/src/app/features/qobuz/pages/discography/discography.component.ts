@@ -73,7 +73,7 @@ function mapReleaseType(type: string | null): string | null {
           <span>Zurück</span>
         </button>
         <div class="discography-page-title-area flex flex-col gap-0.5">
-          <h1 class="text-xl font-bold m-0 leading-tight">Diskografie</h1>
+          <h1 class="text-lg sm:text-xl font-bold m-0 leading-tight">Diskografie</h1>
           @if (artistName()) {
             <span class="discography-artist-subtitle text-sm text-text-secondary">{{ artistName() }}</span>
           }

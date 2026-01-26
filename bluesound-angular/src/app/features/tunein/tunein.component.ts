@@ -5,13 +5,14 @@ import { Subscription, interval } from 'rxjs';
 import { TuneInApiService } from '../../core/services/tunein-api.service';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { TuneInItem, TuneInSection, TuneInNavigationState, BluesoundPlayer } from '../../core/models';
-import { PlayerSelectorComponent } from '../../layout/player-selector/player-selector.component';
+import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout';
 
 @Component({
   selector: 'app-tunein',
   standalone: true,
-  imports: [CommonModule, RouterLink, PlayerSelectorComponent],
+  imports: [CommonModule, RouterLink, PlayerSelectorComponent, ProfileSwitcherComponent],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -36,13 +37,23 @@ import { PlayerSelectorComponent } from '../../layout/player-selector/player-sel
 
           @if (auth.isLoggedIn()) {
             <button
-              class="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-semibold"
+              class="w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:ring-2 hover:ring-orange-500/50 transition-all"
+              [style.background-color]="profileService.activeProfile() ? profileService.getProfileColor(profileService.activeProfile()!.id) : 'rgb(249 115 22)'"
+              (click)="openProfileSwitcher()"
             >
-              {{ auth.userInitial() }}
+              {{ profileInitial() }}
             </button>
           }
         </div>
       </header>
+
+      <!-- Profile Switcher Modal -->
+      @if (showProfileSwitcher()) {
+        <app-profile-switcher
+          (closed)="closeProfileSwitcher()"
+          (profileSelected)="onProfileSelected($event)"
+        />
+      }
 
       <!-- Main Content -->
       <main class="px-4 py-6 max-w-5xl mx-auto pb-28">
@@ -92,7 +103,7 @@ import { PlayerSelectorComponent } from '../../layout/player-selector/player-sel
               @for (nav of navigationStack(); track nav.uri; let i = $index; let last = $last) {
                 <span class="text-text-muted">/</span>
                 <button
-                  class="transition-colors max-w-[150px] truncate"
+                  class="transition-colors max-w-[100px] sm:max-w-[150px] truncate"
                   [class.text-text-primary]="last"
                   [class.font-medium]="last"
                   [class.text-text-secondary]="!last"
@@ -305,8 +316,20 @@ export class TuneInComponent implements OnInit, OnDestroy {
   @ViewChild('playerSelector') playerSelector!: PlayerSelectorComponent;
 
   readonly auth = inject(AuthService);
+  readonly profileService = inject(ProfileService);
   private readonly tuneInApi = inject(TuneInApiService);
   private readonly playerState = inject(PlayerStateService);
+
+  // Profile switcher
+  readonly showProfileSwitcher = signal(false);
+
+  readonly profileInitial = computed(() => {
+    const profile = this.profileService.activeProfile();
+    if (profile) {
+      return this.profileService.getProfileInitial(profile.name);
+    }
+    return this.auth.userInitial();
+  });
 
   // State
   readonly isLoading = signal(false);
@@ -365,6 +388,19 @@ export class TuneInComponent implements OnInit, OnDestroy {
 
   openPlayerSelector(): void {
     this.playerSelector?.open();
+  }
+
+  openProfileSwitcher(): void {
+    this.showProfileSwitcher.set(true);
+  }
+
+  closeProfileSwitcher(): void {
+    this.showProfileSwitcher.set(false);
+  }
+
+  onProfileSelected(profile: { id: string }): void {
+    this.profileService.setActiveProfileId(profile.id);
+    this.closeProfileSwitcher();
   }
 
   ngOnDestroy(): void {

@@ -1160,6 +1160,85 @@ public class QobuzController : ControllerBase
     }
 
     /// <summary>
+    /// Get Qobuz streaming quality from a Bluesound player
+    /// </summary>
+    [HttpGet("bluesound/quality")]
+    public async Task<ActionResult> GetBluesoundQobuzQuality(string playerIp)
+    {
+        if (string.IsNullOrEmpty(playerIp))
+        {
+            return BadRequest(new { success = false, error = "Fehlende IP-Adresse" });
+        }
+
+        _logger.LogInformation("Getting Qobuz quality from Bluesound player {Ip}", playerIp);
+
+        var quality = await _bluesoundService.GetQobuzQualityAsync(playerIp);
+
+        if (quality == null)
+        {
+            return BadRequest(new { success = false, error = "Qualitätseinstellung konnte nicht abgerufen werden" });
+        }
+
+        var formatId = MapBluesoundToFormatId(quality);
+
+        return Ok(new
+        {
+            success = true,
+            quality,
+            formatId
+        });
+    }
+
+    /// <summary>
+    /// Set Qobuz streaming quality on a Bluesound player
+    /// </summary>
+    [HttpPost("bluesound/quality")]
+    public async Task<ActionResult> SetBluesoundQobuzQuality([FromBody] SetQualityRequest request)
+    {
+        if (string.IsNullOrEmpty(request.PlayerIp))
+        {
+            return BadRequest(new { success = false, error = "Fehlende IP-Adresse" });
+        }
+
+        var quality = MapFormatIdToBluesound(request.FormatId);
+        _logger.LogInformation("Setting Qobuz quality to {Quality} (formatId={FormatId}) on Bluesound player {Ip}:{Port}",
+            quality, request.FormatId, request.PlayerIp, request.Port);
+
+        var success = await _bluesoundService.SetQobuzQualityAsync(request.PlayerIp, quality);
+
+        if (!success)
+        {
+            return BadRequest(new { success = false, error = "Qualitätseinstellung konnte nicht gesetzt werden" });
+        }
+
+        return Ok(new { success = true, quality, formatId = request.FormatId });
+    }
+
+    /// <summary>
+    /// Maps BluOS quality string to Qobuz format ID
+    /// </summary>
+    private static int MapBluesoundToFormatId(string quality) => quality switch
+    {
+        "MP3" => 5,
+        "CD" => 6,
+        "HD" => 7,
+        "UHD" => 27,
+        _ => 27 // Default to highest quality
+    };
+
+    /// <summary>
+    /// Maps Qobuz format ID to BluOS quality string
+    /// </summary>
+    private static string MapFormatIdToBluesound(int formatId) => formatId switch
+    {
+        5 => "MP3",
+        6 => "CD",
+        7 => "HD",
+        27 => "UHD",
+        _ => "UHD" // Default to highest quality
+    };
+
+    /// <summary>
     /// Control playback on a Bluesound player
     /// </summary>
     [HttpPost("bluesound/control")]
@@ -1409,8 +1488,13 @@ public class PlayOnBluesoundRequest
 /// </summary>
 public class BluesoundControlRequest
 {
+    [System.Text.Json.Serialization.JsonPropertyName("ip")]
     public string Ip { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("port")]
     public int Port { get; set; } = 11000;
+
+    [System.Text.Json.Serialization.JsonPropertyName("action")]
     public string Action { get; set; } = string.Empty;
 }
 
@@ -1419,13 +1503,28 @@ public class BluesoundControlRequest
 /// </summary>
 public class PlayNativeOnBluesoundRequest
 {
+    [System.Text.Json.Serialization.JsonPropertyName("ip")]
     public string Ip { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("port")]
     public int Port { get; set; } = 11000;
+
+    [System.Text.Json.Serialization.JsonPropertyName("sourceType")]
     public string SourceType { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("sourceId")]
     public string? SourceId { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("albumId")]
     public string? AlbumId { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("playlistId")]
     public long? PlaylistId { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("trackId")]
     public long? TrackId { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("trackIndex")]
     public int? TrackIndex { get; set; }
 }
 
@@ -1442,4 +1541,19 @@ public class BluesoundQueueItem
     public string? Duration { get; set; }
     public string? Quality { get; set; }
     public string? ImageUrl { get; set; }
+}
+
+/// <summary>
+/// Request model for setting Qobuz streaming quality on Bluesound
+/// </summary>
+public class SetQualityRequest
+{
+    [System.Text.Json.Serialization.JsonPropertyName("playerIp")]
+    public string PlayerIp { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("port")]
+    public int Port { get; set; } = 11000;
+
+    [System.Text.Json.Serialization.JsonPropertyName("formatId")]
+    public int FormatId { get; set; } = 27;
 }

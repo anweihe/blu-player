@@ -5,12 +5,14 @@ import { Subscription, interval } from 'rxjs';
 import { BluesoundApiService } from '../../core/services/bluesound-api.service';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { BluesoundPlayer, PlayerGroup } from '../../core/models';
+import { ProfileSwitcherComponent } from '../../layout';
 
 @Component({
   selector: 'app-players',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ProfileSwitcherComponent],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -46,13 +48,25 @@ import { BluesoundPlayer, PlayerGroup } from '../../core/models';
             </button>
 
             @if (auth.isLoggedIn()) {
-              <button class="w-9 h-9 rounded-full bg-accent-qobuz text-white flex items-center justify-center text-sm font-semibold">
-                {{ auth.userInitial() }}
+              <button
+                class="w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:ring-2 hover:ring-accent-qobuz/50 transition-all"
+                [style.background-color]="profileService.activeProfile() ? profileService.getProfileColor(profileService.activeProfile()!.id) : 'var(--color-accent-qobuz)'"
+                (click)="openProfileSwitcher()"
+              >
+                {{ profileInitial() }}
               </button>
             }
           </div>
         </div>
       </header>
+
+      <!-- Profile Switcher Modal -->
+      @if (showProfileSwitcher()) {
+        <app-profile-switcher
+          (closed)="closeProfileSwitcher()"
+          (profileSelected)="onProfileSelected($event)"
+        />
+      }
 
       <!-- Main Content -->
       <main class="px-4 py-6 max-w-5xl mx-auto pb-28">
@@ -197,7 +211,7 @@ import { BluesoundPlayer, PlayerGroup } from '../../core/models';
                             <line x1="5" y1="12" x2="19" y2="12"/>
                           </svg>
                         </button>
-                        <div class="flex-1 max-w-[120px] h-1 bg-bg-secondary rounded-full overflow-hidden">
+                        <div class="flex-1 max-w-[100px] sm:max-w-[120px] h-1 bg-bg-secondary rounded-full overflow-hidden">
                           <div
                             class="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all"
                             [style.width.%]="player.volume"
@@ -246,7 +260,7 @@ import { BluesoundPlayer, PlayerGroup } from '../../core/models';
               <div class="p-4">
                 <div class="flex gap-4">
                   <!-- Artwork -->
-                  <div class="w-24 h-24 sm:w-32 sm:h-32 bg-bg-secondary rounded-lg flex-shrink-0 overflow-hidden">
+                  <div class="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 bg-bg-secondary rounded-lg flex-shrink-0 overflow-hidden">
                     @if (nowPlaying()!.imageUrl) {
                       <img [src]="nowPlaying()!.imageUrl" class="w-full h-full object-cover" />
                     } @else {
@@ -340,8 +354,20 @@ import { BluesoundPlayer, PlayerGroup } from '../../core/models';
 })
 export class PlayersComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
+  readonly profileService = inject(ProfileService);
   private readonly bluesoundApi = inject(BluesoundApiService);
   private readonly playerState = inject(PlayerStateService);
+
+  // Profile switcher
+  readonly showProfileSwitcher = signal(false);
+
+  readonly profileInitial = computed(() => {
+    const profile = this.profileService.activeProfile();
+    if (profile) {
+      return this.profileService.getProfileInitial(profile.name);
+    }
+    return this.auth.userInitial();
+  });
 
   readonly isLoading = signal(true);
   readonly players = signal<BluesoundPlayer[]>([]);
@@ -369,6 +395,19 @@ export class PlayersComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopStatusPolling();
+  }
+
+  openProfileSwitcher(): void {
+    this.showProfileSwitcher.set(true);
+  }
+
+  closeProfileSwitcher(): void {
+    this.showProfileSwitcher.set(false);
+  }
+
+  onProfileSelected(profile: { id: string }): void {
+    this.profileService.setActiveProfileId(profile.id);
+    this.closeProfileSwitcher();
   }
 
   loadPlayers(): void {

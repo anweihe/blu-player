@@ -21,7 +21,7 @@ export class RadioParadiseApiService {
    */
   getMenu(player: BluesoundPlayer): Observable<RadioParadiseMenuResponse> {
     return this.http.get<RadioParadiseMenuResponse>(
-      `/RadioParadise?handler=Menu&playerIp=${encodeURIComponent(player.ipAddress)}&port=${player.port || 11000}`
+      `/api/RadioParadise?handler=Menu&playerIp=${encodeURIComponent(player.ipAddress)}&port=${player.port || 11000}`
     ).pipe(
       catchError(error => {
         console.error('Failed to get Radio Paradise menu:', error);
@@ -53,7 +53,7 @@ export class RadioParadiseApiService {
     };
 
     return this.http.post<{ success: boolean; error?: string }>(
-      '/RadioParadise?handler=PlayStation',
+      '/api/RadioParadise?handler=PlayStation',
       request
     ).pipe(
       catchError(error => {
@@ -81,7 +81,7 @@ export class RadioParadiseApiService {
     error?: string;
   }> {
     return this.http.get<any>(
-      `/RadioParadise?handler=BluesoundStatus&ip=${player.ipAddress}&port=${player.port || 11000}`
+      `/api/RadioParadise?handler=BluesoundStatus&ip=${player.ipAddress}&port=${player.port || 11000}`
     ).pipe(
       catchError(error => {
         console.error('Failed to get Bluesound status:', error);
@@ -95,7 +95,7 @@ export class RadioParadiseApiService {
    */
   controlPlayback(player: BluesoundPlayer, action: 'play' | 'pause' | 'stop'): Observable<{ success: boolean }> {
     return this.http.post<{ success: boolean }>(
-      '/RadioParadise?handler=BluesoundControl',
+      '/api/RadioParadise?handler=BluesoundControl',
       {
         ip: player.ipAddress,
         port: player.port || 11000,
@@ -116,7 +116,7 @@ export class RadioParadiseApiService {
     }
 
     return this.http.post<{ success: boolean }>(
-      '/RadioParadise?handler=SaveHistory',
+      '/api/RadioParadise?handler=SaveHistory',
       {
         profileId,
         title: item.title,
