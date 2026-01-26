@@ -1,3 +1,27 @@
+/* Flicker prevention during browser navigation - only hide login */
+body.qobuz-restoring #login-section {
+    display: none !important;
+}
+
+/* Disable fadeIn animation during programmatic view switches to prevent flicker */
+.no-animation {
+    animation: none !important;
+}
+
+/* Global navigation class - disables ALL animations and transitions during navigation */
+body.qobuz-navigating,
+body.qobuz-navigating *,
+body.qobuz-navigating *::before,
+body.qobuz-navigating *::after {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* Hide loading overlay during navigation */
+body.qobuz-navigating .loading-overlay {
+    display: none !important;
+}
+
 /* CSS Variables - same as main app */
     :root {
         --bg-primary: #0a0a0b;
@@ -384,7 +408,6 @@
 
     /* Logged In Section */
 .logged-in-section {
-    animation: fadeIn 0.3s ease;
     width: 100%;
     min-width: 0;
     overflow-x: hidden;
@@ -464,7 +487,6 @@
 
     /* Search Results */
     .search-results {
-        animation: fadeIn 0.2s ease;
     }
 
     .search-results-header {
@@ -690,7 +712,6 @@
 
     /* Search Skeleton */
     .search-skeleton {
-        animation: fadeIn 0.15s ease;
     }
 
     .skeleton-section {
@@ -1104,7 +1125,6 @@
 
     /* Playlist Detail Section */
     .playlist-detail-section {
-        animation: fadeIn 0.3s ease;
     }
 
     .playlist-detail-header {
@@ -2101,7 +2121,6 @@
 
 .favorites-content.active {
     display: block;
-    animation: fadeIn 0.2s ease;
 }
 
 /* ========================================
@@ -2206,7 +2225,6 @@
    ======================================== */
 
 .artist-detail-section {
-    animation: fadeIn 0.3s ease;
 }
 
 .artist-detail-header {
@@ -2617,7 +2635,6 @@
    ======================================== */
 
 .artist-discography-page {
-    animation: fadeIn 0.3s ease;
 }
 
 .discography-page-header {

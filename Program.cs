@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddControllers(); // For API controllers
 
 // Register database context - PostgreSQL for production, SQLite for development
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -81,7 +82,11 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+app.MapControllers(); // API endpoints
 app.MapRazorPages()
    .WithStaticAssets();
+
+// SPA fallback - serve index.html for Angular routes
+app.MapFallbackToFile("index.html");
 
 app.Run();

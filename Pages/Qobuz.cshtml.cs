@@ -12,6 +12,7 @@ public class QobuzModel : PageModel
     private readonly IBluesoundPlayerService _playerService;
     private readonly IBluesoundApiService _bluesoundService;
     private readonly IListeningHistoryService _historyService;
+    private readonly IAlbumInfoService _albumInfoService;
     private readonly ILogger<QobuzModel> _logger;
     private readonly HttpClient _httpClient;
 
@@ -20,6 +21,7 @@ public class QobuzModel : PageModel
         IBluesoundPlayerService playerService,
         IBluesoundApiService bluesoundService,
         IListeningHistoryService historyService,
+        IAlbumInfoService albumInfoService,
         ILogger<QobuzModel> logger,
         IHttpClientFactory httpClientFactory)
     {
@@ -27,8 +29,21 @@ public class QobuzModel : PageModel
         _playerService = playerService;
         _bluesoundService = bluesoundService;
         _historyService = historyService;
+        _albumInfoService = albumInfoService;
         _logger = logger;
         _httpClient = httpClientFactory.CreateClient();
+    }
+
+    /// <summary>
+    /// Extracts auth token and user ID from HTTP headers.
+    /// Angular sends these as X-Auth-Token and X-User-Id headers.
+    /// </summary>
+    private (string? authToken, long? userId) GetAuthFromHeaders()
+    {
+        var authToken = Request.Headers["X-Auth-Token"].FirstOrDefault();
+        var userIdStr = Request.Headers["X-User-Id"].FirstOrDefault();
+        long? userId = long.TryParse(userIdStr, out var id) ? id : null;
+        return (authToken, userId);
     }
 
     // Bound properties for the form
@@ -136,11 +151,17 @@ public class QobuzModel : PageModel
         });
     }
 
-    public async Task<IActionResult> OnGetPlaylistsAsync(long userId, string authToken)
+    public async Task<IActionResult> OnGetUserPlaylistsAsync()
     {
+        var (authToken, userId) = GetAuthFromHeaders();
+        if (userId == null || string.IsNullOrEmpty(authToken))
+        {
+            return new JsonResult(new { success = false, error = "Authentifizierung erforderlich" }) { StatusCode = 401 };
+        }
+
         _logger.LogInformation("Fetching playlists for user {UserId}", userId);
 
-        var playlists = await _qobuzService.GetUserPlaylistsAsync(userId, authToken);
+        var playlists = await _qobuzService.GetUserPlaylistsAsync(userId.Value, authToken);
 
         return new JsonResult(new
         {
@@ -160,8 +181,14 @@ public class QobuzModel : PageModel
         });
     }
 
-    public async Task<IActionResult> OnGetPlaylistTracksAsync(long playlistId, string authToken)
+    public async Task<IActionResult> OnGetPlaylistAsync(long playlistId)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            return new JsonResult(new { success = false, error = "Authentifizierung erforderlich" }) { StatusCode = 401 };
+        }
+
         _logger.LogInformation("Fetching tracks for playlist {PlaylistId}", playlistId);
 
         var playlist = await _qobuzService.GetPlaylistAsync(playlistId, authToken);
@@ -228,66 +255,80 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
-    /// Get most streamed albums from Qobuz discover endpoint with pagination
+    /// Get album charts (most streamed) from Qobuz discover endpoint with pagination
     /// </summary>
-    public async Task<IActionResult> OnGetMostStreamedAlbumsAsync(string? authToken = null, int offset = 0, int limit = 50)
+    public async Task<IActionResult> OnGetAlbumChartsAsync(int offset = 0, int limit = 50)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+
         _logger.LogInformation("Fetching most streamed albums (offset={Offset}, limit={Limit})", offset, limit);
 
         var (albums, hasMore) = await _qobuzService.GetMostStreamedAlbumsAsync(authToken, offset, limit);
+        var albumItems = albums.ToList();
 
         return new JsonResult(new
         {
             success = true,
-            hasMore,
-            offset,
-            albums = albums.Select(a => new
+            albums = new
             {
-                id = a.Id,
-                title = a.Title,
-                artistName = a.Artist?.Name,
-                artistId = a.Artist?.Id,
-                coverUrl = a.CoverUrl,
-                tracksCount = a.TracksCount,
-                duration = a.Duration,
-                releasedAt = a.ReleasedAt
-            })
+                items = albumItems.Select(a => new
+                {
+                    id = a.Id,
+                    title = a.Title,
+                    artist = new { id = a.Artist?.Id, name = a.Artist?.Name },
+                    image = new { large = a.CoverUrl, small = a.CoverUrl },
+                    tracks_count = a.TracksCount,
+                    duration = a.Duration,
+                    released_at = a.ReleasedAt
+                }),
+                total = hasMore ? offset + albumItems.Count + 1 : offset + albumItems.Count,
+                offset,
+                limit
+            }
         });
     }
 
     /// <summary>
     /// Get new releases from Qobuz discover endpoint with pagination
     /// </summary>
-    public async Task<IActionResult> OnGetNewReleasesAsync(string? authToken = null, int offset = 0, int limit = 50)
+    public async Task<IActionResult> OnGetNewReleasesAsync(int offset = 0, int limit = 50)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+
         _logger.LogInformation("Fetching new releases (offset={Offset}, limit={Limit})", offset, limit);
 
         var (albums, hasMore) = await _qobuzService.GetNewReleasesAsync(authToken, offset, limit);
+        var albumItems = albums.ToList();
 
         return new JsonResult(new
         {
             success = true,
-            hasMore,
-            offset,
-            albums = albums.Select(a => new
+            albums = new
             {
-                id = a.Id,
-                title = a.Title,
-                artistName = a.Artist?.Name,
-                artistId = a.Artist?.Id,
-                coverUrl = a.CoverUrl,
-                tracksCount = a.TracksCount,
-                duration = a.Duration,
-                releasedAt = a.ReleasedAt
-            })
+                items = albumItems.Select(a => new
+                {
+                    id = a.Id,
+                    title = a.Title,
+                    artist = new { id = a.Artist?.Id, name = a.Artist?.Name },
+                    image = new { large = a.CoverUrl, small = a.CoverUrl },
+                    tracks_count = a.TracksCount,
+                    duration = a.Duration,
+                    released_at = a.ReleasedAt
+                }),
+                total = hasMore ? offset + albumItems.Count + 1 : offset + albumItems.Count,
+                offset,
+                limit
+            }
         });
     }
 
     /// <summary>
     /// Get discover playlists from Qobuz with pagination and optional tag/genre filters
     /// </summary>
-    public async Task<IActionResult> OnGetDiscoverPlaylistsAsync(string? authToken = null, int offset = 0, int limit = 50, string? tags = null, string? genreIds = null)
+    public async Task<IActionResult> OnGetDiscoverPlaylistsAsync(int offset = 0, int limit = 50, string? tags = null, string? genreIds = null)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+
         _logger.LogInformation("Fetching discover playlists (offset={Offset}, limit={Limit}, tags={Tags}, genreIds={GenreIds})", offset, limit, tags ?? "(all)", genreIds ?? "(all)");
 
         var (playlists, hasMore) = await _qobuzService.GetDiscoverPlaylistsAsync(authToken, offset, limit, tags, genreIds);
@@ -312,28 +353,40 @@ public class QobuzModel : PageModel
     }
 
     /// <summary>
-    /// Get featured/editorial playlists from Qobuz
+    /// Get featured/editorial playlists from Qobuz with optional tag and genre filtering
     /// </summary>
-    public async Task<IActionResult> OnGetFeaturedPlaylistsAsync(int limit = 50)
+    public async Task<IActionResult> OnGetFeaturedPlaylistsAsync(string? tags = null, string? genreIds = null, int offset = 0, int limit = 50)
     {
-        _logger.LogInformation("Fetching featured playlists");
+        var (authToken, _) = GetAuthFromHeaders();
 
-        var playlists = await _qobuzService.GetFeaturedPlaylistsAsync(limit);
+        _logger.LogInformation("Fetching featured playlists (offset={Offset}, limit={Limit}, tags={Tags}, genreIds={GenreIds})",
+            offset, limit, tags ?? "(all)", genreIds ?? "(all)");
+
+        var (playlists, hasMore) = await _qobuzService.GetDiscoverPlaylistsAsync(authToken, offset, limit, tags, genreIds);
+        var playlistItems = playlists.ToList();
 
         return new JsonResult(new
         {
             success = true,
-            playlists = playlists.Select(p => new
+            playlists = new
             {
-                id = p.Id,
-                name = p.Name,
-                description = p.Description,
-                tracksCount = p.TracksCount,
-                duration = p.Duration,
-                formattedDuration = p.FormattedDuration,
-                coverUrl = p.CoverUrl,
-                ownerName = p.Owner?.Name
-            })
+                items = playlistItems.Select(p => new
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    description = p.Description,
+                    tracks_count = p.TracksCount,
+                    duration = p.Duration,
+                    is_public = true,
+                    is_collaborative = false,
+                    owner = new { id = 0, name = p.Owner?.Name },
+                    images300 = !string.IsNullOrEmpty(p.CoverUrl) ? new[] { p.CoverUrl } : Array.Empty<string>()
+                }),
+                total = hasMore ? offset + playlistItems.Count + 1 : offset + playlistItems.Count,
+                offset,
+                limit,
+                hasMore
+            }
         });
     }
 
@@ -350,55 +403,82 @@ public class QobuzModel : PageModel
         _logger.LogInformation("Searching for: {Query}", query);
 
         var result = await _qobuzService.SearchAsync(query, limit);
+        var albumItems = result.Albums.ToList();
+        var playlistItems = result.Playlists.ToList();
+        var trackItems = result.Tracks.ToList();
 
         return new JsonResult(new
         {
             success = true,
-            albums = result.Albums.Select(a => new
+            albums = new
             {
-                id = a.Id,
-                title = a.Title,
-                artistName = a.Artist?.Name,
-                artistId = a.Artist?.Id,
-                coverUrl = a.CoverUrl,
-                tracksCount = a.TracksCount,
-                duration = a.Duration,
-                typeLabel = a.TypeLabel,
-                isSingle = a.IsSingle,
-                type = "album"
-            }),
-            playlists = result.Playlists.Select(p => new
+                items = albumItems.Select(a => new
+                {
+                    id = a.Id,
+                    title = a.Title,
+                    artist = new { id = a.Artist?.Id, name = a.Artist?.Name },
+                    image = new { large = a.CoverUrl, small = a.CoverUrl },
+                    tracks_count = a.TracksCount,
+                    duration = a.Duration,
+                    product_type = a.TypeLabel
+                }),
+                total = albumItems.Count,
+                offset = 0,
+                limit
+            },
+            playlists = new
             {
-                id = p.Id,
-                name = p.Name,
-                description = p.Description,
-                tracksCount = p.TracksCount,
-                coverUrl = p.CoverUrl,
-                ownerName = p.Owner?.Name,
-                type = "playlist"
-            }),
-            tracks = result.Tracks.Select(t => new
+                items = playlistItems.Select(p => new
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    description = p.Description,
+                    tracks_count = p.TracksCount,
+                    duration = p.Duration,
+                    is_public = true,
+                    is_collaborative = false,
+                    owner = new { id = 0, name = p.Owner?.Name },
+                    images300 = !string.IsNullOrEmpty(p.CoverUrl) ? new[] { p.CoverUrl } : Array.Empty<string>()
+                }),
+                total = playlistItems.Count,
+                offset = 0,
+                limit
+            },
+            tracks = new
             {
-                id = t.Id,
-                title = t.Title,
-                artistName = t.Performer?.Name,
-                artistId = t.Performer?.Id,
-                albumTitle = t.Album?.Title,
-                albumId = t.Album?.Id,
-                coverUrl = t.Album?.CoverUrl,
-                duration = t.Duration,
-                formattedDuration = t.FormattedDuration,
-                isHiRes = t.IsHiRes,
-                type = "track"
-            })
+                items = trackItems.Select(t => new
+                {
+                    id = t.Id,
+                    title = t.Title,
+                    duration = t.Duration,
+                    track_number = t.TrackNumber,
+                    performer = new { id = t.Performer?.Id, name = t.Performer?.Name },
+                    album = new
+                    {
+                        id = t.Album?.Id,
+                        title = t.Album?.Title,
+                        image = new { large = t.Album?.CoverUrl, small = t.Album?.CoverUrl }
+                    },
+                    hires = t.IsHiRes
+                }),
+                total = trackItems.Count,
+                offset = 0,
+                limit
+            }
         });
     }
 
     /// <summary>
     /// Get personalized recommendations for the user
     /// </summary>
-    public async Task<IActionResult> OnGetRecommendationsAsync(string authToken, int limit = 50)
+    public async Task<IActionResult> OnGetRecommendationsAsync(int limit = 50)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            return new JsonResult(new { success = false, error = "Authentifizierung erforderlich" }) { StatusCode = 401 };
+        }
+
         _logger.LogInformation("Fetching recommendations");
 
         var result = await _qobuzService.GetRecommendationsAsync(authToken, limit);
@@ -447,87 +527,128 @@ public class QobuzModel : PageModel
     /// <summary>
     /// Get user's favorite albums
     /// </summary>
-    public async Task<IActionResult> OnGetFavoriteAlbumsAsync(string authToken, int limit = 500)
+    public async Task<IActionResult> OnGetFavoriteAlbumsAsync(int limit = 500)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            return new JsonResult(new { success = false, error = "Authentifizierung erforderlich" }) { StatusCode = 401 };
+        }
+
         _logger.LogInformation("Fetching favorite albums (limit: {Limit})", limit);
 
         var albums = await _qobuzService.GetFavoriteAlbumsAsync(authToken, limit);
+        var albumItems = albums.ToList();
 
         return new JsonResult(new
         {
             success = true,
-            albums = albums.Select(a => new
+            albums = new
             {
-                id = a.Id,
-                title = a.Title,
-                artistName = a.Artist?.Name,
-                artistId = a.Artist?.Id,
-                coverUrl = a.CoverUrl,
-                tracksCount = a.TracksCount,
-                duration = a.Duration,
-                typeLabel = a.TypeLabel,
-                type = "album"
-            })
+                items = albumItems.Select(a => new
+                {
+                    id = a.Id,
+                    title = a.Title,
+                    artist = new { id = a.Artist?.Id, name = a.Artist?.Name },
+                    image = new { large = a.CoverUrl, small = a.CoverUrl },
+                    tracks_count = a.TracksCount,
+                    duration = a.Duration,
+                    product_type = a.TypeLabel
+                }),
+                total = albumItems.Count,
+                offset = 0,
+                limit
+            }
         });
     }
 
     /// <summary>
     /// Get user's favorite tracks
     /// </summary>
-    public async Task<IActionResult> OnGetFavoriteTracksAsync(string authToken, int limit = 500)
+    public async Task<IActionResult> OnGetFavoriteTracksAsync(int limit = 500)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            return new JsonResult(new { success = false, error = "Authentifizierung erforderlich" }) { StatusCode = 401 };
+        }
+
         _logger.LogInformation("Fetching favorite tracks (limit: {Limit})", limit);
 
         var tracks = await _qobuzService.GetFavoriteTracksAsync(authToken, limit);
+        var trackItems = tracks.ToList();
 
         return new JsonResult(new
         {
             success = true,
-            tracks = tracks.Select(t => new
+            tracks = new
             {
-                id = t.Id,
-                title = t.Title,
-                artistName = t.Performer?.Name,
-                artistId = t.Performer?.Id,
-                albumTitle = t.Album?.Title,
-                albumId = t.Album?.Id,
-                coverUrl = t.Album?.CoverUrl,
-                duration = t.Duration,
-                formattedDuration = t.FormattedDuration,
-                isHiRes = t.IsHiRes,
-                type = "track"
-            })
+                items = trackItems.Select(t => new
+                {
+                    id = t.Id,
+                    title = t.Title,
+                    duration = t.Duration,
+                    track_number = t.TrackNumber,
+                    performer = new { id = t.Performer?.Id, name = t.Performer?.Name },
+                    album = new
+                    {
+                        id = t.Album?.Id,
+                        title = t.Album?.Title,
+                        image = new { large = t.Album?.CoverUrl, small = t.Album?.CoverUrl }
+                    },
+                    hires = t.IsHiRes,
+                    maximum_bit_depth = t.MaxBitDepth,
+                    maximum_sampling_rate = t.MaxSamplingRate
+                }),
+                total = trackItems.Count,
+                offset = 0,
+                limit
+            }
         });
     }
 
     /// <summary>
     /// Get user's favorite artists
     /// </summary>
-    public async Task<IActionResult> OnGetFavoriteArtistsAsync(string authToken, int limit = 100)
+    public async Task<IActionResult> OnGetFavoriteArtistsAsync(int limit = 100)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            return new JsonResult(new { success = false, error = "Authentifizierung erforderlich" }) { StatusCode = 401 };
+        }
+
         _logger.LogInformation("Fetching favorite artists (limit: {Limit})", limit);
 
         var artists = await _qobuzService.GetFavoriteArtistsAsync(authToken, limit);
+        var artistItems = artists.ToList();
 
         return new JsonResult(new
         {
             success = true,
-            artists = artists.Select(a => new
+            artists = new
             {
-                id = a.Id,
-                name = a.Name,
-                imageUrl = a.ImageUrl,
-                albumsCount = a.AlbumsCount,
-                type = "artist"
-            })
+                items = artistItems.Select(a => new
+                {
+                    id = a.Id,
+                    name = a.Name,
+                    picture = a.ImageUrl,
+                    albums_count = a.AlbumsCount
+                }),
+                total = artistItems.Count,
+                offset = 0,
+                limit
+            }
         });
     }
 
     /// <summary>
     /// Get artist page with biography, top tracks, discography, and similar artists
     /// </summary>
-    public async Task<IActionResult> OnGetArtistPageAsync(long artistId, string? authToken = null)
+    public async Task<IActionResult> OnGetArtistPageAsync(long artistId)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+
         _logger.LogInformation("Fetching artist page for artist {ArtistId}", artistId);
 
         var artistPage = await _qobuzService.GetArtistPageAsync(artistId, authToken);
@@ -607,9 +728,10 @@ public class QobuzModel : PageModel
         string? releaseType = null,
         string sort = "release_date",
         int offset = 0,
-        int limit = 20,
-        string? authToken = null)
+        int limit = 20)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+
         _logger.LogInformation("Fetching artist discography for artist {ArtistId} (type={Type}, sort={Sort}, offset={Offset})",
             artistId, releaseType ?? "all", sort, offset);
 
@@ -637,9 +759,16 @@ public class QobuzModel : PageModel
 
     /// <summary>
     /// Get album with tracks
+    /// Returns format matching Angular QobuzAlbumWithTracks interface
     /// </summary>
-    public async Task<IActionResult> OnGetAlbumTracksAsync(string albumId, string authToken)
+    public async Task<IActionResult> OnGetAlbumAsync(string albumId)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            return new JsonResult(new { success = false, error = "Authentifizierung erforderlich" }) { StatusCode = 401 };
+        }
+
         _logger.LogInformation("Fetching tracks for album {AlbumId}", albumId);
 
         var album = await _qobuzService.GetAlbumAsync(albumId, authToken);
@@ -649,44 +778,64 @@ public class QobuzModel : PageModel
             return new JsonResult(new { success = false, error = "Album nicht gefunden" });
         }
 
-        return new JsonResult(new
+        var trackItemsList = album.Tracks?.Items ?? new List<QobuzTrack>();
+        var trackItems = trackItemsList.Select(t => new
         {
-            success = true,
+            id = t.Id,
+            title = t.Title,
+            duration = t.Duration,
+            track_number = t.TrackNumber,
+            media_number = t.MediaNumber,
+            performer = new { id = t.Performer?.Id ?? album.Artist?.Id, name = t.Performer?.Name ?? album.Artist?.Name },
             album = new
             {
                 id = album.Id,
                 title = album.Title,
-                artistName = album.Artist?.Name,
-                artistId = album.Artist?.Id,
-                coverUrl = album.CoverUrl,
-                tracksCount = album.TracksCount,
-                duration = album.Duration,
-                label = album.Label?.Name,
-                genre = album.Genre?.Name,
-                description = album.Description,
-                isHiRes = album.IsHiRes
+                image = new { large = album.CoverUrl, small = album.CoverUrl }
             },
-            tracks = album.Tracks?.Items?.Select(t => new
+            hires = t.IsHiRes,
+            hires_streamable = t.IsHiRes,
+            streamable = t.IsStreamable,
+            maximum_bit_depth = t.MaxBitDepth,
+            maximum_sampling_rate = t.MaxSamplingRate
+        }).ToList();
+
+        // Return format matching Angular QobuzAlbumWithTracks interface
+        return new JsonResult(new
+        {
+            id = album.Id,
+            title = album.Title,
+            artist = new { id = album.Artist?.Id, name = album.Artist?.Name },
+            image = new { large = album.CoverUrl, small = album.CoverUrl },
+            duration = album.Duration,
+            tracks_count = album.TracksCount,
+            released_at = album.ReleasedAt,
+            product_type = album.TypeLabel,
+            maximum_bit_depth = album.MaxBitDepth,
+            maximum_sampling_rate = album.MaxSamplingRate,
+            hires = album.IsHiRes,
+            hires_streamable = album.IsHiRes,
+            label = album.Label != null ? new { id = album.Label.Id, name = album.Label.Name } : null,
+            genre = album.Genre != null ? new { id = album.Genre.Id, name = album.Genre.Name } : null,
+            description = album.Description,
+            tracks = new
             {
-                id = t.Id,
-                title = t.Title,
-                trackNumber = t.TrackNumber,
-                duration = t.Duration,
-                formattedDuration = t.FormattedDuration,
-                artistName = t.Performer?.Name ?? album.Artist?.Name,
-                artistId = t.Performer?.Id ?? album.Artist?.Id,
-                albumTitle = album.Title,
-                albumId = album.Id,
-                albumCover = album.CoverUrl,
-                isHiRes = t.IsHiRes,
-                qualityLabel = t.QualityLabel,
-                isStreamable = t.IsStreamable
-            }) ?? []
+                items = trackItems,
+                total = trackItems.Count,
+                offset = 0,
+                limit = trackItems.Count
+            }
         });
     }
 
-    public async Task<IActionResult> OnGetTrackStreamUrlAsync(long trackId, string authToken, int formatId = 27)
+    public async Task<IActionResult> OnGetTrackStreamUrlAsync(long trackId, int formatId = 27)
     {
+        var (authToken, _) = GetAuthFromHeaders();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            return new JsonResult(new { success = false, error = "Authentifizierung erforderlich" }) { StatusCode = 401 };
+        }
+
         _logger.LogInformation("Getting stream URL for track {TrackId} with format {FormatId}", trackId, formatId);
 
         var streamUrl = await _qobuzService.GetTrackStreamUrlAsync(trackId, authToken, formatId);
@@ -1314,6 +1463,99 @@ public class QobuzModel : PageModel
         await _historyService.SaveQobuzPlaylistAsync(request.ProfileId, request.PlaylistId, request.PlaylistName, request.CoverUrl, request.Tracks);
 
         return new JsonResult(new { success = true });
+    }
+
+    /// <summary>
+    /// Get available music genres for filtering
+    /// </summary>
+    public IActionResult OnGetGenres()
+    {
+        // Static list of Qobuz genres (commonly used for filtering)
+        var genres = new[]
+        {
+            new { id = 10, name = "Pop/Rock" },
+            new { id = 6, name = "Jazz" },
+            new { id = 98, name = "Klassik" },
+            new { id = 21, name = "Electronic" },
+            new { id = 2, name = "Blues" },
+            new { id = 91, name = "Soul/Funk/R&B" },
+            new { id = 64, name = "Hip-Hop/Rap" },
+            new { id = 52, name = "Reggae" },
+            new { id = 87, name = "Weltmusik" },
+            new { id = 3, name = "Country" },
+            new { id = 56, name = "Metal" },
+            new { id = 80, name = "Chanson française" },
+            new { id = 73, name = "Film/Soundtrack" }
+        };
+
+        return new JsonResult(new { success = true, genres });
+    }
+
+    /// <summary>
+    /// Get AI-generated album information (style and summary)
+    /// </summary>
+    public async Task<IActionResult> OnGetAlbumInfoAsync(string albumId, string albumTitle, string artistName)
+    {
+        _logger.LogInformation("Getting album info for {AlbumTitle} by {ArtistName}", albumTitle, artistName);
+
+        try
+        {
+            var albumInfo = await _albumInfoService.GetAlbumInfoAsync(albumId, artistName, albumTitle);
+
+            if (albumInfo == null)
+            {
+                return new JsonResult(new
+                {
+                    success = false,
+                    error = "Album-Info nicht verfügbar. Bitte Mistral API Key in den Einstellungen konfigurieren."
+                });
+            }
+
+            return new JsonResult(new
+            {
+                success = true,
+                style = albumInfo.Style ?? "",
+                summary = albumInfo.Summary ?? ""
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting album info for {AlbumTitle}", albumTitle);
+            return new JsonResult(new
+            {
+                success = false,
+                error = "Fehler beim Laden der Album-Info"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get all listening history for a profile
+    /// </summary>
+    public async Task<IActionResult> OnGetHistoryAsync(string? profileId)
+    {
+        if (string.IsNullOrEmpty(profileId))
+        {
+            return new JsonResult(new
+            {
+                success = true,
+                tuneIn = new List<object>(),
+                radioParadise = new List<object>(),
+                qobuzAlbums = new List<object>(),
+                qobuzPlaylists = new List<object>()
+            });
+        }
+
+        var history = await _historyService.GetAllHistoryAsync(profileId);
+
+        return new JsonResult(new
+        {
+            success = true,
+            tuneIn = history.TuneIn,
+            radioParadise = history.RadioParadise,
+            qobuzAlbums = history.QobuzAlbums,
+            qobuzPlaylists = history.QobuzPlaylists
+        });
     }
 }
 

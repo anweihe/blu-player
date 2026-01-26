@@ -91,6 +91,44 @@
             });
         }
 
+        // Delayed loading - only visible on slow requests (>150ms)
+        const isRestoring = QobuzApp.navigation?.isRestoring;
+        if (!isRestoring) {
+            QobuzApp.core.showLoadingDelayed(150);
+        }
+
+        try {
+            // Prepare all content BEFORE showing the view
+            prepareDiscographyContent(artistName);
+            renderFilters();
+            clearGrid();
+            await loadDiscography(true);  // replace mode
+            setupScrollObserver();
+
+            // Disable animations during view switch (only if not already in navigation mode)
+            const wasNavigating = document.body.classList.contains('qobuz-navigating');
+            if (!wasNavigating) {
+                document.body.classList.add('qobuz-navigating');
+            }
+
+            // THEN switch view (content already rendered)
+            switchToDiscographyView();
+
+            // Re-enable animations (only if we added the class)
+            if (!wasNavigating) {
+                document.body.classList.remove('qobuz-navigating');
+            }
+        } finally {
+            if (!isRestoring) {
+                QobuzApp.core.hideLoadingDelayed();
+            }
+        }
+    }
+
+    /**
+     * Prepare discography page content WITHOUT switching views.
+     */
+    function prepareDiscographyContent(artistName) {
         // Set title and artist name
         const titleEl = document.getElementById('discography-page-title');
         const artistNameEl = document.getElementById('discography-artist-name');
@@ -100,19 +138,20 @@
         // Reset sort dropdown
         const sortSelect = document.getElementById('discography-sort-select');
         if (sortSelect) sortSelect.value = currentSort;
+    }
 
-        renderFilters();
-        clearGrid();
-        await loadDiscography(true);  // replace mode
-        setupScrollObserver();
-
+    /**
+     * Switch to discography view.
+     * Call this AFTER content has been prepared.
+     * Animation is disabled globally via qobuz-navigating class.
+     */
+    function switchToDiscographyView() {
         // Show discography page, hide others
         showSection('artist-discography-page');
         window.scrollTo(0, 0);
     }
 
     function showSection(sectionId) {
-        // Hide all main sections
         const sections = [
             'logged-in-section',
             'playlist-detail-section',
@@ -120,9 +159,18 @@
             'artist-discography-page'
         ];
 
+        // FIRST: Show target section (while others may still be visible - overlap prevents gap)
+        const targetEl = document.getElementById(sectionId);
+        if (targetEl) {
+            targetEl.style.display = 'block';
+        }
+
+        // THEN: Hide other sections
         sections.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = id === sectionId ? 'block' : 'none';
+            if (id !== sectionId) {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            }
         });
     }
 
@@ -130,7 +178,11 @@
         if (isLoading || (!hasMore && !replace)) return;
 
         isLoading = true;
-        showLoading(true);
+        // Show inline loading indicator for subsequent loads (append mode)
+        // Initial load is handled by showDiscographyPage's delayed loading
+        if (!replace) {
+            showLoading(true);
+        }
 
         try {
             const creds = await QobuzApp.auth.getQobuzCredentials();
@@ -163,7 +215,9 @@
         }
 
         isLoading = false;
-        showLoading(false);
+        if (!replace) {
+            showLoading(false);
+        }
     }
 
     // ==================== Rendering ====================

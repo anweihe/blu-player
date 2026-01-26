@@ -7,6 +7,42 @@
 
     window.QobuzApp = window.QobuzApp || {};
 
+    // ==================== Auth-State-Caching ====================
+
+    let cachedAuthState = {
+        verified: false,
+        timestamp: 0,
+        data: null  // { userId, authToken, displayName, avatar }
+    };
+    const AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+    function isAuthCacheValid() {
+        return cachedAuthState.verified &&
+               (Date.now() - cachedAuthState.timestamp < AUTH_CACHE_TTL);
+    }
+
+    function setCachedAuth(data) {
+        cachedAuthState = { verified: true, timestamp: Date.now(), data };
+        // Set hint for immediate flicker prevention on page load
+        try {
+            sessionStorage.setItem('qobuz_auth_hint', 'true');
+            document.documentElement.classList.add('qobuz-has-auth');
+        } catch(e) {}
+    }
+
+    function getCachedAuth() {
+        return isAuthCacheValid() ? cachedAuthState.data : null;
+    }
+
+    function clearAuthCache() {
+        cachedAuthState = { verified: false, timestamp: 0, data: null };
+        // Clear hint
+        try {
+            sessionStorage.removeItem('qobuz_auth_hint');
+            document.documentElement.classList.remove('qobuz-has-auth');
+        } catch(e) {}
+    }
+
     // ==================== Credentials Management ====================
 
     async function getQobuzCredentials() {
@@ -242,15 +278,32 @@
     // ==================== State Management ====================
 
     function showLoginState() {
+        // Don't show login during restoration if auth is cached
+        if (QobuzApp.navigation?.isRestoring && isAuthCacheValid()) {
+            return;
+        }
+
+        // Clear auth hint since we're showing login
+        try {
+            sessionStorage.removeItem('qobuz_auth_hint');
+            document.documentElement.classList.remove('qobuz-has-auth');
+        } catch(e) {}
+
         if (QobuzApp.dom.loginSection) QobuzApp.dom.loginSection.style.display = 'flex';
         if (QobuzApp.dom.loggedInSection) QobuzApp.dom.loggedInSection.style.display = 'none';
         if (QobuzApp.dom.userMenu) QobuzApp.dom.userMenu.style.display = 'none';
     }
 
     function showLoggedInState(userData) {
-        QobuzApp.dom.loginSection.style.display = 'none';
-        QobuzApp.dom.loggedInSection.style.display = 'block';
-        QobuzApp.dom.userMenu.style.display = 'flex';
+        // Set auth hint for flicker prevention
+        try {
+            sessionStorage.setItem('qobuz_auth_hint', 'true');
+            document.documentElement.classList.add('qobuz-has-auth');
+        } catch(e) {}
+
+        if (QobuzApp.dom.loginSection) QobuzApp.dom.loginSection.style.display = 'none';
+        if (QobuzApp.dom.loggedInSection) QobuzApp.dom.loggedInSection.style.display = 'block';
+        if (QobuzApp.dom.userMenu) QobuzApp.dom.userMenu.style.display = 'flex';
     }
 
     // ==================== Logout ====================
@@ -271,6 +324,9 @@
             window.GlobalPlayer.setPlaying(false);
             window.GlobalPlayer.hideBar();
         }
+
+        // Clear auth cache
+        clearAuthCache();
 
         // Clear credentials from profile
         await clearQobuzCredentials();
@@ -313,7 +369,12 @@
         showLoggedInState,
         logout,
         openPlayerSelector,
-        closePlayerSelector
+        closePlayerSelector,
+        // Auth cache functions
+        isAuthCacheValid,
+        setCachedAuth,
+        getCachedAuth,
+        clearAuthCache
     };
 
     // Global exports

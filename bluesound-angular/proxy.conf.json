@@ -1,0 +1,22 @@
+{
+  "/Qobuz": {
+    "target": "https://localhost:5001",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/TuneIn": {
+    "target": "https://localhost:5001",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/RadioParadise": {
+    "target": "https://localhost:5001",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api": {
+    "target": "https://localhost:5001",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

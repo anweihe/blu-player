@@ -2,6 +2,28 @@
 
 <link rel="stylesheet" href="~/css/qobuz.css" asp-append-version="true" />
 
+<script>
+// Immediate flicker prevention - runs before DOM is fully loaded
+(function() {
+    'use strict';
+    // Check if we likely have auth (stored in IndexedDB via UserProfileManager)
+    // Also check sessionStorage for quick auth hint
+    try {
+        var hasAuthHint = sessionStorage.getItem('qobuz_auth_hint') === 'true';
+        if (hasAuthHint) {
+            // Add class to body to hide login via CSS
+            document.documentElement.classList.add('qobuz-has-auth');
+        }
+    } catch(e) {}
+})();
+</script>
+<style>
+/* Hide login when we have auth hint */
+.qobuz-has-auth #login-section {
+    display: none !important;
+}
+</style>
+
 <div class="qobuz-app">
     <!-- Header -->
     <header class="app-header">
@@ -165,8 +187,8 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Login Section -->
-        <div id="login-section" class="login-section">
+        <!-- Login Section (hidden by default, shown by JS if needed) -->
+        <div id="login-section" class="login-section" style="display: none;">
             <div class="login-card">
                 <div class="login-header">
                     <svg class="qobuz-logo" viewBox="0 0 100 100" fill="currentColor">
@@ -810,7 +832,8 @@
 </div>
 
 <!-- user-profiles.js and hamburger-menu.js are loaded in _Layout.cshtml -->
-<!-- Qobuz modules (order matters: auth, context-menu, search, ratings, browse, artist, playback, lightbox, then core) -->
+<!-- Qobuz modules (order matters: scroll, auth, context-menu, search, ratings, browse, artist, playback, lightbox, then core) -->
+<script src="~/js/qobuz/qobuz-scroll.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-auth.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-context-menu.js" asp-append-version="true"></script>
 <script src="~/js/qobuz/qobuz-search.js" asp-append-version="true"></script>

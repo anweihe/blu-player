@@ -955,6 +955,11 @@
     async function selectAlbum(albumId, highlightTrackIndex = null, skipHistory = false) {
         QobuzApp.savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
 
+        // Save scroll position before navigation
+        if (!skipHistory && QobuzApp.scroll && QobuzApp.scroll.save) {
+            QobuzApp.scroll.save();
+        }
+
         // Push state to browser history (unless restoring from popstate)
         if (!skipHistory && QobuzApp.core.pushState) {
             QobuzApp.core.pushState('album', albumId);
@@ -964,27 +969,52 @@
         const authToken = creds?.authToken;
         if (!authToken) return;
 
-        QobuzApp.core.showLoading();
+        // Delayed loading - only visible on slow requests (>150ms)
+        const isRestoring = QobuzApp.navigation?.isRestoring;
+        if (!isRestoring) {
+            QobuzApp.core.showLoadingDelayed(150);
+        }
 
         try {
             const response = await fetch(`/Qobuz?handler=AlbumTracks&albumId=${albumId}&authToken=${encodeURIComponent(authToken)}`);
             const data = await response.json();
 
             if (data.success) {
-                showAlbumDetail(data.album, data.tracks, highlightTrackIndex);
+                // Disable animations during view switch (only if not already in navigation mode)
+                const wasNavigating = document.body.classList.contains('qobuz-navigating');
+                if (!wasNavigating) {
+                    document.body.classList.add('qobuz-navigating');
+                }
+
+                // 1. Prepare content BEFORE view switch
+                prepareAlbumDetailContent(data.album, data.tracks, highlightTrackIndex);
+                // 2. THEN switch view (content already rendered)
+                switchToDetailView(highlightTrackIndex);
+
+                // Re-enable animations (only if we added the class)
+                if (!wasNavigating) {
+                    document.body.classList.remove('qobuz-navigating');
+                }
             } else {
                 QobuzApp.core.showError(data.error || 'Album konnte nicht geladen werden');
             }
         } catch (error) {
             console.error('Failed to load album:', error);
             QobuzApp.core.showError('Album konnte nicht geladen werden');
+        } finally {
+            if (!isRestoring) {
+                QobuzApp.core.hideLoadingDelayed();
+            }
         }
-
-        QobuzApp.core.hideLoading();
     }
 
     async function selectPlaylist(playlistId, highlightTrackIndex = null, skipHistory = false) {
         QobuzApp.savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+
+        // Save scroll position before navigation
+        if (!skipHistory && QobuzApp.scroll && QobuzApp.scroll.save) {
+            QobuzApp.scroll.save();
+        }
 
         // Push state to browser history (unless restoring from popstate)
         if (!skipHistory && QobuzApp.core.pushState) {
@@ -995,26 +1025,50 @@
         const authToken = creds?.authToken;
         if (!authToken) return;
 
-        QobuzApp.core.showLoading();
+        // Delayed loading - only visible on slow requests (>150ms)
+        const isRestoring = QobuzApp.navigation?.isRestoring;
+        if (!isRestoring) {
+            QobuzApp.core.showLoadingDelayed(150);
+        }
 
         try {
             const response = await fetch(`/Qobuz?handler=PlaylistTracks&playlistId=${playlistId}&authToken=${encodeURIComponent(authToken)}`);
             const data = await response.json();
 
             if (data.success) {
-                showPlaylistDetail(data.playlist, data.tracks, highlightTrackIndex);
+                // Disable animations during view switch (only if not already in navigation mode)
+                const wasNavigating = document.body.classList.contains('qobuz-navigating');
+                if (!wasNavigating) {
+                    document.body.classList.add('qobuz-navigating');
+                }
+
+                // 1. Prepare content BEFORE view switch
+                preparePlaylistDetailContent(data.playlist, data.tracks, highlightTrackIndex);
+                // 2. THEN switch view (content already rendered)
+                switchToDetailView(highlightTrackIndex);
+
+                // Re-enable animations (only if we added the class)
+                if (!wasNavigating) {
+                    document.body.classList.remove('qobuz-navigating');
+                }
             } else {
                 QobuzApp.core.showError(data.error || 'Playlist konnte nicht geladen werden');
             }
         } catch (error) {
             console.error('Failed to load playlist:', error);
             QobuzApp.core.showError('Playlist konnte nicht geladen werden');
+        } finally {
+            if (!isRestoring) {
+                QobuzApp.core.hideLoadingDelayed();
+            }
         }
-
-        QobuzApp.core.hideLoading();
     }
 
-    function showAlbumDetail(album, tracks, highlightTrackIndex = null) {
+    /**
+     * Prepare album detail content WITHOUT switching views.
+     * This allows all DOM updates to complete before the view becomes visible.
+     */
+    function prepareAlbumDetailContent(album, tracks, highlightTrackIndex = null) {
         const playback = QobuzApp.playback;
         playback.currentTracks = tracks || [];
         playback.currentSourceType = 'album';
@@ -1087,28 +1141,54 @@
         }
 
         renderDetailTracks(tracks, highlightTrackIndex);
+    }
 
+    /**
+     * Switch to detail view.
+     * Call this AFTER content has been prepared.
+     * Animation is disabled globally via qobuz-navigating class.
+     */
+    function switchToDetailView(highlightTrackIndex = null) {
+        const detailSection = QobuzApp.dom.playlistDetailSection;
+
+        // FIRST: Show new section (while old may still be visible - overlap prevents gap)
+        detailSection.style.display = 'block';
+
+        // THEN: Hide other sections
         QobuzApp.dom.loggedInSection.style.display = 'none';
-        QobuzApp.dom.playlistDetailSection.style.display = 'block';
-
-        // Hide artist section if visible
         if (QobuzApp.dom.artistDetailSection) {
             QobuzApp.dom.artistDetailSection.style.display = 'none';
         }
+        const discographyPage = document.getElementById('artist-discography-page');
+        if (discographyPage) {
+            discographyPage.style.display = 'none';
+        }
 
+        // Handle scroll/highlight
         if (highlightTrackIndex !== null) {
-            setTimeout(() => {
-                const trackItem = document.querySelector(`.track-item[data-index="${highlightTrackIndex}"]`);
-                if (trackItem) {
-                    trackItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 100);
+            const trackItem = document.querySelector(`.track-item[data-index="${highlightTrackIndex}"]`);
+            if (trackItem) {
+                trackItem.scrollIntoView({ behavior: 'instant', block: 'center' });
+            }
         } else {
             window.scrollTo(0, 0);
         }
     }
 
-    function showPlaylistDetail(playlist, tracks, highlightTrackIndex = null) {
+    /**
+     * Legacy function for backwards compatibility.
+     * Combines content preparation and view switch.
+     */
+    function showAlbumDetail(album, tracks, highlightTrackIndex = null) {
+        prepareAlbumDetailContent(album, tracks, highlightTrackIndex);
+        switchToDetailView(highlightTrackIndex);
+    }
+
+    /**
+     * Prepare playlist detail content WITHOUT switching views.
+     * This allows all DOM updates to complete before the view becomes visible.
+     */
+    function preparePlaylistDetailContent(playlist, tracks, highlightTrackIndex = null) {
         const playback = QobuzApp.playback;
         playback.currentTracks = tracks || [];
         playback.currentSourceType = 'playlist';
@@ -1163,25 +1243,15 @@
         }
 
         renderDetailTracks(tracks, highlightTrackIndex);
+    }
 
-        QobuzApp.dom.loggedInSection.style.display = 'none';
-        QobuzApp.dom.playlistDetailSection.style.display = 'block';
-
-        // Hide artist section if visible
-        if (QobuzApp.dom.artistDetailSection) {
-            QobuzApp.dom.artistDetailSection.style.display = 'none';
-        }
-
-        if (highlightTrackIndex !== null) {
-            setTimeout(() => {
-                const trackItem = document.querySelector(`.track-item[data-index="${highlightTrackIndex}"]`);
-                if (trackItem) {
-                    trackItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 100);
-        } else {
-            window.scrollTo(0, 0);
-        }
+    /**
+     * Legacy function for backwards compatibility.
+     * Combines content preparation and view switch.
+     */
+    function showPlaylistDetail(playlist, tracks, highlightTrackIndex = null) {
+        preparePlaylistDetailContent(playlist, tracks, highlightTrackIndex);
+        switchToDetailView(highlightTrackIndex);
     }
 
     function renderDetailTracks(tracks, highlightTrackIndex = null) {

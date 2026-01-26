@@ -1,0 +1,687 @@
+import { Injectable, inject, signal, OnDestroy } from '@angular/core';
+import { Subject, Subscription, interval, firstValueFrom } from 'rxjs';
+import { takeUntil, switchMap } from 'rxjs/operators';
+import { PlayerStateService, StreamingQuality } from './player-state.service';
+import { BluesoundApiService } from './bluesound-api.service';
+import { QobuzApiService } from './qobuz-api.service';
+import { QobuzTrack, QobuzAlbum, QobuzPlaylist, BluesoundPlayer } from '../models';
+
+/**
+ * Playback context for queueing
+ */
+export interface PlaybackContext {
+  type: 'track' | 'album' | 'playlist';
+  id: string | number;
+  tracks: QobuzTrack[];
+  startIndex: number;
+}
+
+/**
+ * Unified playback service that handles both browser and Bluesound playback
+ */
+@Injectable({ providedIn: 'root' })
+export class PlaybackService implements OnDestroy {
+  private readonly playerState = inject(PlayerStateService);
+  private readonly bluesoundApi = inject(BluesoundApiService);
+  private readonly qobuzApi = inject(QobuzApiService);
+
+  // Browser audio element
+  private audioElement: HTMLAudioElement | null = null;
+
+  // Animation frame for smooth progress updates
+  private animationFrameId: number | null = null;
+  private lastProgressUpdate = 0;
+
+  // Playback context
+  private currentContext: PlaybackContext | null = null;
+
+  // Cleanup
+  private readonly destroy$ = new Subject<void>();
+  private pollingSubscription: Subscription | null = null;
+
+  // Loading state
+  readonly isLoading = signal(false);
+  readonly loadingTrackId = signal<number | null>(null);
+
+  // Browser playback state (for when we're in browser mode)
+  readonly isBrowserPlaying = signal(false);
+
+  constructor() {
+    this.initAudioElement();
+    this.setupModeWatcher();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.stopProgressAnimation();
+    this.disposeAudioElement();
+    this.stopPolling();
+  }
+
+  // ==================== Initialization ====================
+
+  private initAudioElement(): void {
+    if (typeof window !== 'undefined') {
+      this.audioElement = new Audio();
+      this.audioElement.preload = 'metadata';
+
+      // Event listeners
+      this.audioElement.addEventListener('play', () => this.onAudioPlay());
+      this.audioElement.addEventListener('pause', () => this.onAudioPause());
+      this.audioElement.addEventListener('ended', () => this.onAudioEnded());
+      this.audioElement.addEventListener('timeupdate', () => this.onTimeUpdate());
+      this.audioElement.addEventListener('loadedmetadata', () => this.onLoadedMetadata());
+      this.audioElement.addEventListener('error', (e) => this.onAudioError(e));
+    }
+  }
+
+  private disposeAudioElement(): void {
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement.src = '';
+      this.audioElement = null;
+    }
+  }
+
+  private setupModeWatcher(): void {
+    // Watch for player mode changes to handle handoff
+    // When switching from browser to bluesound, stop browser audio
+    // When switching from bluesound to browser, stop polling
+  }
+
+  // ==================== Play Commands ====================
+
+  /**
+   * Play a single track
+   */
+  async playTrack(track: QobuzTrack, context?: PlaybackContext): Promise<void> {
+    this.isLoading.set(true);
+    this.loadingTrackId.set(track.id);
+
+    try {
+      // Set current track in state
+      this.playerState.currentTrack.set(track);
+      this.playerState.duration.set(track.duration || 0);
+      this.playerState.progress.set(0);
+
+      // Store context for queue navigation
+      if (context) {
+        this.currentContext = context;
+      }
+
+      const mode = this.playerState.playerMode();
+
+      if (mode === 'browser') {
+        await this.playTrackInBrowser(track);
+      } else {
+        await this.playTrackOnBluesound(track);
+      }
+    } catch (error) {
+      console.error('Failed to play track:', error);
+    } finally {
+      this.isLoading.set(false);
+      this.loadingTrackId.set(null);
+    }
+  }
+
+  /**
+   * Play an album starting from a specific track index
+   */
+  async playAlbum(album: QobuzAlbum, tracks: QobuzTrack[], startIndex = 0): Promise<void> {
+    if (!album.id) {
+      console.error('Album has no ID');
+      return;
+    }
+
+    const context: PlaybackContext = {
+      type: 'album',
+      id: album.id,
+      tracks,
+      startIndex
+    };
+
+    const mode = this.playerState.playerMode();
+    const player = this.playerState.selectedPlayer();
+
+    if (mode === 'bluesound' && player) {
+      // Use native Bluesound album playback
+      this.isLoading.set(true);
+      try {
+        await firstValueFrom(
+          this.bluesoundApi.playQobuzAlbum(player.ipAddress, album.id, startIndex)
+        );
+        this.startPolling();
+      } finally {
+        this.isLoading.set(false);
+      }
+    } else {
+      // Browser playback - play first track and set context
+      if (tracks[startIndex]) {
+        await this.playTrack(tracks[startIndex], context);
+      }
+    }
+  }
+
+  /**
+   * Play a playlist starting from a specific track index
+   */
+  async playPlaylist(playlist: QobuzPlaylist, tracks: QobuzTrack[], startIndex = 0): Promise<void> {
+    const context: PlaybackContext = {
+      type: 'playlist',
+      id: playlist.id,
+      tracks,
+      startIndex
+    };
+
+    const mode = this.playerState.playerMode();
+    const player = this.playerState.selectedPlayer();
+
+    if (mode === 'bluesound' && player) {
+      // Use native Bluesound playlist playback
+      this.isLoading.set(true);
+      try {
+        await firstValueFrom(
+          this.bluesoundApi.playQobuzPlaylist(player.ipAddress, playlist.id, startIndex)
+        );
+        this.startPolling();
+      } finally {
+        this.isLoading.set(false);
+      }
+    } else {
+      // Browser playback - play first track and set context
+      if (tracks[startIndex]) {
+        await this.playTrack(tracks[startIndex], context);
+      }
+    }
+  }
+
+  // ==================== Browser Playback ====================
+
+  private async playTrackInBrowser(track: QobuzTrack): Promise<void> {
+    if (!this.audioElement) return;
+
+    try {
+      // Get stream URL from Qobuz
+      const quality = this.playerState.streamingQuality();
+      const streamUrl = await firstValueFrom(
+        this.qobuzApi.getTrackStreamUrl(track.id, quality)
+      );
+
+      // Stop any existing playback
+      this.audioElement.pause();
+
+      // Set source and play
+      this.audioElement.src = streamUrl;
+      this.audioElement.volume = this.playerState.isMuted()
+        ? 0
+        : this.playerState.volume() / 100;
+
+      await this.audioElement.play();
+
+      // Start progress animation
+      this.startProgressAnimation();
+    } catch (error) {
+      console.error('Failed to play track in browser:', error);
+      throw error;
+    }
+  }
+
+  // ==================== Bluesound Playback ====================
+
+  private async playTrackOnBluesound(track: QobuzTrack): Promise<void> {
+    const player = this.playerState.selectedPlayer();
+    if (!player) {
+      console.error('No Bluesound player selected');
+      return;
+    }
+
+    try {
+      await firstValueFrom(
+        this.bluesoundApi.playQobuzTrack(player.ipAddress, track.id)
+      );
+
+      // Start polling for status updates
+      this.startPolling();
+    } catch (error) {
+      console.error('Failed to play track on Bluesound:', error);
+      throw error;
+    }
+  }
+
+  // ==================== Transport Controls ====================
+
+  /**
+   * Toggle play/pause
+   */
+  async togglePlayPause(): Promise<void> {
+    const mode = this.playerState.playerMode();
+    const isPlaying = this.playerState.isPlaying();
+
+    if (mode === 'browser') {
+      if (this.audioElement) {
+        if (isPlaying || !this.audioElement.paused) {
+          this.audioElement.pause();
+        } else {
+          await this.audioElement.play();
+          this.startProgressAnimation();
+        }
+      }
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player) {
+        if (isPlaying) {
+          await firstValueFrom(this.bluesoundApi.pause(player.ipAddress));
+        } else {
+          await firstValueFrom(this.bluesoundApi.play(player.ipAddress));
+        }
+      }
+    }
+  }
+
+  /**
+   * Play (resume)
+   */
+  async play(): Promise<void> {
+    const mode = this.playerState.playerMode();
+
+    if (mode === 'browser') {
+      if (this.audioElement && this.audioElement.paused) {
+        await this.audioElement.play();
+        this.startProgressAnimation();
+      }
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player) {
+        await firstValueFrom(this.bluesoundApi.play(player.ipAddress));
+      }
+    }
+  }
+
+  /**
+   * Pause
+   */
+  async pause(): Promise<void> {
+    const mode = this.playerState.playerMode();
+
+    if (mode === 'browser') {
+      this.audioElement?.pause();
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player) {
+        await firstValueFrom(this.bluesoundApi.pause(player.ipAddress));
+      }
+    }
+  }
+
+  /**
+   * Stop playback
+   */
+  async stop(): Promise<void> {
+    const mode = this.playerState.playerMode();
+
+    if (mode === 'browser') {
+      if (this.audioElement) {
+        this.audioElement.pause();
+        this.audioElement.currentTime = 0;
+      }
+      this.stopProgressAnimation();
+      this.playerState.reset();
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player) {
+        await firstValueFrom(this.bluesoundApi.stop(player.ipAddress));
+      }
+    }
+  }
+
+  /**
+   * Skip to next track
+   */
+  async skipNext(): Promise<void> {
+    const mode = this.playerState.playerMode();
+
+    if (mode === 'browser') {
+      // Check context for next track
+      if (this.currentContext) {
+        const nextIndex = this.currentContext.startIndex + 1;
+        if (nextIndex < this.currentContext.tracks.length) {
+          this.currentContext.startIndex = nextIndex;
+          await this.playTrack(this.currentContext.tracks[nextIndex], this.currentContext);
+        }
+      }
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player) {
+        await firstValueFrom(this.bluesoundApi.skip(player.ipAddress));
+      }
+    }
+  }
+
+  /**
+   * Skip to previous track
+   */
+  async skipPrevious(): Promise<void> {
+    const mode = this.playerState.playerMode();
+
+    if (mode === 'browser') {
+      // If more than 3 seconds into track, restart it
+      if (this.audioElement && this.audioElement.currentTime > 3) {
+        this.audioElement.currentTime = 0;
+        return;
+      }
+
+      // Check context for previous track
+      if (this.currentContext) {
+        const prevIndex = this.currentContext.startIndex - 1;
+        if (prevIndex >= 0) {
+          this.currentContext.startIndex = prevIndex;
+          await this.playTrack(this.currentContext.tracks[prevIndex], this.currentContext);
+        }
+      }
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player) {
+        await firstValueFrom(this.bluesoundApi.back(player.ipAddress));
+      }
+    }
+  }
+
+  /**
+   * Seek to position (in seconds)
+   */
+  async seek(seconds: number): Promise<void> {
+    const mode = this.playerState.playerMode();
+
+    if (mode === 'browser') {
+      if (this.audioElement) {
+        this.audioElement.currentTime = seconds;
+        this.playerState.updateProgress(seconds);
+      }
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player) {
+        await firstValueFrom(this.bluesoundApi.seek(player.ipAddress, seconds));
+      }
+    }
+  }
+
+  /**
+   * Seek to percentage (0-100)
+   */
+  async seekToPercent(percent: number): Promise<void> {
+    const duration = this.playerState.duration();
+    if (duration > 0) {
+      const seconds = (percent / 100) * duration;
+      await this.seek(seconds);
+    }
+  }
+
+  // ==================== Volume Control ====================
+
+  /**
+   * Set volume (0-100)
+   */
+  async setVolume(level: number): Promise<void> {
+    const clampedLevel = Math.max(0, Math.min(100, level));
+    this.playerState.setVolume(clampedLevel);
+
+    const mode = this.playerState.playerMode();
+
+    if (mode === 'browser') {
+      if (this.audioElement) {
+        this.audioElement.volume = clampedLevel / 100;
+      }
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player && !player.isFixedVolume) {
+        await firstValueFrom(this.bluesoundApi.setVolume(player.ipAddress, clampedLevel));
+      }
+    }
+  }
+
+  /**
+   * Toggle mute
+   */
+  async toggleMute(): Promise<void> {
+    const wasMuted = this.playerState.isMuted();
+    this.playerState.toggleMute();
+
+    const mode = this.playerState.playerMode();
+
+    if (mode === 'browser') {
+      if (this.audioElement) {
+        this.audioElement.volume = wasMuted ? this.playerState.volume() / 100 : 0;
+      }
+    } else {
+      const player = this.playerState.selectedPlayer();
+      if (player) {
+        await firstValueFrom(this.bluesoundApi.setMute(player.ipAddress, !wasMuted));
+      }
+    }
+  }
+
+  // ==================== Quality Control ====================
+
+  /**
+   * Set streaming quality
+   */
+  setQuality(quality: StreamingQuality): void {
+    this.playerState.setStreamingQuality(quality);
+    // Note: Quality change takes effect on next track
+  }
+
+  // ==================== Player Mode ====================
+
+  /**
+   * Switch to browser playback
+   */
+  async switchToBrowser(): Promise<void> {
+    // Stop Bluesound playback first
+    const player = this.playerState.selectedPlayer();
+    if (player) {
+      try {
+        await firstValueFrom(this.bluesoundApi.stop(player.ipAddress));
+      } catch {
+        // Ignore errors when stopping
+      }
+    }
+
+    this.stopPolling();
+    this.playerState.useBrowserPlayback();
+  }
+
+  /**
+   * Switch to Bluesound player
+   */
+  async switchToBluesound(player: BluesoundPlayer): Promise<void> {
+    // Stop browser playback first
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement.src = '';
+    }
+    this.stopProgressAnimation();
+
+    // Update state
+    this.playerState.selectPlayer(player);
+
+    // Start polling for status
+    this.startPolling();
+  }
+
+  // ==================== Audio Element Events ====================
+
+  private onAudioPlay(): void {
+    this.isBrowserPlaying.set(true);
+    // Update playback status to reflect playing state
+    const currentStatus = this.playerState.playbackStatus();
+    if (currentStatus) {
+      this.playerState.updatePlaybackStatus({
+        ...currentStatus,
+        state: 'play'
+      });
+    } else {
+      const track = this.playerState.currentTrack();
+      if (track) {
+        this.playerState.updatePlaybackStatus({
+          state: 'play',
+          title: track.title,
+          artist: track.performer?.name,
+          album: track.album?.title,
+          imageUrl: track.album?.image?.large,
+          totalSeconds: track.duration,
+          currentSeconds: 0,
+          artistId: track.performer?.id
+        });
+      }
+    }
+  }
+
+  private onAudioPause(): void {
+    this.isBrowserPlaying.set(false);
+    this.stopProgressAnimation();
+    const currentStatus = this.playerState.playbackStatus();
+    if (currentStatus) {
+      this.playerState.updatePlaybackStatus({
+        ...currentStatus,
+        state: 'pause'
+      });
+    }
+  }
+
+  private onAudioEnded(): void {
+    this.isBrowserPlaying.set(false);
+    this.stopProgressAnimation();
+
+    // Auto-play next track if in context
+    if (this.currentContext) {
+      this.skipNext();
+    }
+  }
+
+  private onTimeUpdate(): void {
+    if (this.audioElement) {
+      this.playerState.updateProgress(this.audioElement.currentTime);
+    }
+  }
+
+  private onLoadedMetadata(): void {
+    if (this.audioElement) {
+      this.playerState.duration.set(this.audioElement.duration);
+    }
+  }
+
+  private onAudioError(event: Event): void {
+    console.error('Audio playback error:', event);
+    this.isBrowserPlaying.set(false);
+    this.stopProgressAnimation();
+  }
+
+  // ==================== Progress Animation ====================
+
+  private startProgressAnimation(): void {
+    this.stopProgressAnimation();
+    this.lastProgressUpdate = performance.now();
+    this.animateProgress();
+  }
+
+  private stopProgressAnimation(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
+  private animateProgress = (): void => {
+    if (!this.audioElement || this.audioElement.paused) {
+      return;
+    }
+
+    const now = performance.now();
+    const elapsed = (now - this.lastProgressUpdate) / 1000;
+    this.lastProgressUpdate = now;
+
+    // Update progress smoothly
+    const currentProgress = this.playerState.progress();
+    const newProgress = currentProgress + elapsed;
+
+    if (newProgress <= this.playerState.duration()) {
+      this.playerState.updateProgress(newProgress);
+    }
+
+    this.animationFrameId = requestAnimationFrame(this.animateProgress);
+  };
+
+  // ==================== Polling for Bluesound ====================
+
+  private startPolling(): void {
+    this.stopPolling();
+
+    const player = this.playerState.selectedPlayer();
+    if (!player) return;
+
+    // Poll every second for status updates
+    this.pollingSubscription = interval(1000)
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(() => this.bluesoundApi.getStatus(player.ipAddress))
+      )
+      .subscribe(status => {
+        if (status) {
+          this.playerState.updatePlaybackStatus(status);
+        }
+      });
+  }
+
+  private stopPolling(): void {
+    if (this.pollingSubscription) {
+      this.pollingSubscription.unsubscribe();
+      this.pollingSubscription = null;
+    }
+  }
+
+  // ==================== Queue Management ====================
+
+  /**
+   * Add track to queue
+   */
+  async addToQueue(track: QobuzTrack): Promise<void> {
+    const mode = this.playerState.playerMode();
+    const player = this.playerState.selectedPlayer();
+
+    if (mode === 'bluesound' && player) {
+      await firstValueFrom(this.bluesoundApi.addToQueue(player.ipAddress, track.id));
+    } else {
+      // For browser mode, add to local context
+      if (this.currentContext) {
+        this.currentContext.tracks.push(track);
+      }
+    }
+  }
+
+  /**
+   * Clear queue
+   */
+  async clearQueue(): Promise<void> {
+    const mode = this.playerState.playerMode();
+    const player = this.playerState.selectedPlayer();
+
+    if (mode === 'bluesound' && player) {
+      await firstValueFrom(this.bluesoundApi.clearQueue(player.ipAddress));
+    }
+
+    this.playerState.clearQueue();
+    this.currentContext = null;
+  }
+
+  /**
+   * Load queue from Bluesound player
+   */
+  async loadQueue(): Promise<void> {
+    const player = this.playerState.selectedPlayer();
+    if (!player) return;
+
+    const queue = await firstValueFrom(this.bluesoundApi.getQueue(player.ipAddress));
+    this.playerState.setQueue(queue);
+  }
+}

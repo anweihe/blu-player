@@ -24,6 +24,11 @@
         QobuzApp.savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
         previousScrollPosition = QobuzApp.savedScrollPosition;
 
+        // Save scroll position for browser navigation
+        if (!skipHistory && QobuzApp.scroll && QobuzApp.scroll.save) {
+            QobuzApp.scroll.save();
+        }
+
         // If we're already on an artist page, push it to the stack
         if (currentArtistData) {
             artistNavigationStack.push({
@@ -46,7 +51,11 @@
             QobuzApp.core.pushState('artist', artistId);
         }
 
-        QobuzApp.core.showLoading();
+        // Delayed loading - only visible on slow requests (>150ms)
+        const isRestoring = QobuzApp.navigation?.isRestoring;
+        if (!isRestoring) {
+            QobuzApp.core.showLoadingDelayed(150);
+        }
 
         try {
             const creds = await QobuzApp.auth.getQobuzCredentials();
@@ -57,21 +66,42 @@
 
             if (data.success) {
                 currentArtistData = data;
-                renderArtistPage(data);
+
+                // Disable animations during view switch (only if not already in navigation mode)
+                const wasNavigating = document.body.classList.contains('qobuz-navigating');
+                if (!wasNavigating) {
+                    document.body.classList.add('qobuz-navigating');
+                }
+
+                // 1. Prepare content BEFORE view switch
+                prepareArtistContent(data);
+                // 2. THEN switch view (content already rendered)
+                switchToArtistView();
+
+                // Re-enable animations (only if we added the class)
+                if (!wasNavigating) {
+                    document.body.classList.remove('qobuz-navigating');
+                }
             } else {
                 QobuzApp.core.showError(data.error || 'Künstler konnte nicht geladen werden');
             }
         } catch (error) {
             console.error('Failed to load artist page:', error);
             QobuzApp.core.showError('Künstler konnte nicht geladen werden');
+        } finally {
+            if (!isRestoring) {
+                QobuzApp.core.hideLoadingDelayed();
+            }
         }
-
-        QobuzApp.core.hideLoading();
     }
 
     // ==================== Render Artist Page ====================
 
-    function renderArtistPage(data) {
+    /**
+     * Prepare artist page content WITHOUT switching views.
+     * This allows all DOM updates to complete before the view becomes visible.
+     */
+    function prepareArtistContent(data) {
         const artist = data.artist;
 
         // Reset state
@@ -127,16 +157,40 @@
 
         // Render appears on
         renderAppearsOn(data.appearsOn);
+    }
 
-        // Show artist section, hide others
+    /**
+     * Switch to artist view.
+     * Call this AFTER content has been prepared.
+     * Animation is disabled globally via qobuz-navigating class.
+     */
+    function switchToArtistView() {
+        const artistSection = document.getElementById('artist-detail-section');
+
+        // FIRST: Show new section (while old may still be visible - overlap prevents gap)
+        if (artistSection) {
+            artistSection.style.display = 'block';
+        }
+
+        // THEN: Hide other sections
         if (QobuzApp.dom.loggedInSection) QobuzApp.dom.loggedInSection.style.display = 'none';
         if (QobuzApp.dom.playlistDetailSection) QobuzApp.dom.playlistDetailSection.style.display = 'none';
-
-        const artistSection = document.getElementById('artist-detail-section');
-        if (artistSection) artistSection.style.display = 'block';
+        const discographyPage = document.getElementById('artist-discography-page');
+        if (discographyPage) {
+            discographyPage.style.display = 'none';
+        }
 
         // Scroll to top
         window.scrollTo(0, 0);
+    }
+
+    /**
+     * Legacy function for backwards compatibility.
+     * Combines content preparation and view switch.
+     */
+    function renderArtistPage(data) {
+        prepareArtistContent(data);
+        switchToArtistView();
     }
 
     // ==================== Biography ====================

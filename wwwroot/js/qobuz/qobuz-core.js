@@ -83,7 +83,9 @@
     // Navigation state for browser history
     QobuzApp.navigation = {
         initialized: false,
-        artistStack: []  // For Artist→Artist navigation
+        artistStack: [],  // For Artist→Artist navigation
+        isRestoring: false,  // popstate is running
+        authVerified: false  // Token already verified this session
     };
 
     // Setup flags
@@ -125,6 +127,72 @@
     function hideLoading() {
         if (QobuzApp.dom.loadingOverlay) {
             QobuzApp.dom.loadingOverlay.classList.remove('active');
+        }
+    }
+
+    // ==================== Flicker Prevention ====================
+
+    let loadingTimeout = null;
+    let loadingVisible = false;
+    let navigationDepth = 0; // Track nested navigation calls
+
+    /**
+     * Start navigation mode - disables ALL animations globally.
+     * Must be paired with endNavigation().
+     */
+    function startNavigation() {
+        navigationDepth++;
+        if (navigationDepth === 1) {
+            document.body.classList.add('qobuz-navigating');
+        }
+    }
+
+    /**
+     * End navigation mode - re-enables animations after content is stable.
+     */
+    function endNavigation() {
+        navigationDepth--;
+        if (navigationDepth <= 0) {
+            navigationDepth = 0;
+            // Remove class immediately - animations are already removed from CSS
+            document.body.classList.remove('qobuz-navigating');
+        }
+    }
+
+    /**
+     * Show loading overlay with a delay.
+     * If the request completes before the delay, loading is never shown.
+     * This prevents flicker on fast network responses.
+     * @param {number} delay - Delay in ms before showing loading (default: 150)
+     */
+    function showLoadingDelayed(delay = 150) {
+        // Cancel any pending show
+        if (loadingTimeout) {
+            clearTimeout(loadingTimeout);
+        }
+
+        loadingTimeout = setTimeout(() => {
+            if (QobuzApp.dom.loadingOverlay) {
+                QobuzApp.dom.loadingOverlay.classList.add('active');
+                loadingVisible = true;
+            }
+        }, delay);
+    }
+
+    /**
+     * Hide loading overlay and cancel any pending show.
+     * Call this when the request completes.
+     */
+    function hideLoadingDelayed() {
+        // Cancel pending show if request finished fast
+        if (loadingTimeout) {
+            clearTimeout(loadingTimeout);
+            loadingTimeout = null;
+        }
+
+        if (loadingVisible && QobuzApp.dom.loadingOverlay) {
+            QobuzApp.dom.loadingOverlay.classList.remove('active');
+            loadingVisible = false;
         }
     }
 
@@ -223,6 +291,26 @@
     }
 
     /**
+     * Hide all main content sections immediately
+     * Used during navigation to prevent multiple views being visible
+     */
+    function hideAllSections() {
+        if (QobuzApp.dom.loggedInSection) {
+            QobuzApp.dom.loggedInSection.style.display = 'none';
+        }
+        if (QobuzApp.dom.playlistDetailSection) {
+            QobuzApp.dom.playlistDetailSection.style.display = 'none';
+        }
+        if (QobuzApp.dom.artistDetailSection) {
+            QobuzApp.dom.artistDetailSection.style.display = 'none';
+        }
+        const discographyPage = document.getElementById('artist-discography-page');
+        if (discographyPage) {
+            discographyPage.style.display = 'none';
+        }
+    }
+
+    /**
      * Restore view from state (called on popstate)
      */
     async function restoreState(state) {
@@ -233,6 +321,21 @@
         }
 
         console.log('restoreState:', state.view, state.id);
+
+        // IMMEDIATELY hide ALL sections to prevent flicker
+        hideAllSections();
+
+        // Ensure logged-in state is shown if auth cache is valid
+        const cachedAuth = QobuzApp.auth?.getCachedAuth?.();
+        if (cachedAuth) {
+            // Hide login
+            if (QobuzApp.dom.loginSection) {
+                QobuzApp.dom.loginSection.style.display = 'none';
+            }
+            if (QobuzApp.dom.userMenu) {
+                QobuzApp.dom.userMenu.style.display = 'flex';
+            }
+        }
 
         // Restore artist stack from state
         if (state.artistStack) {
@@ -276,7 +379,10 @@
         }
 
         // Restore scroll position after a short delay
-        if (state.scrollY) {
+        // First try QobuzApp.scroll, then fall back to state.scrollY
+        if (QobuzApp.scroll && QobuzApp.scroll.restore) {
+            QobuzApp.scroll.restore();
+        } else if (state.scrollY) {
             setTimeout(() => {
                 window.scrollTo(0, state.scrollY);
             }, 100);
@@ -287,7 +393,15 @@
      * Show the main browse view
      */
     function showBrowseView() {
-        // Hide all detail sections
+        // Disable animations during view switch
+        document.body.classList.add('qobuz-navigating');
+
+        // FIRST: Show browse section (while others may still be visible - overlap prevents gap)
+        if (QobuzApp.dom.loggedInSection) {
+            QobuzApp.dom.loggedInSection.style.display = 'block';
+        }
+
+        // THEN: Hide all detail sections
         if (QobuzApp.dom.playlistDetailSection) {
             QobuzApp.dom.playlistDetailSection.style.display = 'none';
         }
@@ -299,15 +413,13 @@
             discographyPage.style.display = 'none';
         }
 
-        // Show browse section
-        if (QobuzApp.dom.loggedInSection) {
-            QobuzApp.dom.loggedInSection.style.display = 'block';
+        // Restore scroll position
+        if (!QobuzApp.navigation?.isRestoring) {
+            window.scrollTo(0, QobuzApp.savedScrollPosition || 0);
         }
 
-        // Restore scroll position
-        setTimeout(() => {
-            window.scrollTo(0, QobuzApp.savedScrollPosition || 0);
-        }, 50);
+        // Re-enable animations
+        document.body.classList.remove('qobuz-navigating');
     }
 
     /**
@@ -317,9 +429,39 @@
         if (QobuzApp.navigation.initialized) return;
 
         // Handle popstate event (browser back/forward)
+        // Use a flag to prevent multiple simultaneous restorations
+        let isRestoringInProgress = false;
+
         window.addEventListener('popstate', async (event) => {
+            // Prevent multiple simultaneous restorations
+            if (isRestoringInProgress) {
+                console.log('popstate ignored - restoration in progress');
+                return;
+            }
+            isRestoringInProgress = true;
+
             console.log('popstate event:', event.state);
-            await restoreState(event.state);
+
+            // Flicker prevention - disable all animations during history navigation
+            QobuzApp.navigation.isRestoring = true;
+            document.body.classList.add('qobuz-navigating');
+            document.body.classList.add('qobuz-restoring');
+
+            // Immediately hide login if we have cached auth
+            const cachedAuth = QobuzApp.auth?.getCachedAuth?.();
+            if (cachedAuth && QobuzApp.dom.loginSection) {
+                QobuzApp.dom.loginSection.style.display = 'none';
+            }
+
+            try {
+                await restoreState(event.state);
+            } finally {
+                // Re-enable animations
+                QobuzApp.navigation.isRestoring = false;
+                document.body.classList.remove('qobuz-restoring');
+                document.body.classList.remove('qobuz-navigating');
+                isRestoringInProgress = false;
+            }
         });
 
         // Set initial state based on current URL
@@ -353,10 +495,42 @@
         console.log('Navigation initialized, initial view:', initialView);
     }
 
+    // ==================== URL Navigation Helper ====================
+
+    function handleUrlNavigation() {
+        // Check for URL parameters (album, playlist, artist, or discography from history)
+        const urlParams = new URLSearchParams(window.location.search);
+        const albumId = urlParams.get('album');
+        const playlistId = urlParams.get('playlist');
+        const artistId = urlParams.get('artist');
+        const isDiscography = urlParams.get('discography') === '1';
+        const releaseType = urlParams.get('type');
+
+        if (albumId && typeof window.selectAlbum === 'function') {
+            console.log('handleUrlNavigation: Opening album from URL parameter:', albumId);
+            // skipHistory=true since we're restoring from URL
+            setTimeout(() => window.selectAlbum(albumId, null, true), 100);
+        } else if (playlistId && typeof window.selectPlaylist === 'function') {
+            console.log('handleUrlNavigation: Opening playlist from URL parameter:', playlistId);
+            setTimeout(() => window.selectPlaylist(playlistId, null, true), 100);
+        } else if (artistId && isDiscography && typeof window.showDiscographyPage === 'function') {
+            console.log('handleUrlNavigation: Opening discography from URL parameter:', artistId);
+            setTimeout(() => window.showDiscographyPage(parseInt(artistId), '', releaseType, true), 100);
+        } else if (artistId && typeof window.showArtistPage === 'function') {
+            console.log('handleUrlNavigation: Opening artist from URL parameter:', artistId);
+            setTimeout(() => window.showArtistPage(parseInt(artistId), true), 100);
+        } else if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.hasPendingNavigation()) {
+            setTimeout(() => {
+                GlobalPlayer.executePendingNavigation();
+            }, 150);
+        }
+    }
+
     // ==================== Initialization ====================
 
-    async function initQobuz() {
-        console.log('initQobuz: Starting initialization');
+    async function initQobuz(options = {}) {
+        const { skipAuthVerification = false } = options;
+        console.log('initQobuz: Starting initialization', { skipAuthVerification });
 
         // Refresh DOM element references
         refreshDOMElements();
@@ -384,6 +558,70 @@
         const creds = await QobuzApp.auth.getQobuzCredentials();
         const userId = creds?.userId;
         const authToken = creds?.authToken;
+
+        // If auth-cache is valid and skipAuthVerification is set, use cached auth
+        const cachedAuth = QobuzApp.auth.getCachedAuth();
+        if (skipAuthVerification && cachedAuth) {
+            console.log('initQobuz: Using cached auth, skipping token verification');
+            // Use global audio player
+            QobuzApp.playback.audioPlayer = window.GlobalPlayer?.getAudioPlayer() || new Audio();
+
+            // Initialize browser history navigation
+            initNavigation();
+
+            // Setup event listeners
+            QobuzApp.playback.audioPlayer.removeEventListener('timeupdate', QobuzApp.playbackFn.updateProgress);
+            QobuzApp.playback.audioPlayer.removeEventListener('ended', QobuzApp.playbackFn.playNext);
+            QobuzApp.playback.audioPlayer.removeEventListener('loadedmetadata', QobuzApp.playbackFn.updateTotalTime);
+            QobuzApp.playback.audioPlayer.addEventListener('timeupdate', QobuzApp.playbackFn.updateProgress);
+            QobuzApp.playback.audioPlayer.addEventListener('ended', QobuzApp.playbackFn.playNext);
+            QobuzApp.playback.audioPlayer.addEventListener('loadedmetadata', QobuzApp.playbackFn.updateTotalTime);
+
+            // Register playback callbacks with GlobalPlayer
+            if (window.GlobalPlayer) {
+                window.GlobalPlayer.registerPlaybackCallbacks({
+                    togglePlayPause: QobuzApp.playbackFn.togglePlayPause,
+                    playPrevious: QobuzApp.playbackFn.playPrevious,
+                    playNext: QobuzApp.playbackFn.playNext,
+                    seek: QobuzApp.playbackFn.seekTo,
+                    onPlayerChange: QobuzApp.playbackFn.handlePlayerChange
+                });
+
+                window.GlobalPlayer.registerQueueCallback(async (index) => {
+                    if (index >= 0 && index < QobuzApp.playback.currentTracks.length) {
+                        await QobuzApp.playbackFn.playTrack(index);
+                    }
+                });
+
+                window.GlobalPlayer.registerQueueTrackChangedCallback((track) => {
+                    if (!track || !QobuzApp.playback.currentTracks.length) return;
+
+                    const foundIndex = QobuzApp.playback.currentTracks.findIndex(t =>
+                        t.title === track.title ||
+                        t.title === track.artistName
+                    );
+
+                    if (foundIndex >= 0) {
+                        QobuzApp.playback.currentTrackIndex = foundIndex;
+                        QobuzApp.playback.isPlaying = true;
+                        QobuzApp.playbackFn.updateTrackHighlight();
+                        console.log('Queue track changed - updated highlight to index:', foundIndex, track.title);
+                    }
+                });
+            }
+
+            // Setup form and search
+            QobuzApp.auth.setupLoginForm();
+            QobuzApp.search.setupSearch();
+            QobuzApp.browse.setupInfiniteScroll();
+
+            // Show logged in state with cached data
+            QobuzApp.auth.showLoggedInState(cachedAuth);
+
+            // Handle URL navigation
+            handleUrlNavigation();
+            return;
+        }
 
         // Use global audio player
         QobuzApp.playback.audioPlayer = window.GlobalPlayer?.getAudioPlayer() || new Audio();
@@ -454,6 +692,15 @@
                         avatar: data.avatar
                     });
 
+                    // Cache auth data for future navigation
+                    QobuzApp.auth.setCachedAuth({
+                        userId: data.userId,
+                        authToken: data.authToken,
+                        displayName: data.displayName,
+                        avatar: data.avatar
+                    });
+                    QobuzApp.navigation.authVerified = true;
+
                     QobuzApp.auth.showLoggedInState(data);
                     await QobuzApp.browse.loadPlaylists();
 
@@ -463,32 +710,8 @@
 
                     await QobuzApp.auth.syncBluesoundQobuzQuality();
 
-                    // Check for URL parameters (album, playlist, artist, or discography from history)
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const albumId = urlParams.get('album');
-                    const playlistId = urlParams.get('playlist');
-                    const artistId = urlParams.get('artist');
-                    const isDiscography = urlParams.get('discography') === '1';
-                    const releaseType = urlParams.get('type');
-
-                    if (albumId && typeof window.selectAlbum === 'function') {
-                        console.log('initQobuz: Opening album from URL parameter:', albumId);
-                        // skipHistory=true since we're restoring from URL
-                        setTimeout(() => window.selectAlbum(albumId, null, true), 100);
-                    } else if (playlistId && typeof window.selectPlaylist === 'function') {
-                        console.log('initQobuz: Opening playlist from URL parameter:', playlistId);
-                        setTimeout(() => window.selectPlaylist(playlistId, null, true), 100);
-                    } else if (artistId && isDiscography && typeof window.showDiscographyPage === 'function') {
-                        console.log('initQobuz: Opening discography from URL parameter:', artistId);
-                        setTimeout(() => window.showDiscographyPage(parseInt(artistId), '', releaseType, true), 100);
-                    } else if (artistId && typeof window.showArtistPage === 'function') {
-                        console.log('initQobuz: Opening artist from URL parameter:', artistId);
-                        setTimeout(() => window.showArtistPage(parseInt(artistId), true), 100);
-                    } else if (typeof GlobalPlayer !== 'undefined' && GlobalPlayer.hasPendingNavigation()) {
-                        setTimeout(() => {
-                            GlobalPlayer.executePendingNavigation();
-                        }, 150);
-                    }
+                    // Handle URL navigation
+                    handleUrlNavigation();
                 } else {
                     console.warn('initQobuz: Token verification failed:', data.error);
                     await QobuzApp.auth.clearQobuzCredentials();
@@ -525,6 +748,10 @@
         getStreamQuality,
         showLoading,
         hideLoading,
+        showLoadingDelayed,
+        hideLoadingDelayed,
+        startNavigation,
+        endNavigation,
         showError,
         escapeHtml,
         formatTime,
