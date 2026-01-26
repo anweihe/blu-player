@@ -1,7 +1,8 @@
-import { Component, inject, signal, HostListener } from '@angular/core';
+import { Component, inject, signal, HostListener, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { PlayerStateService } from '../../core/services/player-state.service';
 
 interface FabAction {
   id: string;
@@ -26,7 +27,8 @@ interface FabAction {
     }
 
     <!-- FAB Container -->
-    <div class="fab-container fixed z-[450] right-4 md:right-6 bottom-[100px] md:bottom-[116px]">
+    <div class="fab-container fixed z-[450] right-4 md:right-6 transition-all duration-300"
+         [style.bottom.px]="fabBottomPosition()">
       <!-- Mini FABs -->
       <div class="fab-actions absolute bottom-[68px] right-0 flex flex-col items-end gap-3"
            [class.pointer-events-none]="!isOpen()"
@@ -109,8 +111,17 @@ interface FabAction {
 export class FabMenuComponent {
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly playerState = inject(PlayerStateService);
 
   readonly isOpen = signal(false);
+
+  // Move FAB up when volume panel or player selector is open
+  readonly fabBottomPosition = computed(() => {
+    const isVolumePanelOpen = this.playerState.isVolumePanelVisible();
+    const basePosition = window.innerWidth >= 768 ? 116 : 100; // md:bottom-[116px] : bottom-[100px]
+    const extraOffset = isVolumePanelOpen ? 180 : 0; // Move up when volume panel is open
+    return basePosition + extraOffset;
+  });
 
   // Service colors
   private readonly colors = {
