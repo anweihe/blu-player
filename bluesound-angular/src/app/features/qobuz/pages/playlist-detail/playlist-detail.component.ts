@@ -24,7 +24,7 @@ import { TrackItemComponent } from '../../../../shared/components';
         </div>
       } @else if (playlist()) {
         <!-- Header with gradient background -->
-        <div class="playlist-header relative">
+        <div class="playlist-header relative safe-area-top">
           <!-- Background blur -->
           @if (coverImage()) {
             <div
@@ -34,7 +34,7 @@ import { TrackItemComponent } from '../../../../shared/components';
           }
           <div class="absolute inset-0 bg-gradient-to-b from-transparent via-bg-primary/50 to-bg-primary"></div>
 
-          <div class="relative p-4 sm:p-6 pt-4 px-4 pl-16">
+          <div class="relative p-4 sm:p-6 pt-4 px-4 pl-16 md:pl-4">
             <!-- Back button -->
             <button
               (click)="goBack()"
@@ -216,6 +216,10 @@ import { TrackItemComponent } from '../../../../shared/components';
         width: 128px !important;
         height: 128px !important;
       }
+    }
+
+    .safe-area-top {
+      padding-top: env(safe-area-inset-top, 0);
     }
   `]
 })

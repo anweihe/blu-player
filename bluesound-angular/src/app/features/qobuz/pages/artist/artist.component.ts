@@ -48,7 +48,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
         </div>
       } @else if (artist()) {
         <!-- Back Button Header -->
-        <div class="artist-header p-4 pl-16">
+        <div class="artist-header p-4 pl-16 md:pl-4 safe-area-top">
           <button
             (click)="goBack()"
             class="btn-back inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
@@ -482,6 +482,10 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
       .similar-artist-name {
         font-size: 0.7rem;
       }
+    }
+
+    .safe-area-top {
+      padding-top: env(safe-area-inset-top, 0);
     }
   `]
 })

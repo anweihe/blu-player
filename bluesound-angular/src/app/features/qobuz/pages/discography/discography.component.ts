@@ -62,7 +62,7 @@ function mapReleaseType(type: string | null): string | null {
   template: `
     <div class="discography-page bg-bg-primary min-h-screen pb-28">
       <!-- Header -->
-      <div class="discography-page-header flex items-center gap-4 p-4 pl-16 mb-6">
+      <div class="discography-page-header flex items-center gap-4 p-4 pl-16 md:pl-4 mb-6 safe-area-top">
         <button
           (click)="goBack()"
           class="btn-back flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
@@ -212,6 +212,10 @@ function mapReleaseType(type: string | null): string | null {
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
       }
+    }
+
+    .safe-area-top {
+      padding-top: env(safe-area-inset-top, 0);
     }
   `]
 })
