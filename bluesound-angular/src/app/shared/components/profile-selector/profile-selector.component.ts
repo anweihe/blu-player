@@ -1,7 +1,8 @@
 import { Component, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { AuthService, UserProfile } from '../../../core/services/auth.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { ProfileService, Profile } from '../../../core/services/profile.service';
 
 @Component({
   selector: 'app-profile-selector',
@@ -64,11 +65,17 @@ import { AuthService, UserProfile } from '../../../core/services/auth.service';
                     class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary transition-colors text-left"
                     (click)="switchProfile(profile)"
                   >
-                    <div class="w-8 h-8 rounded-full bg-bg-secondary flex items-center justify-center text-text-secondary font-medium text-sm">
-                      {{ profile.name.charAt(0).toUpperCase() }}
+                    <div
+                      class="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
+                      [style.background-color]="profileService.getProfileColor(profile.id)"
+                    >
+                      {{ profileService.getProfileInitial(profile.name) }}
                     </div>
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-medium truncate">{{ profile.name }}</p>
+                      @if (profile.qobuz?.displayName) {
+                        <p class="text-xs text-text-muted truncate">{{ profile.qobuz!.displayName }}</p>
+                      }
                     </div>
                     @if (confirmDelete() === profile.id) {
                       <button
@@ -77,7 +84,7 @@ import { AuthService, UserProfile } from '../../../core/services/auth.service';
                       >
                         Löschen
                       </button>
-                    } @else {
+                    } @else if (profileService.profiles().length > 1) {
                       <button
                         class="p-1 text-text-muted hover:text-error rounded transition-colors"
                         (click)="confirmDeleteProfile(profile, $event)"
@@ -154,15 +161,16 @@ import { AuthService, UserProfile } from '../../../core/services/auth.service';
 })
 export class ProfileSelectorComponent {
   readonly auth = inject(AuthService);
+  readonly profileService = inject(ProfileService);
   private readonly router = inject(Router);
 
   readonly isOpen = signal(false);
   readonly confirmDelete = signal<string | null>(null);
 
   readonly otherProfiles = () => {
-    const profiles = this.auth.profiles();
-    const currentUserId = this.auth.userId();
-    return profiles.filter(p => p.userId !== currentUserId);
+    const profiles = this.profileService.profiles();
+    const activeId = this.profileService.activeProfileId();
+    return profiles.filter(p => p.id !== activeId);
   };
 
   toggle(): void {
@@ -177,27 +185,37 @@ export class ProfileSelectorComponent {
     this.confirmDelete.set(null);
   }
 
-  switchProfile(profile: UserProfile): void {
-    this.auth.switchProfile(profile.id);
+  switchProfile(profile: Profile): void {
+    this.profileService.setActiveProfileId(profile.id);
+    // Load credentials if available
+    if (profile.qobuz?.authToken) {
+      this.auth.loadFromProfileCredentials(profile.qobuz);
+    } else {
+      this.auth.logout();
+      this.router.navigate(['/qobuz/login']);
+    }
     this.close();
   }
 
-  confirmDeleteProfile(profile: UserProfile, event: Event): void {
+  confirmDeleteProfile(profile: Profile, event: Event): void {
     event.stopPropagation();
     this.confirmDelete.set(profile.id);
   }
 
-  deleteProfile(profile: UserProfile, event: Event): void {
+  deleteProfile(profile: Profile, event: Event): void {
     event.stopPropagation();
-    this.auth.deleteProfile(profile.id);
+    this.profileService.deleteProfile(profile.id).subscribe();
     this.confirmDelete.set(null);
   }
 
   addAccount(): void {
     this.close();
-    // Navigate to login but don't logout current session
-    this.router.navigate(['/qobuz/login'], {
-      queryParams: { addAccount: true }
+    // Create a new profile and navigate to login
+    this.profileService.createProfile('Neues Profil').subscribe(newProfile => {
+      if (newProfile) {
+        this.profileService.setActiveProfileId(newProfile.id);
+        this.router.navigate(['/qobuz/login']);
+      }
     });
   }
 

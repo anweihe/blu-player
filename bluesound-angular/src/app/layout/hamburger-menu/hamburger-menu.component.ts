@@ -1,7 +1,9 @@
-import { Component, inject, signal, HostListener } from '@angular/core';
+import { Component, inject, signal, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { ProfileService } from '../../core/services/profile.service';
+import { ProfileSwitcherComponent } from '../profile-switcher/profile-switcher.component';
 
 interface MenuItem {
   label: string;
@@ -13,11 +15,11 @@ interface MenuItem {
 @Component({
   selector: 'app-hamburger-menu',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, ProfileSwitcherComponent],
   template: `
     <!-- Hamburger Button -->
     <button
-      class="hamburger-btn fixed top-4 left-4 z-[60] w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
+      class="hamburger-btn fixed top-4 left-4 z-[110] w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
       [class.is-open]="isOpen()"
       (click)="toggle()"
     >
@@ -70,57 +72,68 @@ interface MenuItem {
         </div>
 
         <!-- Profile Section -->
-        @if (auth.isLoggedIn()) {
-          <div class="border-t border-border-subtle p-4">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 rounded-full bg-accent-qobuz/20 flex items-center justify-center text-accent-qobuz font-semibold">
-                {{ auth.user()?.display_name?.charAt(0)?.toUpperCase() || 'Q' }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="font-medium truncate">{{ auth.user()?.display_name || 'Qobuz User' }}</p>
-                <p class="text-xs text-text-muted">{{ auth.user()?.email }}</p>
-              </div>
+        <div class="border-t border-border-subtle p-4">
+          <!-- Clickable Profile Area -->
+          <button
+            class="w-full flex items-center gap-3 p-2 -m-2 rounded-xl hover:bg-bg-card transition-colors text-left"
+            (click)="openProfileSwitcher()"
+          >
+            <!-- Avatar with profile color -->
+            <div
+              class="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0"
+              [style.background-color]="activeProfileColor()"
+            >
+              {{ activeProfileInitial() }}
             </div>
 
-            <!-- Profile Switcher -->
-            @if ((auth.profiles() || []).length > 1) {
-              <div class="mb-3">
-                <label class="text-xs text-text-muted mb-1 block">Profil wechseln</label>
-                <select
-                  class="w-full px-3 py-2 bg-bg-card border border-border-subtle rounded-lg text-sm"
-                  (change)="onProfileChange($event)"
-                >
-                  @for (profile of auth.profiles(); track profile.id) {
-                    <option [value]="profile.id" [selected]="profile.userId === auth.user()?.id">
-                      {{ profile.name }}
-                    </option>
-                  }
-                </select>
-              </div>
-            }
+            <!-- Profile Info -->
+            <div class="flex-1 min-w-0">
+              @if (auth.isLoggedIn()) {
+                <p class="font-medium truncate">{{ profileService.activeProfile()?.name ?? auth.user()?.display_name ?? 'Profil' }}</p>
+                <p class="text-xs text-text-muted truncate">{{ auth.user()?.email }}</p>
+              } @else {
+                <p class="font-medium truncate">{{ profileService.activeProfile()?.name ?? 'Kein Profil' }}</p>
+                <p class="text-xs text-text-muted">Nicht eingeloggt</p>
+              }
+              <p class="text-xs text-accent-qobuz mt-0.5">Profil wechseln</p>
+            </div>
 
+            <!-- Chevron -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <!-- Logout Button -->
+          @if (auth.isLoggedIn()) {
             <button
-              class="w-full px-4 py-2 text-sm text-text-muted hover:text-error hover:bg-error/10 rounded-lg transition-colors flex items-center justify-center gap-2"
+              class="w-full mt-3 px-4 py-2 text-sm text-text-muted hover:text-error hover:bg-error/10 rounded-lg transition-colors flex items-center justify-center gap-2"
               (click)="logout()"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              Abmelden
+              Von Qobuz abmelden
             </button>
-          </div>
-        } @else {
-          <div class="border-t border-border-subtle p-4">
+          } @else {
             <a
               routerLink="/qobuz/login"
-              class="block w-full px-4 py-3 bg-accent-qobuz text-white text-center rounded-lg font-medium hover:opacity-90 transition-opacity"
+              class="block w-full mt-3 px-4 py-3 bg-accent-qobuz text-white text-center rounded-lg font-medium hover:opacity-90 transition-opacity"
               (click)="close()"
             >
               Bei Qobuz anmelden
             </a>
-          </div>
-        }
+          }
+        </div>
       </nav>
+    }
+
+    <!-- Profile Switcher Modal -->
+    @if (showProfileSwitcher()) {
+      <app-profile-switcher
+        (closed)="closeProfileSwitcher()"
+        (profileSelected)="onProfileSelected($event)"
+      />
     }
   `,
   styles: [`
@@ -129,12 +142,14 @@ interface MenuItem {
     }
   `]
 })
-export class HamburgerMenuComponent {
+export class HamburgerMenuComponent implements OnInit {
   readonly auth = inject(AuthService);
+  readonly profileService = inject(ProfileService);
   private readonly router = inject(Router);
 
   readonly isOpen = signal(false);
   readonly isClosing = signal(false);
+  readonly showProfileSwitcher = signal(false);
 
   readonly menuItems: MenuItem[] = [
     {
@@ -170,6 +185,34 @@ export class HamburgerMenuComponent {
     }
   ];
 
+  ngOnInit(): void {
+    // Load profiles on init
+    this.profileService.loadProfiles().subscribe();
+  }
+
+  // Computed-style getters for template
+  activeProfileColor(): string {
+    const profile = this.profileService.activeProfile();
+    if (profile) {
+      return this.profileService.getProfileColor(profile.id);
+    }
+    // Fallback to Qobuz accent color
+    return 'hsl(200, 65%, 45%)';
+  }
+
+  activeProfileInitial(): string {
+    const profile = this.profileService.activeProfile();
+    if (profile) {
+      return this.profileService.getProfileInitial(profile.name);
+    }
+    // Fallback to user initial or Q
+    const user = this.auth.user();
+    if (user?.display_name) {
+      return user.display_name.charAt(0).toUpperCase();
+    }
+    return 'Q';
+  }
+
   toggle(): void {
     if (this.isOpen()) {
       this.close();
@@ -186,13 +229,29 @@ export class HamburgerMenuComponent {
     }, 300);
   }
 
-  onProfileChange(event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    const profileId = select.value;
-    this.auth.switchProfile(profileId);
+  openProfileSwitcher(): void {
+    this.showProfileSwitcher.set(true);
+  }
+
+  closeProfileSwitcher(): void {
+    this.showProfileSwitcher.set(false);
+  }
+
+  onProfileSelected(profile: any): void {
+    // Check if new profile has Qobuz credentials
+    if (profile.qobuz?.authToken) {
+      // Load Qobuz credentials into AuthService
+      this.auth.loadFromProfileCredentials(profile.qobuz);
+    } else {
+      // Logout from Qobuz, redirect to login
+      this.auth.logout();
+      this.close();
+      this.router.navigate(['/qobuz/login']);
+    }
   }
 
   logout(): void {
+    // Only logout from Qobuz, keep profile
     this.auth.logout();
     this.close();
     this.router.navigate(['/']);
@@ -200,6 +259,10 @@ export class HamburgerMenuComponent {
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
+    if (this.showProfileSwitcher()) {
+      // ProfileSwitcher handles its own escape
+      return;
+    }
     if (this.isOpen()) {
       this.close();
     }

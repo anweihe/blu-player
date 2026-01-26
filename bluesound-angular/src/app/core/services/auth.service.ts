@@ -1,7 +1,8 @@
 import { Injectable, computed, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap, switchMap } from 'rxjs';
 import { QobuzUser, QobuzLoginResponse, QobuzAppCredentials } from '../models';
+import { ProfileService, QobuzCredentials } from './profile.service';
 
 const STORAGE_KEYS = {
   USER_ID: 'qobuz_user_id',
@@ -10,24 +11,13 @@ const STORAGE_KEYS = {
 } as const;
 
 /**
- * Profile for multi-user support
- */
-export interface UserProfile {
-  id: string;
-  name: string;
-  userId: number;
-  authToken: string;
-  userData?: QobuzUser;
-  lastUsed: number;
-}
-
-/**
  * Authentication service for Qobuz
- * Handles login, logout, token management, and multi-profile support
+ * Handles login, logout, token management, and profile integration
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly profileService = inject(ProfileService);
   private readonly apiBaseUrl = '/api/qobuz'; // REST API
 
   // ==================== State ====================
@@ -50,16 +40,6 @@ export class AuthService {
    * Current user data
    */
   readonly user = signal<QobuzUser | null>(null);
-
-  /**
-   * All saved profiles
-   */
-  readonly profiles = signal<UserProfile[]>([]);
-
-  /**
-   * Current active profile ID
-   */
-  readonly activeProfileId = signal<string | null>(null);
 
   /**
    * Is currently authenticating
@@ -105,6 +85,7 @@ export class AuthService {
 
   /**
    * Login with email and password
+   * Also saves credentials to the active profile
    */
   login(email: string, password: string): Observable<boolean> {
     this.isAuthenticating.set(true);
@@ -117,10 +98,17 @@ export class AuthService {
       tap(response => {
         if (response.user_auth_token && response.user) {
           this.setAuthState(response.user, response.user_auth_token);
-          this.saveProfile(response.user, response.user_auth_token);
         }
       }),
-      map(response => !!response.user_auth_token),
+      switchMap(response => {
+        if (response.user_auth_token && response.user) {
+          // Save credentials to active profile
+          return this.saveCredentialsToProfile(response.user, response.user_auth_token).pipe(
+            map(() => true)
+          );
+        }
+        return of(false);
+      }),
       catchError(error => {
         console.error('Login failed:', error);
         this.authError.set(error.error?.message ?? 'Login fehlgeschlagen');
@@ -159,7 +147,29 @@ export class AuthService {
   }
 
   /**
-   * Logout current user
+   * Load credentials from profile (when switching profiles)
+   */
+  loadFromProfileCredentials(credentials: QobuzCredentials): void {
+    this.authToken.set(credentials.authToken);
+    this.userId.set(credentials.userId);
+    this.isLoggedIn.set(true);
+
+    // Create minimal user data from credentials
+    const userData: Partial<QobuzUser> = {
+      id: credentials.userId,
+      display_name: credentials.displayName
+    };
+    this.user.set(userData as QobuzUser);
+
+    // Save to localStorage for persistence
+    this.saveToStorage(userData as QobuzUser, credentials.authToken);
+
+    // Verify token and get full user data
+    this.verifyToken().subscribe();
+  }
+
+  /**
+   * Logout current user (only from Qobuz, profile remains)
    */
   logout(): void {
     this.authToken.set(null);
@@ -170,35 +180,16 @@ export class AuthService {
   }
 
   /**
-   * Switch to a different profile
+   * Logout and also clear credentials from profile
    */
-  switchProfile(profileId: string): void {
-    const profiles = this.profiles();
-    const profile = profiles.find(p => p.id === profileId);
+  logoutAndClearProfile(): Observable<boolean> {
+    const profileId = this.profileService.activeProfileId();
+    this.logout();
 
-    if (profile) {
-      this.setAuthState(
-        profile.userData ?? { id: profile.userId } as QobuzUser,
-        profile.authToken
-      );
-      this.activeProfileId.set(profileId);
-      this.updateProfileLastUsed(profileId);
+    if (profileId) {
+      return this.profileService.deleteQobuzCredentials(profileId);
     }
-  }
-
-  /**
-   * Delete a profile
-   */
-  deleteProfile(profileId: string): void {
-    this.profiles.update(profiles =>
-      profiles.filter(p => p.id !== profileId)
-    );
-    this.saveProfilesToStorage();
-
-    // If deleted active profile, logout
-    if (this.activeProfileId() === profileId) {
-      this.logout();
-    }
+    return of(true);
   }
 
   /**
@@ -222,7 +213,7 @@ export class AuthService {
    * Get current profile ID for history tracking
    */
   getProfileId(): string | null {
-    return this.activeProfileId() ?? (this.userId() ? `profile_${this.userId()}` : null);
+    return this.profileService.activeProfileId() ?? (this.userId() ? `profile_${this.userId()}` : null);
   }
 
   // ==================== Private Methods ====================
@@ -235,16 +226,36 @@ export class AuthService {
     this.saveToStorage(user, token);
   }
 
+  /**
+   * Save Qobuz credentials to the active profile via backend
+   */
+  private saveCredentialsToProfile(user: QobuzUser, token: string): Observable<any> {
+    const profileId = this.profileService.activeProfileId();
+    if (!profileId) {
+      console.warn('No active profile to save credentials to');
+      return of(null);
+    }
+
+    const credentials: QobuzCredentials = {
+      userId: user.id,
+      authToken: token,
+      displayName: user.display_name ?? user.login ?? user.email,
+      avatar: user.avatar
+    };
+
+    return this.profileService.updateQobuzCredentials(profileId, credentials);
+  }
+
   private loadFromStorage(): void {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
       const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
       const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-      const profilesJson = localStorage.getItem('qobuz_profiles');
 
       if (token && userId) {
         this.authToken.set(token);
         this.userId.set(parseInt(userId, 10));
+        this.isLoggedIn.set(true);
 
         if (userData) {
           try {
@@ -252,14 +263,6 @@ export class AuthService {
           } catch {
             // Invalid JSON, ignore
           }
-        }
-      }
-
-      if (profilesJson) {
-        try {
-          this.profiles.set(JSON.parse(profilesJson));
-        } catch {
-          // Invalid JSON, ignore
         }
       }
     } catch {
@@ -282,48 +285,6 @@ export class AuthService {
       localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
       localStorage.removeItem(STORAGE_KEYS.USER_ID);
       localStorage.removeItem(STORAGE_KEYS.USER_DATA);
-    } catch {
-      // Storage not available
-    }
-  }
-
-  private saveProfile(user: QobuzUser, token: string): void {
-    const profileId = `profile_${user.id}`;
-    const profile: UserProfile = {
-      id: profileId,
-      name: user.display_name ?? user.login ?? user.email ?? 'User',
-      userId: user.id,
-      authToken: token,
-      userData: user,
-      lastUsed: Date.now()
-    };
-
-    this.profiles.update(profiles => {
-      const existing = profiles.findIndex(p => p.userId === user.id);
-      if (existing >= 0) {
-        const updated = [...profiles];
-        updated[existing] = profile;
-        return updated;
-      }
-      return [...profiles, profile];
-    });
-
-    this.activeProfileId.set(profileId);
-    this.saveProfilesToStorage();
-  }
-
-  private updateProfileLastUsed(profileId: string): void {
-    this.profiles.update(profiles =>
-      profiles.map(p =>
-        p.id === profileId ? { ...p, lastUsed: Date.now() } : p
-      )
-    );
-    this.saveProfilesToStorage();
-  }
-
-  private saveProfilesToStorage(): void {
-    try {
-      localStorage.setItem('qobuz_profiles', JSON.stringify(this.profiles()));
     } catch {
       // Storage not available
     }

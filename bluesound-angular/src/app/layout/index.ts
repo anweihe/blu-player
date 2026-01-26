@@ -8,3 +8,4 @@ export { FabMenuComponent } from './fab-menu/fab-menu.component';
 export { VolumePanelComponent } from './volume-panel/volume-panel.component';
 export { PlayerSelectorComponent } from './player-selector/player-selector.component';
 export { QualitySelectorComponent } from './quality-selector/quality-selector.component';
+export { ProfileSwitcherComponent } from './profile-switcher/profile-switcher.component';

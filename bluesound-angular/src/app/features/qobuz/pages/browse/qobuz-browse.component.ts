@@ -1,8 +1,9 @@
 import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ProfileService, Profile } from '../../../../core/services/profile.service';
 import { PlaybackService } from '../../../../core/services/playback.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
 import { QobuzAlbum, QobuzPlaylist, QobuzTrack, QobuzFavoriteArtist } from '../../../../core/models';
@@ -16,6 +17,7 @@ import {
   PlaylistTagsFilterComponent
 } from '../../../../shared/components';
 import { InfiniteScrollDirective } from '../../../../shared/directives';
+import { ProfileSwitcherComponent } from '../../../../layout';
 
 type TabType = 'new-releases' | 'album-charts' | 'playlists' | 'favorites';
 type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
@@ -32,7 +34,8 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
     ArtistCardComponent,
     GenreFilterComponent,
     PlaylistTagsFilterComponent,
-    InfiniteScrollDirective
+    InfiniteScrollDirective,
+    ProfileSwitcherComponent
   ],
   template: `
     <div class="qobuz-browse" appInfiniteScroll [scrollDisabled]="!canLoadMore()" (scrolled)="loadMore()">
@@ -60,13 +63,26 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
               </svg>
             </a>
             @if (auth.isLoggedIn()) {
-              <div class="profile-indicator" title="{{ auth.displayName() }}">
-                <span class="profile-initial">{{ auth.userInitial() }}</span>
-              </div>
+              <button
+                class="profile-indicator cursor-pointer hover:ring-2 hover:ring-accent-qobuz/50 transition-all"
+                [style.background-color]="profileService.activeProfile() ? profileService.getProfileColor(profileService.activeProfile()!.id) : 'var(--color-accent-qobuz)'"
+                title="{{ auth.displayName() }} - Profil wechseln"
+                (click)="openProfileSwitcher()"
+              >
+                <span class="profile-initial">{{ profileService.activeProfile() ? profileService.getProfileInitial(profileService.activeProfile()!.name) : auth.userInitial() }}</span>
+              </button>
             }
           </div>
         </div>
       </header>
+
+      <!-- Profile Switcher Modal -->
+      @if (showProfileSwitcher()) {
+        <app-profile-switcher
+          (closed)="closeProfileSwitcher()"
+          (profileSelected)="onProfileSelected($event)"
+        />
+      }
 
       <!-- Main Content -->
       <main class="main-content">
@@ -82,13 +98,13 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            <span>Charts</span>
+            <span>Album-Charts</span>
           </button>
           <button class="tab-btn" [class.active]="activeTab() === 'playlists'" (click)="setTab('playlists')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
-            <span>Playlists</span>
+            <span>Qobuz Playlists</span>
           </button>
           <button class="tab-btn" [class.active]="activeTab() === 'favorites'" (click)="setTab('favorites')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -519,9 +535,14 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
 })
 export class QobuzBrowseComponent implements OnInit {
   readonly auth = inject(AuthService);
+  readonly profileService = inject(ProfileService);
+  private readonly router = inject(Router);
   private readonly qobuzApi = inject(QobuzApiService);
   private readonly playback = inject(PlaybackService);
   private readonly playerState = inject(PlayerStateService);
+
+  // Profile switcher
+  readonly showProfileSwitcher = signal(false);
 
   // Tab state
   readonly activeTab = signal<TabType>('new-releases');
@@ -555,7 +576,8 @@ export class QobuzBrowseComponent implements OnInit {
   });
 
   readonly canLoadMore = computed(() => {
-    if (this.loading() || this.loadingMore()) return false;
+    if (this.loading()) return false;
+    // loadingMore NICHT prüfen - sonst wird Scroll-Listener deaktiviert
 
     const currentCount = this.getCurrentCount();
     return currentCount > 0 && currentCount < this.total;
@@ -594,6 +616,8 @@ export class QobuzBrowseComponent implements OnInit {
   }
 
   loadMore(): void {
+    // Guard gegen Doppel-Aufrufe hier statt in canLoadMore
+    if (this.loadingMore()) return;
     if (!this.canLoadMore()) return;
 
     this.loadingMore.set(true);
@@ -826,6 +850,28 @@ export class QobuzBrowseComponent implements OnInit {
           }
         });
         break;
+    }
+  }
+
+  // Profile switcher methods
+  openProfileSwitcher(): void {
+    this.showProfileSwitcher.set(true);
+  }
+
+  closeProfileSwitcher(): void {
+    this.showProfileSwitcher.set(false);
+  }
+
+  onProfileSelected(profile: Profile): void {
+    // Check if new profile has Qobuz credentials
+    if (profile.qobuz?.authToken) {
+      this.auth.loadFromProfileCredentials(profile.qobuz);
+      // Reload content for new profile
+      this.loadContent();
+    } else {
+      // No Qobuz credentials, redirect to login
+      this.auth.logout();
+      this.router.navigate(['/qobuz/login']);
     }
   }
 }
