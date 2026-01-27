@@ -641,6 +641,9 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
   private readonly limit = 30;
   private total = 0;
 
+  // Flag to restore scroll position only once on initial load
+  private shouldRestoreScroll = true;
+
   // Computed
   readonly hasContent = computed(() => {
     return this.albums().length > 0 ||
@@ -681,17 +684,31 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
 
   /**
    * Restore scroll position after content is loaded
+   * Only restores once on initial navigation, not on tab switches
    */
   private restoreScrollPosition(): void {
+    if (!this.shouldRestoreScroll) return;
+
     const savedScrollPos = this.browseState.getScrollPosition();
     if (savedScrollPos > 0) {
-      // Use requestAnimationFrame to ensure DOM is rendered
-      requestAnimationFrame(() => {
+      this.shouldRestoreScroll = false; // Only restore once
+
+      // Wait for Angular change detection and DOM rendering
+      // Use setTimeout to ensure grid items are rendered
+      setTimeout(() => {
         const mainEl = document.querySelector('main');
         if (mainEl) {
           mainEl.scrollTop = savedScrollPos;
+          // Double-check after another frame in case of layout shifts
+          requestAnimationFrame(() => {
+            if (mainEl.scrollTop !== savedScrollPos) {
+              mainEl.scrollTop = savedScrollPos;
+            }
+          });
         }
-      });
+      }, 100);
+    } else {
+      this.shouldRestoreScroll = false;
     }
   }
 
@@ -699,6 +716,8 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
     if (this.activeTab() === tab) return;
 
     this.browseState.setTab(tab);
+    this.browseState.resetScrollPosition(); // Reset scroll when changing tabs
+    this.scrollToTop();
     this.resetPagination();
     this.loadContent();
   }
@@ -707,8 +726,17 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
     if (this.favoritesSubTab() === subTab) return;
 
     this.browseState.setFavoritesSubTab(subTab);
+    this.browseState.resetScrollPosition(); // Reset scroll when changing sub-tabs
+    this.scrollToTop();
     this.resetPagination();
     this.loadFavorites();
+  }
+
+  private scrollToTop(): void {
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTop = 0;
+    }
   }
 
   onTagChange(tag: string): void {
