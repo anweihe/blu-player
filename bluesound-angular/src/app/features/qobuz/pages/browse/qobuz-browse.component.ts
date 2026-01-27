@@ -288,8 +288,10 @@ import { ProfileSwitcherComponent } from '../../../../layout';
     .browse-header {
       background: var(--color-bg-secondary);
       border-bottom: 1px solid var(--color-border-subtle);
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
       padding: 0 max(16px, env(safe-area-inset-left));
       padding-top: env(safe-area-inset-top);
@@ -408,6 +410,7 @@ import { ProfileSwitcherComponent } from '../../../../layout';
 
     .main-content {
       padding: 20px max(16px, env(safe-area-inset-left));
+      padding-top: calc(64px + env(safe-area-inset-top, 0) + 20px);
       padding-bottom: calc(120px + max(20px, env(safe-area-inset-bottom)));
       max-width: 1200px;
       margin: 0 auto;

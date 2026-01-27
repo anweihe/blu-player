@@ -44,7 +44,7 @@ import { TrackItemComponent } from '../../../../shared/components';
             <div class="flex gap-4 sm:gap-6 flex-col md:flex-row">
               <!-- Album Cover (clickable to enlarge) -->
               <div
-                class="album-cover w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mx-auto md:mx-0 shadow-2xl cursor-zoom-in"
+                class="album-cover w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 overflow-hidden bg-bg-secondary flex-shrink-0 mx-auto md:mx-0 shadow-2xl cursor-zoom-in"
                 (click)="album()?.image?.large && openFullCover()"
               >
                 @if (album()?.image?.large) {
@@ -291,7 +291,7 @@ import { TrackItemComponent } from '../../../../shared/components';
           <img
             [src]="album()?.image?.large"
             [alt]="album()?.title"
-            class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            class="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl"
             (click)="$event.stopPropagation()"
           />
         </div>

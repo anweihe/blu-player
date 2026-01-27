@@ -21,7 +21,7 @@ interface ApiResponse<T> {
   template: `
     <div class="settings-page min-h-screen bg-bg-primary pb-24">
       <!-- Header -->
-      <header class="sticky top-0 z-[60] bg-bg-primary/95 backdrop-blur border-b border-border-subtle safe-area-top">
+      <header class="sticky z-[60] bg-bg-primary/95 backdrop-blur border-b border-border-subtle" style="top: env(safe-area-inset-top, 0); padding-top: env(safe-area-inset-top, 0);">
         <div class="flex items-center gap-3 px-4 py-4">
           <!-- Hamburger Menu Button -->
           <button
