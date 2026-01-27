@@ -78,9 +78,9 @@ import { QobuzTrack, formatDuration } from '../../../core/models';
         </p>
       </div>
 
-      <!-- Quality Badge -->
+      <!-- Quality Badge (hidden on mobile) -->
       @if (showQuality && (track.hires_streamable || track.hires || (track.maximum_bit_depth && track.maximum_bit_depth > 16))) {
-        <span class="px-1.5 py-0.5 bg-accent-qobuz/10 text-accent-qobuz text-[10px] font-semibold rounded">
+        <span class="hidden md:inline-block px-1.5 py-0.5 bg-accent-qobuz/10 text-accent-qobuz text-[10px] font-semibold rounded">
           Hi-Res
         </span>
       }

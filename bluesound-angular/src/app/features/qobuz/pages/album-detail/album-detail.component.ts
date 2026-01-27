@@ -42,8 +42,11 @@ import { TrackItemComponent } from '../../../../shared/components';
             <!-- Back button removed - now in AppHeader -->
 
             <div class="flex gap-4 sm:gap-6 flex-col md:flex-row">
-              <!-- Album Cover -->
-              <div class="album-cover w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mx-auto md:mx-0 shadow-2xl">
+              <!-- Album Cover (clickable to enlarge) -->
+              <div
+                class="album-cover w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mx-auto md:mx-0 shadow-2xl cursor-zoom-in"
+                (click)="album()?.image?.large && openFullCover()"
+              >
                 @if (album()?.image?.large) {
                   <img
                     [src]="album()?.image?.large"
@@ -267,6 +270,32 @@ import { TrackItemComponent } from '../../../../shared/components';
           </button>
         </div>
       }
+
+      <!-- Fullscreen Cover Overlay -->
+      @if (showFullCover()) {
+        <div
+          class="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center cursor-zoom-out"
+          (click)="closeFullCover()"
+        >
+          <!-- Close Button -->
+          <button
+            class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors safe-area-top safe-area-right"
+            (click)="closeFullCover()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <!-- Full-size Cover Image -->
+          <img
+            [src]="album()?.image?.large"
+            [alt]="album()?.title"
+            class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            (click)="$event.stopPropagation()"
+          />
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -366,6 +395,7 @@ export class AlbumDetailComponent implements OnInit, OnDestroy {
   readonly showAlbumInfo = signal(false);
   readonly loadingAlbumInfo = signal(false);
   readonly albumInfoError = signal<string | null>(null);
+  readonly showFullCover = signal(false);
 
   // Computed properties
   readonly isHiRes = computed(() => {
@@ -541,5 +571,13 @@ export class AlbumDetailComponent implements OnInit, OnDestroy {
     if (alb) {
       this.contextMenu.openAlbumMenu(event, alb);
     }
+  }
+
+  openFullCover(): void {
+    this.showFullCover.set(true);
+  }
+
+  closeFullCover(): void {
+    this.showFullCover.set(false);
   }
 }
