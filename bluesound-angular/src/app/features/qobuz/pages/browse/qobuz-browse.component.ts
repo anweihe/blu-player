@@ -644,6 +644,9 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
   // Flag to restore scroll position only once on initial load
   private shouldRestoreScroll = true;
 
+  // Scroll listener reference for cleanup
+  private scrollListener?: () => void;
+
   // Computed
   readonly hasContent = computed(() => {
     return this.albums().length > 0 ||
@@ -670,33 +673,44 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Set up scroll listener to continuously save scroll position
+    this.setupScrollListener();
+
     this.loadContent();
   }
 
   ngOnDestroy(): void {
-    // Save scroll position when leaving the page
-    // Debug: Check all possible scroll containers
+    // Clean up scroll listener
+    this.removeScrollListener();
+  }
+
+  /**
+   * Set up scroll listener to save position on every scroll
+   */
+  private setupScrollListener(): void {
     const mainEl = document.querySelector('main');
-    const appContainer = document.querySelector('.app-container');
-    const browseEl = document.querySelector('.qobuz-browse');
+    if (!mainEl) return;
 
-    console.log('[Browse] Scroll positions on destroy:');
-    console.log('  - window.scrollY:', window.scrollY);
-    console.log('  - document.documentElement.scrollTop:', document.documentElement.scrollTop);
-    console.log('  - document.body.scrollTop:', document.body.scrollTop);
-    console.log('  - main.scrollTop:', mainEl?.scrollTop);
-    console.log('  - .app-container.scrollTop:', appContainer?.scrollTop);
-    console.log('  - .qobuz-browse.scrollTop:', browseEl?.scrollTop);
+    this.scrollListener = () => {
+      const scrollPos = mainEl.scrollTop;
+      if (scrollPos > 0) {
+        this.browseState.saveScrollPosition(scrollPos);
+      }
+    };
 
-    // Find the element that actually has scroll
-    const scrollPos = window.scrollY ||
-                      document.documentElement.scrollTop ||
-                      document.body.scrollTop ||
-                      mainEl?.scrollTop ||
-                      0;
+    mainEl.addEventListener('scroll', this.scrollListener, { passive: true });
+  }
 
-    console.log('[Browse] Using scroll position:', scrollPos);
-    this.browseState.saveScrollPosition(scrollPos);
+  /**
+   * Remove scroll listener
+   */
+  private removeScrollListener(): void {
+    if (this.scrollListener) {
+      const mainEl = document.querySelector('main');
+      if (mainEl) {
+        mainEl.removeEventListener('scroll', this.scrollListener);
+      }
+    }
   }
 
   /**
