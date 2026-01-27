@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { QobuzPlaylist } from '../../../core/models';
+import { ContextMenuService } from '../../services/context-menu.service';
 
 @Component({
   selector: 'app-playlist-card',
@@ -29,24 +30,26 @@ import { QobuzPlaylist } from '../../../core/models';
           </div>
         }
 
+        <!-- Context Menu Button (3-dot) - Top Right, always visible -->
+        <button
+          type="button"
+          class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center z-10 hover:bg-black/80"
+          (click)="onMenuClick($event)"
+          title="Mehr Optionen"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="12" cy="19" r="2"/>
+          </svg>
+        </button>
+
         <!-- Duration Badge -->
         @if (playlist.duration) {
           <div class="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/70 text-white text-[10px] font-medium rounded">
             {{ formatDuration(playlist.duration) }}
           </div>
         }
-
-        <!-- Play Overlay -->
-        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <button
-            class="w-12 h-12 rounded-full bg-accent-qobuz text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform"
-            (click)="onPlayClick($event)"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-          </button>
-        </div>
       </div>
 
       <!-- Info -->
@@ -67,6 +70,8 @@ import { QobuzPlaylist } from '../../../core/models';
   `
 })
 export class PlaylistCardComponent {
+  private readonly contextMenu = inject(ContextMenuService);
+
   @Input({ required: true }) playlist!: QobuzPlaylist;
   @Input() showOwner = false;
 
@@ -78,10 +83,10 @@ export class PlaylistCardComponent {
            this.playlist.images?.[0];
   }
 
-  onPlayClick(event: Event): void {
+  onMenuClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.play.emit(this.playlist);
+    this.contextMenu.openPlaylistMenu(event, this.playlist);
   }
 
   formatDuration(seconds: number): string {

@@ -32,10 +32,10 @@ import { AlbumRatingService } from '../../../core/services/album-rating.service'
           </div>
         }
 
-        <!-- Context Menu Button (3-dot) - Top Right -->
+        <!-- Context Menu Button (3-dot) - Top Right, always visible -->
         <button
           type="button"
-          class="context-menu-btn absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          class="context-menu-btn absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center z-10"
           (click)="onMenuClick($event)"
           title="Mehr Optionen"
         >
@@ -80,17 +80,6 @@ import { AlbumRatingService } from '../../../core/services/album-rating.service'
           }
         }
 
-        <!-- Play Overlay -->
-        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-          <button
-            class="w-12 h-12 rounded-full bg-accent-qobuz text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform pointer-events-auto"
-            (click)="onPlayClick($event)"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-          </button>
-        </div>
       </div>
 
       <!-- Info -->

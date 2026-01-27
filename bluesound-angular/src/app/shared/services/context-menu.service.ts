@@ -1,6 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
-import { QobuzTrack, QobuzAlbum } from '../../core/models';
+import { QobuzTrack, QobuzAlbum, QobuzPlaylist } from '../../core/models';
 
 /**
  * Menu item definition
@@ -122,6 +122,42 @@ export class ContextMenuService {
         label: 'Zur Künstlerseite',
         icon: 'artist',
         action: () => this.router.navigate(['/qobuz/artist', album.artist!.id])
+      });
+    }
+
+    this.openAt(event.clientX, event.clientY, menuItems);
+  }
+
+  /**
+   * Open context menu for a playlist
+   */
+  openPlaylistMenu(
+    event: MouseEvent,
+    playlist: QobuzPlaylist,
+    options?: {
+      onPlay?: () => void;
+    }
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const menuItems: MenuItem[] = [];
+
+    // Play option
+    if (options?.onPlay) {
+      menuItems.push({
+        label: 'Abspielen',
+        icon: 'play',
+        action: options.onPlay
+      });
+    }
+
+    // Go to playlist
+    if (playlist.id) {
+      menuItems.push({
+        label: 'Zur Playlist',
+        icon: 'album',
+        action: () => this.router.navigate(['/qobuz/playlist', playlist.id])
       });
     }
 
