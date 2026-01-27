@@ -678,7 +678,9 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
     // The scrollable element is the <main> in app.ts, not window
     const mainEl = document.querySelector('main');
     if (mainEl) {
-      this.browseState.saveScrollPosition(mainEl.scrollTop);
+      const scrollPos = mainEl.scrollTop;
+      console.log('[Browse] Saving scroll position:', scrollPos);
+      this.browseState.saveScrollPosition(scrollPos);
     }
   }
 
@@ -690,25 +692,43 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
     if (!this.shouldRestoreScroll) return;
 
     const savedScrollPos = this.browseState.getScrollPosition();
+    console.log('[Browse] Attempting to restore scroll position:', savedScrollPos);
+
     if (savedScrollPos > 0) {
       this.shouldRestoreScroll = false; // Only restore once
 
-      // Wait for Angular change detection and DOM rendering
-      // Use setTimeout to ensure grid items are rendered
-      setTimeout(() => {
-        const mainEl = document.querySelector('main');
-        if (mainEl) {
-          mainEl.scrollTop = savedScrollPos;
-          // Double-check after another frame in case of layout shifts
-          requestAnimationFrame(() => {
-            if (mainEl.scrollTop !== savedScrollPos) {
-              mainEl.scrollTop = savedScrollPos;
-            }
-          });
-        }
-      }, 100);
+      // Try to restore scroll position with retries
+      this.tryRestoreScroll(savedScrollPos, 10);
     } else {
+      console.log('[Browse] No scroll position to restore');
       this.shouldRestoreScroll = false;
+    }
+  }
+
+  /**
+   * Attempt to restore scroll position with retries
+   * Waits for content to be tall enough to scroll
+   */
+  private tryRestoreScroll(targetPos: number, retriesLeft: number): void {
+    const mainEl = document.querySelector('main');
+    if (!mainEl) {
+      console.log('[Browse] Main element not found');
+      return;
+    }
+
+    // Check if content is tall enough to scroll to target position
+    const maxScroll = mainEl.scrollHeight - mainEl.clientHeight;
+    console.log(`[Browse] Try restore: target=${targetPos}, maxScroll=${maxScroll}, retries=${retriesLeft}`);
+
+    if (maxScroll >= targetPos) {
+      // Content is tall enough, scroll now
+      mainEl.scrollTop = targetPos;
+      console.log('[Browse] Scroll restored to:', mainEl.scrollTop);
+    } else if (retriesLeft > 0) {
+      // Content not ready yet, retry after a short delay
+      setTimeout(() => this.tryRestoreScroll(targetPos, retriesLeft - 1), 50);
+    } else {
+      console.log('[Browse] Gave up restoring scroll - content not tall enough');
     }
   }
 
