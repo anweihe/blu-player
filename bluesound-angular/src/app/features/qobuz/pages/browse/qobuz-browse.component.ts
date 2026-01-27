@@ -675,13 +675,28 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     // Save scroll position when leaving the page
-    // The scrollable element is the <main> in app.ts, not window
+    // Debug: Check all possible scroll containers
     const mainEl = document.querySelector('main');
-    if (mainEl) {
-      const scrollPos = mainEl.scrollTop;
-      console.log('[Browse] Saving scroll position:', scrollPos);
-      this.browseState.saveScrollPosition(scrollPos);
-    }
+    const appContainer = document.querySelector('.app-container');
+    const browseEl = document.querySelector('.qobuz-browse');
+
+    console.log('[Browse] Scroll positions on destroy:');
+    console.log('  - window.scrollY:', window.scrollY);
+    console.log('  - document.documentElement.scrollTop:', document.documentElement.scrollTop);
+    console.log('  - document.body.scrollTop:', document.body.scrollTop);
+    console.log('  - main.scrollTop:', mainEl?.scrollTop);
+    console.log('  - .app-container.scrollTop:', appContainer?.scrollTop);
+    console.log('  - .qobuz-browse.scrollTop:', browseEl?.scrollTop);
+
+    // Find the element that actually has scroll
+    const scrollPos = window.scrollY ||
+                      document.documentElement.scrollTop ||
+                      document.body.scrollTop ||
+                      mainEl?.scrollTop ||
+                      0;
+
+    console.log('[Browse] Using scroll position:', scrollPos);
+    this.browseState.saveScrollPosition(scrollPos);
   }
 
   /**
