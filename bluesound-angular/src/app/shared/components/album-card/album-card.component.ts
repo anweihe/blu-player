@@ -12,7 +12,7 @@ import { AlbumRatingService } from '../../../core/services/album-rating.service'
   template: `
     <a
       [routerLink]="['/qobuz/album', album.id]"
-      class="album-card group block bg-bg-card border border-border-subtle rounded-lg overflow-hidden transition-all hover:border-border-accent hover:-translate-y-0.5 hover:shadow-lg"
+      class="album-card group block bg-bg-card border border-border-subtle overflow-hidden transition-all hover:border-border-accent hover:-translate-y-0.5 hover:shadow-lg"
       [class.compact]="compact"
     >
       <!-- Cover -->
@@ -101,9 +101,6 @@ import { AlbumRatingService } from '../../../core/services/album-rating.service'
     </a>
   `,
   styles: [`
-    .album-card.compact .album-cover {
-      border-radius: 6px;
-    }
     .context-menu-btn:hover {
       background: rgba(0, 0, 0, 0.8);
     }

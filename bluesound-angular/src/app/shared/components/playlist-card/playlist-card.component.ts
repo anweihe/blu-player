@@ -11,7 +11,7 @@ import { ContextMenuService } from '../../services/context-menu.service';
   template: `
     <a
       [routerLink]="['/qobuz/playlist', playlist.id]"
-      class="playlist-card group block bg-bg-card border border-border-subtle rounded-lg overflow-hidden transition-all hover:border-border-accent hover:-translate-y-0.5 hover:shadow-lg"
+      class="playlist-card group block bg-bg-card border border-border-subtle overflow-hidden transition-all hover:border-border-accent hover:-translate-y-0.5 hover:shadow-lg"
     >
       <!-- Cover -->
       <div class="playlist-cover relative aspect-square bg-bg-secondary overflow-hidden">
