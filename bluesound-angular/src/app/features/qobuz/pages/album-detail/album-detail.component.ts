@@ -428,6 +428,9 @@ export class AlbumDetailComponent implements OnInit, OnDestroy {
   getAlbumTypeLabel = getAlbumTypeLabel;
 
   ngOnInit(): void {
+    // Scroll to top when entering detail page
+    document.querySelector('main')?.scrollTo(0, 0);
+
     // Enter detail mode - back button and play button will appear in header
     this.navState.enterDetailMode('/qobuz/browse', 'Album', {
       showPlayButton: true,

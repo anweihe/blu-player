@@ -266,6 +266,9 @@ export class PlaylistDetailComponent implements OnInit, OnDestroy {
   formatDuration = formatDuration;
 
   ngOnInit(): void {
+    // Scroll to top when entering detail page
+    document.querySelector('main')?.scrollTo(0, 0);
+
     // Enter detail mode - back button will appear in header
     this.navState.enterDetailMode('/qobuz/browse', 'Playlist', {
       showPlayButton: true,

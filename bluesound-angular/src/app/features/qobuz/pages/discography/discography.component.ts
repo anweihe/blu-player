@@ -238,6 +238,9 @@ export class DiscographyComponent implements OnInit, OnDestroy {
   private scrollObserver: IntersectionObserver | null = null;
 
   ngOnInit(): void {
+    // Scroll to top when entering detail page
+    document.querySelector('main')?.scrollTo(0, 0);
+
     // Enter detail mode - back button will appear in header
     this.navState.enterDetailMode(`/qobuz/artist/${this.id}`, 'Diskografie');
 
