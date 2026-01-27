@@ -1,4 +1,4 @@
-import { Component, inject, signal, HostListener, OnInit } from '@angular/core';
+import { Component, inject, signal, HostListener, OnInit, Input, Output, EventEmitter, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -17,18 +17,7 @@ interface MenuItem {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive, ProfileSwitcherComponent],
   template: `
-    <!-- Hamburger Button -->
-    <button
-      class="hamburger-btn fixed top-4 left-4 z-[110] w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
-      [class.is-open]="isOpen()"
-      (click)="toggle()"
-    >
-      <div class="hamburger-lines w-5 h-4 relative flex flex-col justify-between">
-        <span class="block h-0.5 w-full bg-text-primary rounded transition-all duration-300" [class.rotate-45]="isOpen()" [class.translate-y-[7px]]="isOpen()"></span>
-        <span class="block h-0.5 w-full bg-text-primary rounded transition-all duration-300" [class.opacity-0]="isOpen()"></span>
-        <span class="block h-0.5 w-full bg-text-primary rounded transition-all duration-300" [class.-rotate-45]="isOpen()" [class.-translate-y-[7px]]="isOpen()"></span>
-      </div>
-    </button>
+    <!-- Hamburger Button removed - now in AppHeader -->
 
     <!-- Backdrop -->
     @if (isOpen()) {
@@ -147,6 +136,18 @@ export class HamburgerMenuComponent implements OnInit {
   readonly profileService = inject(ProfileService);
   private readonly router = inject(Router);
 
+  /** External control for opening the menu (from AppHeader) */
+  @Input() set externalOpen(value: boolean) {
+    if (value && !this.isOpen()) {
+      this.isOpen.set(true);
+    } else if (!value && this.isOpen()) {
+      this.close();
+    }
+  }
+
+  /** Event emitted when menu is closed */
+  @Output() closed = new EventEmitter<void>();
+
   readonly isOpen = signal(false);
   readonly isClosing = signal(false);
   readonly showProfileSwitcher = signal(false);
@@ -226,6 +227,7 @@ export class HamburgerMenuComponent implements OnInit {
     setTimeout(() => {
       this.isOpen.set(false);
       this.isClosing.set(false);
+      this.closed.emit();
     }, 300);
   }
 

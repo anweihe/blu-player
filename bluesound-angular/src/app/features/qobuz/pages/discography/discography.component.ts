@@ -2,6 +2,7 @@ import { Component, Input, inject, signal, OnInit, OnDestroy, computed } from '@
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
+import { NavigationStateService } from '../../../../core/services/navigation-state.service';
 import { QobuzAlbum } from '../../../../core/models';
 import { AlbumCardComponent } from '../../../../shared/components';
 
@@ -61,17 +62,8 @@ function mapReleaseType(type: string | null): string | null {
   imports: [CommonModule, AlbumCardComponent],
   template: `
     <div class="discography-page bg-bg-primary min-h-screen pb-28">
-      <!-- Header -->
-      <div class="discography-page-header flex items-center gap-4 p-4 pl-16 md:pl-4 mb-6 safe-area-top">
-        <button
-          (click)="goBack()"
-          class="btn-back flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          <span>Zurück</span>
-        </button>
+      <!-- Header - back button removed, now in AppHeader -->
+      <div class="discography-page-header flex items-center gap-4 p-4 mb-6">
         <div class="discography-page-title-area flex flex-col gap-0.5">
           <h1 class="text-lg sm:text-xl font-bold m-0 leading-tight">Diskografie</h1>
           @if (artistName()) {
@@ -223,6 +215,7 @@ export class DiscographyComponent implements OnInit, OnDestroy {
   @Input() id!: string;
 
   private readonly qobuzApi = inject(QobuzApiService);
+  private readonly navState = inject(NavigationStateService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -245,6 +238,9 @@ export class DiscographyComponent implements OnInit, OnDestroy {
   private scrollObserver: IntersectionObserver | null = null;
 
   ngOnInit(): void {
+    // Enter detail mode - back button will appear in header
+    this.navState.enterDetailMode(`/qobuz/artist/${this.id}`, 'Diskografie');
+
     // Check for initial filter from query params
     this.route.queryParams.subscribe(params => {
       if (params['type']) {
@@ -263,6 +259,8 @@ export class DiscographyComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Exit detail mode when leaving the page
+    this.navState.exitDetailMode();
     this.cleanupScrollObserver();
   }
 

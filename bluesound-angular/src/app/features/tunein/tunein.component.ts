@@ -1,29 +1,34 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy, ViewChild, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { TuneInApiService } from '../../core/services/tunein-api.service';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ProfileService } from '../../core/services/profile.service';
+import { NavigationStateService } from '../../core/services/navigation-state.service';
 import { TuneInItem, TuneInSection, TuneInNavigationState, BluesoundPlayer } from '../../core/models';
 import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout';
 
 @Component({
   selector: 'app-tunein',
   standalone: true,
-  imports: [CommonModule, RouterLink, PlayerSelectorComponent, ProfileSwitcherComponent],
+  imports: [CommonModule, PlayerSelectorComponent, ProfileSwitcherComponent],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
-      <header class="sticky top-0 z-50 bg-bg-secondary border-b border-border-subtle safe-area-top">
+      <header class="sticky top-0 z-[60] bg-bg-secondary border-b border-border-subtle safe-area-top">
         <div class="flex items-center justify-between px-4 py-3.5 max-w-5xl mx-auto">
           <div class="flex items-center gap-3">
-            <a routerLink="/" class="w-9 h-9 rounded-lg hover:bg-bg-card flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path d="M15 19l-7-7 7-7"/>
+            <!-- Hamburger Menu Button -->
+            <button
+              class="w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
+              (click)="toggleMenu()"
+              aria-label="Menü"
+            >
+              <svg class="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
               </svg>
-            </a>
+            </button>
             <div class="flex items-center gap-2.5">
               <svg class="w-7 h-7 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/>
@@ -319,6 +324,7 @@ export class TuneInComponent implements OnInit, OnDestroy {
   readonly profileService = inject(ProfileService);
   private readonly tuneInApi = inject(TuneInApiService);
   private readonly playerState = inject(PlayerStateService);
+  private readonly navState = inject(NavigationStateService);
 
   // Profile switcher
   readonly showProfileSwitcher = signal(false);
@@ -381,6 +387,8 @@ export class TuneInComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    // Hide app header - this page has its own header
+    this.navState.usePreset('hidden');
     if (this.hasBluesoundPlayer()) {
       this.loadMainMenu();
     }
@@ -401,6 +409,10 @@ export class TuneInComponent implements OnInit, OnDestroy {
   onProfileSelected(profile: { id: string }): void {
     this.profileService.setActiveProfileId(profile.id);
     this.closeProfileSwitcher();
+  }
+
+  toggleMenu(): void {
+    this.navState.toggleHamburger();
   }
 
   ngOnDestroy(): void {

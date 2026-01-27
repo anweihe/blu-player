@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { HistoryService } from '../../core/services/history.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ProfileService } from '../../core/services/profile.service';
+import { NavigationStateService } from '../../core/services/navigation-state.service';
 import { HistorySection, HistoryDisplayItem } from '../../core/models';
 import { ProfileSwitcherComponent } from '../../layout';
 
@@ -24,19 +25,31 @@ interface SourceCard {
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
-      <header class="sticky top-0 z-40 bg-bg-secondary border-b border-border-subtle safe-area-top">
+      <header class="sticky top-0 z-[60] bg-bg-secondary border-b border-border-subtle safe-area-top">
         <div class="flex items-center justify-between px-4 py-3.5 max-w-5xl mx-auto">
-          <!-- Brand -->
-          <div class="flex items-center gap-2.5">
-            <svg class="w-7 h-7 text-accent-qobuz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
-            </svg>
-            <h1 class="text-xl font-semibold tracking-tight">Bluesound</h1>
+          <!-- Left: Hamburger + Brand -->
+          <div class="flex items-center gap-3">
+            <!-- Hamburger Menu Button -->
+            <button
+              class="w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
+              (click)="toggleMenu()"
+              aria-label="Menü"
+            >
+              <svg class="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <div class="flex items-center gap-2.5">
+              <svg class="w-7 h-7 text-accent-qobuz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+              </svg>
+              <h1 class="text-xl font-semibold tracking-tight">Bluesound</h1>
+            </div>
           </div>
 
-          <!-- Profile Indicator -->
+          <!-- Right: Profile -->
           @if (auth.isLoggedIn()) {
             <button
               class="w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:ring-2 hover:ring-accent-qobuz/50 transition-all"
@@ -245,6 +258,7 @@ export class HomeComponent implements OnInit {
   readonly auth = inject(AuthService);
   private readonly historyService = inject(HistoryService);
   private readonly router = inject(Router);
+  private readonly navState = inject(NavigationStateService);
 
   readonly isLoading = signal(true);
   readonly historySections = signal<HistorySection[]>([]);
@@ -307,6 +321,8 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Hide app header - this page has its own header
+    this.navState.usePreset('hidden');
     this.loadHistory();
   }
 
@@ -324,8 +340,7 @@ export class HomeComponent implements OnInit {
   }
 
   toggleMenu(): void {
-    // Will be handled by HamburgerMenuComponent
-    // For now, just a placeholder
+    this.navState.toggleHamburger();
   }
 
   getPlaceholderClass(iconType: string): string {

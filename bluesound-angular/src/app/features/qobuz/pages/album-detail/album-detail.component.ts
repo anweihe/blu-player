@@ -1,9 +1,10 @@
-import { Component, Input, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, Input, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
 import { PlaybackService } from '../../../../core/services/playback.service';
+import { NavigationStateService } from '../../../../core/services/navigation-state.service';
 import { ContextMenuService } from '../../../../shared/services/context-menu.service';
 import {
   QobuzAlbumWithTracks,
@@ -27,7 +28,7 @@ import { TrackItemComponent } from '../../../../shared/components';
         </div>
       } @else if (album()) {
         <!-- Header with gradient background -->
-        <div class="album-header relative safe-area-top">
+        <div class="album-header relative">
           <!-- Background blur -->
           @if (album()?.image?.large) {
             <div
@@ -37,17 +38,8 @@ import { TrackItemComponent } from '../../../../shared/components';
           }
           <div class="absolute inset-0 bg-gradient-to-b from-transparent via-bg-primary/50 to-bg-primary"></div>
 
-          <div class="relative p-4 sm:p-6 pt-4 px-4 pl-16 md:pl-4">
-            <!-- Back button -->
-            <button
-              (click)="goBack()"
-              class="back-btn mb-4 inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Zurück
-            </button>
+          <div class="relative p-4 sm:p-6 pt-4">
+            <!-- Back button removed - now in AppHeader -->
 
             <div class="flex gap-4 sm:gap-6 flex-col md:flex-row">
               <!-- Album Cover -->
@@ -359,12 +351,13 @@ import { TrackItemComponent } from '../../../../shared/components';
     }
   `]
 })
-export class AlbumDetailComponent implements OnInit {
+export class AlbumDetailComponent implements OnInit, OnDestroy {
   @Input() id!: string;
 
   private readonly qobuzApi = inject(QobuzApiService);
   private readonly playerState = inject(PlayerStateService);
   private readonly playbackService = inject(PlaybackService);
+  private readonly navState = inject(NavigationStateService);
   private readonly contextMenu = inject(ContextMenuService);
 
   readonly loading = signal(true);
@@ -405,9 +398,20 @@ export class AlbumDetailComponent implements OnInit {
   getAlbumTypeLabel = getAlbumTypeLabel;
 
   ngOnInit(): void {
+    // Enter detail mode - back button and play button will appear in header
+    this.navState.enterDetailMode('/qobuz/browse', 'Album', {
+      showPlayButton: true,
+      onPlayAll: () => this.playAll()
+    });
+
     if (this.id) {
       this.loadAlbum();
     }
+  }
+
+  ngOnDestroy(): void {
+    // Exit detail mode when leaving the page
+    this.navState.exitDetailMode();
   }
 
   private loadAlbum(): void {

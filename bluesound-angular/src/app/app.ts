@@ -3,7 +3,9 @@ import { RouterOutlet } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
 import { PlayerStateService } from './core/services/player-state.service';
 import { PollingService } from './core/services/polling.service';
+import { NavigationStateService } from './core/services/navigation-state.service';
 import {
+  AppHeaderComponent,
   GlobalPlayerComponent,
   NowPlayingPopupComponent,
   HamburgerMenuComponent,
@@ -17,6 +19,7 @@ import { GlobalContextMenuComponent } from './shared/components';
   standalone: true,
   imports: [
     RouterOutlet,
+    AppHeaderComponent,
     GlobalPlayerComponent,
     NowPlayingPopupComponent,
     HamburgerMenuComponent,
@@ -26,11 +29,18 @@ import { GlobalContextMenuComponent } from './shared/components';
   ],
   template: `
     <div class="app-container min-h-screen bg-bg-primary">
-      <!-- Hamburger Menu -->
-      <app-hamburger-menu />
+      <!-- App Header (replaces floating hamburger) -->
+      <app-header (toggleMenu)="toggleHamburger()" />
 
-      <!-- Main Content -->
-      <main class="flex-1 pb-24 overflow-y-auto">
+      <!-- Hamburger Menu (side panel only) -->
+      <app-hamburger-menu [externalOpen]="navState.hamburgerOpen()" (closed)="navState.closeHamburger()" />
+
+      <!-- Main Content with top padding for fixed header (only when header visible) -->
+      <main
+        class="flex-1 pb-24 overflow-y-auto"
+        [class.pt-14]="!navState.headerConfig().hidden"
+        [class.header-padding]="!navState.headerConfig().hidden"
+      >
         <router-outlet />
       </main>
 
@@ -64,17 +74,27 @@ import { GlobalContextMenuComponent } from './shared/components';
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
+
+    /* Additional top padding for safe area when header is visible */
+    main.header-padding {
+      padding-top: calc(3.5rem + env(safe-area-inset-top, 0));
+    }
   `]
 })
 export class App implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly playerState = inject(PlayerStateService);
   private readonly polling = inject(PollingService);
+  readonly navState = inject(NavigationStateService);
 
   ngOnInit(): void {
     // Verify existing auth token on startup
     if (this.auth.authToken()) {
       this.auth.verifyToken().subscribe();
     }
+  }
+
+  toggleHamburger(): void {
+    this.navState.toggleHamburger();
   }
 }

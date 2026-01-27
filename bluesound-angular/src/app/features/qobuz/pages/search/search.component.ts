@@ -16,6 +16,7 @@ import { of } from 'rxjs';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
 import { AlbumRatingService } from '../../../../core/services/album-rating.service';
+import { NavigationStateService } from '../../../../core/services/navigation-state.service';
 import { ContextMenuService } from '../../../../shared/services/context-menu.service';
 import {
   QobuzSearchResponse,
@@ -80,17 +81,18 @@ const SEARCH_LIMIT = 20;
   template: `
     <div class="search-page bg-bg-primary min-h-screen pb-28">
       <!-- Header -->
-      <div class="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm border-b border-border-subtle safe-area-top">
-        <div class="p-4 pl-16">
-          <!-- Search Input with Close Button -->
+      <div class="sticky top-0 z-[60] bg-bg-primary/95 backdrop-blur-sm border-b border-border-subtle safe-area-top">
+        <div class="p-4">
+          <!-- Search Input with Hamburger -->
           <div class="flex items-center gap-3 mb-4">
+            <!-- Hamburger Menu Button -->
             <button
-              (click)="goBack()"
-              class="flex-shrink-0 w-8 h-8 rounded-full bg-bg-card border border-border-subtle flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-card-hover transition-colors"
-              title="Suche schließen"
+              class="flex-shrink-0 w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
+              (click)="toggleMenu()"
+              aria-label="Menü"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg class="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
               </svg>
             </button>
 
@@ -124,6 +126,17 @@ const SEARCH_LIMIT = 20;
                 </button>
               }
             </div>
+
+            <!-- Back Button -->
+            <button
+              (click)="goBack()"
+              class="flex-shrink-0 w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-card-hover transition-colors"
+              title="Zurück"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
           <!-- Tabs (only show when we have results) -->
@@ -456,6 +469,7 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly playerState = inject(PlayerStateService);
   private readonly contextMenu = inject(ContextMenuService);
   private readonly ratingService = inject(AlbumRatingService);
+  private readonly navState = inject(NavigationStateService);
 
   private readonly searchSubject = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
@@ -510,6 +524,9 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    // Hide app header - this page has its own header
+    this.navState.usePreset('hidden');
+
     // Load recent searches from localStorage
     this.loadRecentSearches();
 
@@ -787,6 +804,10 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
 
   goBack(): void {
     window.history.back();
+  }
+
+  toggleMenu(): void {
+    this.navState.toggleHamburger();
   }
 
   getTabCount(tab: SearchTab): number {

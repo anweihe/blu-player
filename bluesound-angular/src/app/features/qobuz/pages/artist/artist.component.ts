@@ -1,9 +1,10 @@
-import { Component, Input, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, Input, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
 import { PlaybackService } from '../../../../core/services/playback.service';
+import { NavigationStateService } from '../../../../core/services/navigation-state.service';
 import { AlbumRatingService, AlbumRating } from '../../../../core/services/album-rating.service';
 import {
   QobuzTrack,
@@ -47,18 +48,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
           <div class="loading-spinner"></div>
         </div>
       } @else if (artist()) {
-        <!-- Back Button Header -->
-        <div class="artist-header p-4 pl-16 md:pl-4 safe-area-top">
-          <button
-            (click)="goBack()"
-            class="btn-back inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            <span>Zurück</span>
-          </button>
-        </div>
+        <!-- Back Button Header removed - now in AppHeader -->
 
         <!-- Hero Section - Centered like Razor -->
         <div class="artist-hero flex flex-col items-center text-center px-5 py-8 mb-6 mx-4 rounded-xl"
@@ -489,12 +479,13 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
     }
   `]
 })
-export class ArtistComponent implements OnInit {
+export class ArtistComponent implements OnInit, OnDestroy {
   @Input() id!: string;
 
   private readonly qobuzApi = inject(QobuzApiService);
   private readonly playerState = inject(PlayerStateService);
   private readonly playback = inject(PlaybackService);
+  private readonly navState = inject(NavigationStateService);
   private readonly ratingService = inject(AlbumRatingService);
 
   readonly loading = signal(true);
@@ -548,9 +539,17 @@ export class ArtistComponent implements OnInit {
   formatDuration = formatDuration;
 
   ngOnInit(): void {
+    // Enter detail mode - back button will appear in header
+    this.navState.enterDetailMode('/qobuz/browse', 'Künstler');
+
     if (this.id) {
       this.loadArtist();
     }
+  }
+
+  ngOnDestroy(): void {
+    // Exit detail mode when leaving the page
+    this.navState.exitDetailMode();
   }
 
   private loadArtist(): void {

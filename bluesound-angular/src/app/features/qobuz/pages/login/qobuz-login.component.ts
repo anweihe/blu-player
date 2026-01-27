@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
+import { NavigationStateService } from '../../../../core/services/navigation-state.service';
 
 @Component({
   selector: 'app-qobuz-login',
@@ -332,6 +333,7 @@ export class QobuzLoginComponent implements OnInit {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly navState = inject(NavigationStateService);
 
   email = '';
   password = '';
@@ -341,6 +343,9 @@ export class QobuzLoginComponent implements OnInit {
   private returnUrl = '/qobuz/browse';
 
   ngOnInit(): void {
+    // Hide app header - this is a full-screen login page
+    this.navState.usePreset('hidden');
+
     // Get return URL from query params
     this.route.queryParams.subscribe(params => {
       if (params['returnUrl']) {

@@ -7,6 +7,7 @@ import { ProfileService, Profile } from '../../../../core/services/profile.servi
 import { PlaybackService } from '../../../../core/services/playback.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
 import { AlbumRatingService } from '../../../../core/services/album-rating.service';
+import { NavigationStateService } from '../../../../core/services/navigation-state.service';
 import { QobuzAlbum, QobuzPlaylist, QobuzTrack, QobuzFavoriteArtist } from '../../../../core/models';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -44,11 +45,16 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
       <header class="browse-header">
         <div class="header-content">
           <div class="header-left">
-            <a routerLink="/" class="back-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            <!-- Hamburger Menu Button -->
+            <button
+              class="hamburger-btn"
+              (click)="toggleMenu()"
+              aria-label="Menü"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
               </svg>
-            </a>
+            </button>
             <div class="brand">
               <svg class="brand-icon" viewBox="0 0 100 100" fill="none">
                 <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="4"/>
@@ -363,6 +369,39 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
       text-transform: uppercase;
     }
 
+    .hamburger-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .hamburger-btn:hover {
+      background: var(--color-bg-card-hover);
+    }
+
+    .hamburger-lines {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 18px;
+      height: 14px;
+    }
+
+    .hamburger-lines span {
+      display: block;
+      height: 2px;
+      width: 100%;
+      background: var(--color-text-primary);
+      border-radius: 1px;
+    }
+
     .main-content {
       padding: 20px max(16px, env(safe-area-inset-left));
       padding-bottom: calc(120px + max(20px, env(safe-area-inset-bottom)));
@@ -573,6 +612,7 @@ export class QobuzBrowseComponent implements OnInit {
   private readonly playback = inject(PlaybackService);
   private readonly playerState = inject(PlayerStateService);
   private readonly ratingService = inject(AlbumRatingService);
+  private readonly navState = inject(NavigationStateService);
 
   // Profile switcher
   readonly showProfileSwitcher = signal(false);
@@ -617,6 +657,9 @@ export class QobuzBrowseComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Hide app header - this page has its own header
+    this.navState.usePreset('hidden');
+
     // Check if user is logged in, redirect to login if not
     if (!this.auth.isLoggedIn()) {
       this.router.navigate(['/qobuz/login']);
@@ -920,6 +963,11 @@ export class QobuzBrowseComponent implements OnInit {
       this.auth.logout();
       this.router.navigate(['/qobuz/login']);
     }
+  }
+
+  // Hamburger menu
+  toggleMenu(): void {
+    this.navState.toggleHamburger();
   }
 
   /**

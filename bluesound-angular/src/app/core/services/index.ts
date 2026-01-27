@@ -6,6 +6,7 @@ export * from './album-rating.service';
 export * from './auth.service';
 export * from './bluesound-api.service';
 export * from './history.service';
+export * from './navigation-state.service';
 export * from './playback.service';
 export * from './player-state.service';
 export * from './polling.service';
