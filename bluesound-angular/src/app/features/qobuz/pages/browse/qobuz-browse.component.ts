@@ -721,15 +721,10 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
     if (!this.shouldRestoreScroll) return;
 
     const savedScrollPos = this.browseState.getScrollPosition();
-    console.log('[Browse] Attempting to restore scroll position:', savedScrollPos);
-
     if (savedScrollPos > 0) {
-      this.shouldRestoreScroll = false; // Only restore once
-
-      // Try to restore scroll position with retries
+      this.shouldRestoreScroll = false;
       this.tryRestoreScroll(savedScrollPos, 10);
     } else {
-      console.log('[Browse] No scroll position to restore');
       this.shouldRestoreScroll = false;
     }
   }
@@ -740,24 +735,14 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
    */
   private tryRestoreScroll(targetPos: number, retriesLeft: number): void {
     const mainEl = document.querySelector('main');
-    if (!mainEl) {
-      console.log('[Browse] Main element not found');
-      return;
-    }
+    if (!mainEl) return;
 
-    // Check if content is tall enough to scroll to target position
     const maxScroll = mainEl.scrollHeight - mainEl.clientHeight;
-    console.log(`[Browse] Try restore: target=${targetPos}, maxScroll=${maxScroll}, retries=${retriesLeft}`);
 
     if (maxScroll >= targetPos) {
-      // Content is tall enough, scroll now
       mainEl.scrollTop = targetPos;
-      console.log('[Browse] Scroll restored to:', mainEl.scrollTop);
     } else if (retriesLeft > 0) {
-      // Content not ready yet, retry after a short delay
       setTimeout(() => this.tryRestoreScroll(targetPos, retriesLeft - 1), 50);
-    } else {
-      console.log('[Browse] Gave up restoring scroll - content not tall enough');
     }
   }
 
