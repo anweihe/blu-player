@@ -327,10 +327,11 @@ public class QobuzController : ControllerBase
                 id = playlist.Id,
                 name = playlist.Name,
                 description = playlist.Description,
-                tracksCount = playlist.TracksCount,
+                tracks_count = playlist.TracksCount,
                 duration = playlist.Duration,
                 formattedDuration = playlist.FormattedDuration,
-                coverUrl = playlist.CoverUrl
+                // Return images300 as array for frontend compatibility
+                images300 = !string.IsNullOrEmpty(playlist.CoverUrl) ? new[] { playlist.CoverUrl } : Array.Empty<string>()
             },
             tracks = playlist.Tracks?.Items?.Select(t => new
             {
@@ -338,14 +339,19 @@ public class QobuzController : ControllerBase
                 title = t.Title,
                 duration = t.Duration,
                 formattedDuration = t.FormattedDuration,
-                artistName = t.Performer?.Name,
-                artistId = t.Performer?.Id,
-                albumTitle = t.Album?.Title,
-                albumId = t.Album?.Id,
-                albumCover = t.Album?.CoverUrl,
-                isHiRes = t.IsHiRes,
-                qualityLabel = t.QualityLabel,
-                isStreamable = t.IsStreamable
+                // Return performer object for frontend compatibility
+                performer = new { id = t.Performer?.Id, name = t.Performer?.Name },
+                // Return album with image object for frontend compatibility
+                album = new
+                {
+                    id = t.Album?.Id,
+                    title = t.Album?.Title,
+                    image = new { large = t.Album?.CoverUrl, small = t.Album?.CoverUrl }
+                },
+                hires = t.IsHiRes,
+                hires_streamable = t.IsHiRes,
+                maximum_bit_depth = t.MaxBitDepth,
+                maximum_sampling_rate = t.MaxSamplingRate
             }) ?? []
         });
     }
