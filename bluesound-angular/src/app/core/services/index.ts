@@ -12,5 +12,6 @@ export * from './player-state.service';
 export * from './polling.service';
 export * from './profile.service';
 export * from './qobuz-api.service';
+export * from './qobuz-browse-state.service';
 export * from './tunein-api.service';
 export * from './radioparadise-api.service';

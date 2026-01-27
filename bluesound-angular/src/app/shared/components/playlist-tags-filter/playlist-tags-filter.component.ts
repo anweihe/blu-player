@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface PlaylistTag {
@@ -57,7 +57,10 @@ export interface PlaylistTag {
     }
   `]
 })
-export class PlaylistTagsFilterComponent {
+export class PlaylistTagsFilterComponent implements OnInit, OnChanges {
+  /** Initial tag value (use empty string or 'all' for default) */
+  @Input() initialTag: string = '';
+
   @Output() tagChange = new EventEmitter<string>();
 
   readonly selectedTag = signal<string>('all');
@@ -80,6 +83,22 @@ export class PlaylistTagsFilterComponent {
     { value: 'event', label: 'Events & Medien' },
     { value: 'partner', label: 'Hi-Fi Partners' }
   ];
+
+  ngOnInit(): void {
+    this.applyInitialTag();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['initialTag'] && !changes['initialTag'].firstChange) {
+      this.applyInitialTag();
+    }
+  }
+
+  private applyInitialTag(): void {
+    // Convert empty string to 'all' for internal state
+    const tag = this.initialTag || 'all';
+    this.selectedTag.set(tag);
+  }
 
   selectTag(tag: string): void {
     this.selectedTag.set(tag);

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
@@ -8,6 +8,7 @@ import { PlaybackService } from '../../../../core/services/playback.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
 import { AlbumRatingService } from '../../../../core/services/album-rating.service';
 import { NavigationStateService } from '../../../../core/services/navigation-state.service';
+import { QobuzBrowseStateService, TabType, FavoritesSubTab } from '../../../../core/services/qobuz-browse-state.service';
 import { QobuzAlbum, QobuzPlaylist, QobuzTrack, QobuzFavoriteArtist } from '../../../../core/models';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -20,9 +21,6 @@ import {
 } from '../../../../shared/components';
 import { InfiniteScrollDirective } from '../../../../shared/directives';
 import { ProfileSwitcherComponent } from '../../../../layout';
-
-type TabType = 'new-releases' | 'album-charts' | 'playlists' | 'favorites';
-type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
 
 @Component({
   selector: 'app-qobuz-browse',
@@ -125,10 +123,16 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
         @if (activeTab() === 'playlists') {
           <div class="playlist-filters space-y-3 mb-4">
             <!-- Category Tags (Top-Playlists, Hi-Res, etc.) -->
-            <app-playlist-tags-filter (tagChange)="onTagChange($event)" />
+            <app-playlist-tags-filter
+              [initialTag]="browseState.selectedTag()"
+              (tagChange)="onTagChange($event)"
+            />
 
             <!-- Genre Filter (Pop/Rock, Jazz, etc.) - collapsible built into component -->
-            <app-genre-filter (genreChange)="onGenreChange($event)" />
+            <app-genre-filter
+              [initialGenres]="browseState.selectedGenres()"
+              (genreChange)="onGenreChange($event)"
+            />
           </div>
         }
 
@@ -604,9 +608,10 @@ type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
     }
   `]
 })
-export class QobuzBrowseComponent implements OnInit {
+export class QobuzBrowseComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   readonly profileService = inject(ProfileService);
+  readonly browseState = inject(QobuzBrowseStateService);
   private readonly router = inject(Router);
   private readonly qobuzApi = inject(QobuzApiService);
   private readonly playback = inject(PlaybackService);
@@ -617,9 +622,9 @@ export class QobuzBrowseComponent implements OnInit {
   // Profile switcher
   readonly showProfileSwitcher = signal(false);
 
-  // Tab state
-  readonly activeTab = signal<TabType>('new-releases');
-  readonly favoritesSubTab = signal<FavoritesSubTab>('albums');
+  // Tab state - now using browseState service
+  readonly activeTab = this.browseState.activeTab;
+  readonly favoritesSubTab = this.browseState.favoritesSubTab;
 
   // Loading state
   readonly loading = signal(true);
@@ -635,10 +640,6 @@ export class QobuzBrowseComponent implements OnInit {
   private offset = 0;
   private readonly limit = 30;
   private total = 0;
-
-  // Playlist filters
-  private selectedTag = '';
-  private selectedGenres: string[] = [];
 
   // Computed
   readonly hasContent = computed(() => {
@@ -665,13 +666,25 @@ export class QobuzBrowseComponent implements OnInit {
       this.router.navigate(['/qobuz/login']);
       return;
     }
+
+    // Restore scroll position if available
+    const savedScrollPos = this.browseState.getScrollPosition();
+    if (savedScrollPos > 0) {
+      setTimeout(() => window.scrollTo(0, savedScrollPos), 100);
+    }
+
     this.loadContent();
+  }
+
+  ngOnDestroy(): void {
+    // Save scroll position when leaving the page
+    this.browseState.saveScrollPosition(window.scrollY);
   }
 
   setTab(tab: TabType): void {
     if (this.activeTab() === tab) return;
 
-    this.activeTab.set(tab);
+    this.browseState.setTab(tab);
     this.resetPagination();
     this.loadContent();
   }
@@ -679,19 +692,19 @@ export class QobuzBrowseComponent implements OnInit {
   setFavoritesSubTab(subTab: FavoritesSubTab): void {
     if (this.favoritesSubTab() === subTab) return;
 
-    this.favoritesSubTab.set(subTab);
+    this.browseState.setFavoritesSubTab(subTab);
     this.resetPagination();
     this.loadFavorites();
   }
 
   onTagChange(tag: string): void {
-    this.selectedTag = tag;
+    this.browseState.setTag(tag);
     this.resetPagination();
     this.loadPlaylists();
   }
 
   onGenreChange(genreIds: string[]): void {
-    this.selectedGenres = genreIds;
+    this.browseState.setGenres(genreIds);
     this.resetPagination();
     this.loadPlaylists();
   }
@@ -856,8 +869,9 @@ export class QobuzBrowseComponent implements OnInit {
   }
 
   private loadPlaylists(append = false): void {
-    const tags = this.selectedTag || undefined;
-    const genreIds = this.selectedGenres.length > 0 ? this.selectedGenres : undefined;
+    const tags = this.browseState.selectedTag() || undefined;
+    const genres = this.browseState.selectedGenres();
+    const genreIds = genres.length > 0 ? genres : undefined;
 
     this.qobuzApi.getFeaturedPlaylists(tags, genreIds, this.offset, this.limit).subscribe({
       next: container => {

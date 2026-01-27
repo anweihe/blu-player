@@ -22,21 +22,6 @@ import {
 } from '../models';
 
 /**
- * Tab types for browse navigation
- */
-export type BrowseTab =
-  | 'new-releases'
-  | 'album-charts'
-  | 'playlists'
-  | 'favorites'
-  | 'recommendations';
-
-/**
- * Favorites sub-tabs
- */
-export type FavoritesSubTab = 'albums' | 'tracks' | 'artists';
-
-/**
  * Qobuz API Service
  * Handles all API calls to the Qobuz backend through the .NET REST API
  */

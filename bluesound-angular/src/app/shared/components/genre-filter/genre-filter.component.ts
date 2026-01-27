@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal, computed, OnInit, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, computed, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QobuzApiService } from '../../../core/services/qobuz-api.service';
 
@@ -224,8 +224,11 @@ export interface Genre {
     }
   `]
 })
-export class GenreFilterComponent implements OnInit {
+export class GenreFilterComponent implements OnInit, OnChanges {
   private readonly qobuzApi = inject(QobuzApiService);
+
+  /** Initial genre IDs as strings */
+  @Input() initialGenres: string[] = [];
 
   @Output() genreChange = new EventEmitter<string[]>();
 
@@ -238,7 +241,25 @@ export class GenreFilterComponent implements OnInit {
   readonly selectedCount = computed(() => this.selectedGenres().length);
 
   ngOnInit(): void {
+    this.applyInitialGenres();
     this.loadGenres();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['initialGenres'] && !changes['initialGenres'].firstChange) {
+      this.applyInitialGenres();
+    }
+  }
+
+  private applyInitialGenres(): void {
+    if (this.initialGenres && this.initialGenres.length > 0) {
+      const genreIds = this.initialGenres.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      this.selectedGenres.set(genreIds);
+      // Auto-expand if genres are selected
+      if (genreIds.length > 0) {
+        this.expanded.set(true);
+      }
+    }
   }
 
   private loadGenres(): void {
