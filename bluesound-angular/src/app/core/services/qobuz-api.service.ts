@@ -143,13 +143,30 @@ export class QobuzApiService {
 
   /**
    * Get playlist details with tracks
+   * Maps the backend response to QobuzPlaylistWithTracks format
    */
   getPlaylist(playlistId: number): Observable<QobuzPlaylistWithTracks> {
-    return this.http.get<QobuzPlaylistWithTracks>(
+    interface PlaylistApiResponse {
+      success: boolean;
+      playlist: QobuzPlaylist;
+      tracks: QobuzTrack[];
+    }
+
+    return this.http.get<PlaylistApiResponse>(
       `${this.apiBaseUrl}/playlist/${playlistId}`,
       {
         headers: this.auth.getAuthHeaders()
       }
+    ).pipe(
+      map(response => ({
+        ...response.playlist,
+        tracks: {
+          items: response.tracks ?? [],
+          total: response.tracks?.length ?? 0,
+          offset: 0,
+          limit: response.tracks?.length ?? 0
+        }
+      } as QobuzPlaylistWithTracks))
     );
   }
 
