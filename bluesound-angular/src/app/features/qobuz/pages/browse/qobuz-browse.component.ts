@@ -667,18 +667,32 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Restore scroll position if available
-    const savedScrollPos = this.browseState.getScrollPosition();
-    if (savedScrollPos > 0) {
-      setTimeout(() => window.scrollTo(0, savedScrollPos), 100);
-    }
-
     this.loadContent();
   }
 
   ngOnDestroy(): void {
     // Save scroll position when leaving the page
-    this.browseState.saveScrollPosition(window.scrollY);
+    // The scrollable element is the <main> in app.ts, not window
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      this.browseState.saveScrollPosition(mainEl.scrollTop);
+    }
+  }
+
+  /**
+   * Restore scroll position after content is loaded
+   */
+  private restoreScrollPosition(): void {
+    const savedScrollPos = this.browseState.getScrollPosition();
+    if (savedScrollPos > 0) {
+      // Use requestAnimationFrame to ensure DOM is rendered
+      requestAnimationFrame(() => {
+        const mainEl = document.querySelector('main');
+        if (mainEl) {
+          mainEl.scrollTop = savedScrollPos;
+        }
+      });
+    }
   }
 
   setTab(tab: TabType): void {
@@ -833,6 +847,8 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
           this.albums.update(current => [...current, ...newAlbums]);
         } else {
           this.albums.set(newAlbums);
+          // Restore scroll position after initial load
+          this.restoreScrollPosition();
         }
         // Fetch ratings for loaded albums
         this.fetchRatingsForAlbums(newAlbums);
@@ -855,6 +871,8 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
           this.albums.update(current => [...current, ...newAlbums]);
         } else {
           this.albums.set(newAlbums);
+          // Restore scroll position after initial load
+          this.restoreScrollPosition();
         }
         // Fetch ratings for loaded albums
         this.fetchRatingsForAlbums(newAlbums);
@@ -880,6 +898,8 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
           this.playlists.update(current => [...current, ...(container.items ?? [])]);
         } else {
           this.playlists.set(container.items ?? []);
+          // Restore scroll position after initial load
+          this.restoreScrollPosition();
         }
         this.loading.set(false);
         this.loadingMore.set(false);
@@ -902,6 +922,8 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
               this.albums.update(current => [...current, ...newAlbums]);
             } else {
               this.albums.set(newAlbums);
+              // Restore scroll position after initial load
+              this.restoreScrollPosition();
             }
             // Fetch ratings for loaded albums
             this.fetchRatingsForAlbums(newAlbums);
@@ -924,6 +946,8 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
               this.tracks.update(current => [...current, ...tracks]);
             } else {
               this.tracks.set(tracks);
+              // Restore scroll position after initial load
+              this.restoreScrollPosition();
             }
             this.loading.set(false);
             this.loadingMore.set(false);
@@ -944,6 +968,8 @@ export class QobuzBrowseComponent implements OnInit, OnDestroy {
               this.artists.update(current => [...current, ...artists]);
             } else {
               this.artists.set(artists);
+              // Restore scroll position after initial load
+              this.restoreScrollPosition();
             }
             this.loading.set(false);
             this.loadingMore.set(false);
