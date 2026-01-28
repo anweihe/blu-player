@@ -101,11 +101,6 @@ interface FabAction {
       align-items: center;
       justify-content: center;
     }
-
-    .fab-icon :deep(svg) {
-      width: 100%;
-      height: 100%;
-    }
   `]
 })
 export class FabMenuComponent {
@@ -131,10 +126,10 @@ export class FabMenuComponent {
     player: '#a1a1aa'
   };
 
-  // Icons as SafeHtml
+  // Icons as SafeHtml - inline styles for iOS PWA compatibility
   private readonly icons = {
     tunein: this.sanitizer.bypassSecurityTrustHtml(`
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg style="width:24px;height:24px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
         <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
         <circle cx="12" cy="12" r="2"/>
@@ -143,7 +138,7 @@ export class FabMenuComponent {
       </svg>
     `),
     radioparadise: this.sanitizer.bypassSecurityTrustHtml(`
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg style="width:24px;height:24px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="2"/>
         <path d="M16.24 7.76a6 6 0 0 1 0 8.49"/>
         <path d="M7.76 16.24a6 6 0 0 1 0-8.49"/>
@@ -152,14 +147,14 @@ export class FabMenuComponent {
       </svg>
     `),
     qobuz: this.sanitizer.bypassSecurityTrustHtml(`
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg style="width:24px;height:24px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 18V5l12-2v13"/>
         <circle cx="6" cy="18" r="3"/>
         <circle cx="18" cy="16" r="3"/>
       </svg>
     `),
     player: this.sanitizer.bypassSecurityTrustHtml(`
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg style="width:24px;height:24px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="4" y="4" width="16" height="16" rx="2"/>
         <circle cx="12" cy="12" r="3"/>
       </svg>
