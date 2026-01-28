@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { PlayerStateService } from '../../../../core/services/player-state.service';
+import { PlaybackService } from '../../../../core/services/playback.service';
 import { NavigationStateService } from '../../../../core/services/navigation-state.service';
 import { ContextMenuService } from '../../../../shared/services/context-menu.service';
 import {
@@ -249,6 +250,7 @@ export class PlaylistDetailComponent implements OnInit, OnDestroy {
 
   private readonly qobuzApi = inject(QobuzApiService);
   private readonly playerState = inject(PlayerStateService);
+  private readonly playbackService = inject(PlaybackService);
   private readonly navState = inject(NavigationStateService);
   private readonly contextMenu = inject(ContextMenuService);
 
@@ -332,30 +334,36 @@ export class PlaylistDetailComponent implements OnInit, OnDestroy {
   }
 
   playAll(): void {
-    const tracks = this.playlist()?.tracks?.items;
-    if (tracks?.length) {
-      this.playTrack(tracks[0], 0);
+    const pl = this.playlist();
+    const tracks = pl?.tracks?.items;
+    if (pl && tracks?.length) {
+      this.playbackService.playPlaylist(pl, tracks, 0);
     }
   }
 
   shufflePlay(): void {
-    const tracks = this.playlist()?.tracks?.items;
-    if (tracks?.length) {
+    const pl = this.playlist();
+    const tracks = pl?.tracks?.items;
+    if (pl && tracks?.length) {
       const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-      this.playTrack(shuffled[0], 0);
+      this.playbackService.playPlaylist(pl, shuffled, 0);
     }
   }
 
   playTrack(track: QobuzTrack, index: number): void {
-    this.playerState.currentTrack.set(track);
-    console.log('Playing track:', track.title, 'at index:', index);
-    // TODO: Integrate with actual playback service
+    const pl = this.playlist();
+    const tracks = pl?.tracks?.items;
+    if (pl && tracks?.length) {
+      this.playbackService.playPlaylist(pl, tracks, index);
+    }
   }
 
   openTrackMenu(event: { track: QobuzTrack; event: MouseEvent }): void {
+    const tracks = this.playlist()?.tracks?.items ?? [];
+    const index = tracks.findIndex(t => t.id === event.track.id);
     this.contextMenu.openTrackMenu(event.event, event.track, {
-      onPlay: () => this.playTrack(event.track, 0),
-      onAddToQueue: () => console.log('Add to queue:', event.track.title)
+      onPlay: () => this.playTrack(event.track, index >= 0 ? index : 0),
+      onAddToQueue: () => this.playbackService.addToQueue(event.track)
     });
   }
 
