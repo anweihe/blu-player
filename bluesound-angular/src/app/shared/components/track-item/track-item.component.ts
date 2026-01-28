@@ -1,12 +1,11 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { QobuzTrack, formatDuration } from '../../../core/models';
 
 @Component({
   selector: 'app-track-item',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   template: `
     <div
       class="track-item flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer"
@@ -55,25 +54,13 @@ import { QobuzTrack, formatDuration } from '../../../core/models';
         </p>
         <p class="text-xs text-text-muted truncate">
           @if (showArtist && track.performer?.name) {
-            <a
-              [routerLink]="['/qobuz/artist', track.performer?.id]"
-              class="hover:text-accent-qobuz hover:underline"
-              (click)="$event.stopPropagation()"
-            >
-              {{ track.performer?.name }}
-            </a>
+            <span>{{ track.performer?.name }}</span>
           }
           @if (showArtist && showAlbum && track.performer?.name && track.album?.title) {
             <span> · </span>
           }
           @if (showAlbum && track.album?.title) {
-            <a
-              [routerLink]="['/qobuz/album', track.album?.id]"
-              class="hover:text-accent-qobuz hover:underline"
-              (click)="$event.stopPropagation()"
-            >
-              {{ track.album?.title }}
-            </a>
+            <span>{{ track.album?.title }}</span>
           }
         </p>
       </div>
