@@ -1,5 +1,7 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, isDevMode } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { filter } from 'rxjs/operators';
 import { AuthService } from './core/services/auth.service';
 import { PlayerStateService } from './core/services/player-state.service';
 import { PollingService } from './core/services/polling.service';
@@ -85,6 +87,7 @@ export class App implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly playerState = inject(PlayerStateService);
   private readonly polling = inject(PollingService);
+  private readonly swUpdate = inject(SwUpdate);
   readonly navState = inject(NavigationStateService);
 
   ngOnInit(): void {
@@ -92,6 +95,29 @@ export class App implements OnInit {
     if (this.auth.authToken()) {
       this.auth.verifyToken().subscribe();
     }
+
+    // Handle PWA updates - auto reload when new version is available
+    this.setupServiceWorkerUpdates();
+  }
+
+  private setupServiceWorkerUpdates(): void {
+    if (!this.swUpdate.isEnabled) {
+      return;
+    }
+
+    // Check for updates immediately and every 30 seconds
+    this.swUpdate.checkForUpdate().catch(() => {});
+    setInterval(() => {
+      this.swUpdate.checkForUpdate().catch(() => {});
+    }, 30000);
+
+    // When a new version is ready, reload the page
+    this.swUpdate.versionUpdates
+      .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
+      .subscribe(() => {
+        console.log('New version available, reloading...');
+        document.location.reload();
+      });
   }
 
   toggleHamburger(): void {
