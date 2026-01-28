@@ -544,8 +544,14 @@ export class PlaybackService implements OnDestroy {
 
   /**
    * Switch to browser playback
+   * If a track is currently playing on Bluesound, it will be handed off to the browser
    */
   async switchToBrowser(): Promise<void> {
+    // Check if we have a track playing on Bluesound to hand off
+    const wasPlaying = this.playerState.isPlaying();
+    const currentTrack = this.playerState.currentTrack();
+    const context = this.currentContext;
+
     // Stop Bluesound playback first
     const player = this.playerState.selectedPlayer();
     if (player) {
@@ -558,13 +564,36 @@ export class PlaybackService implements OnDestroy {
 
     this.stopPolling();
     this.playerState.useBrowserPlayback();
+
+    // Hand off playback to browser if we were playing
+    if (wasPlaying && currentTrack && context) {
+      await this.playTrackInBrowser(currentTrack);
+    }
   }
 
   /**
    * Switch to Bluesound player
+   * If a track is currently playing (browser or another Bluesound), it will be handed off
    */
   async switchToBluesound(player: BluesoundPlayer): Promise<void> {
-    // Stop browser playback first
+    // Check if we have a track playing to hand off
+    const wasPlayingBrowser = this.isBrowserPlaying();
+    const wasPlayingBluesound = this.playerState.playerMode() === 'bluesound' && this.playerState.isPlaying();
+    const wasPlaying = wasPlayingBrowser || wasPlayingBluesound;
+    const currentTrack = this.playerState.currentTrack();
+    const context = this.currentContext;
+
+    // Stop previous Bluesound player if switching between players
+    const previousPlayer = this.playerState.selectedPlayer();
+    if (previousPlayer && previousPlayer.ipAddress !== player.ipAddress) {
+      try {
+        await firstValueFrom(this.bluesoundApi.stop(previousPlayer.ipAddress));
+      } catch {
+        // Ignore errors when stopping
+      }
+    }
+
+    // Stop browser playback
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement.src = '';
@@ -578,7 +607,27 @@ export class PlaybackService implements OnDestroy {
     this.startPolling();
 
     // Load quality setting from player
-    this.loadQualityFromPlayer();
+    await this.loadQualityFromPlayer();
+
+    // Hand off playback to Bluesound if we were playing
+    if (wasPlaying && currentTrack && context) {
+      // Find the current track index in the context
+      const trackIndex = context.tracks.findIndex(t => t.id === currentTrack.id);
+      const startIndex = trackIndex >= 0 ? trackIndex : context.startIndex;
+
+      if (context.type === 'album') {
+        await firstValueFrom(
+          this.bluesoundApi.playQobuzAlbum(player.ipAddress, context.id as string, startIndex, currentTrack.id)
+        );
+      } else if (context.type === 'playlist') {
+        await firstValueFrom(
+          this.bluesoundApi.playQobuzPlaylist(player.ipAddress, context.id as number, startIndex, currentTrack.id)
+        );
+      } else {
+        // Single track - play via native track endpoint if available
+        await this.playTrackOnBluesound(currentTrack, context);
+      }
+    }
   }
 
   // ==================== Audio Element Events ====================
