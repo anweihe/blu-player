@@ -362,6 +362,15 @@
 
         const trackChanged = progress.lastTrackTitle !== status.title;
 
+        // Update currentTrackIndex when track changes (e.g., auto-advancement or app was in background)
+        if (trackChanged && status.title && playback.currentTracks.length > 0) {
+            const newIndex = findTrackIndex(status.title, status.artist);
+            if (newIndex !== -1 && newIndex !== playback.currentTrackIndex) {
+                playback.currentTrackIndex = newIndex;
+                updateTrackHighlight();
+            }
+        }
+
         if (status.title && window.GlobalPlayer) {
             window.GlobalPlayer.setCurrentTrack({
                 title: status.title,
@@ -665,6 +674,41 @@
         });
     }
 
+    /**
+     * Find the index of a track in the current playlist by title and artist.
+     * Used when the Bluesound player advances to the next track automatically.
+     */
+    function findTrackIndex(title, artist) {
+        const playback = QobuzApp.playback;
+        if (!title || playback.currentTracks.length === 0) return -1;
+
+        const normalizedTitle = title.toLowerCase().trim();
+        const normalizedArtist = artist ? artist.toLowerCase().trim() : '';
+
+        // Try exact match first
+        for (let i = 0; i < playback.currentTracks.length; i++) {
+            const track = playback.currentTracks[i];
+            const trackTitle = (track.title || '').toLowerCase().trim();
+            const trackArtist = (track.artistName || '').toLowerCase().trim();
+
+            if (trackTitle === normalizedTitle && trackArtist === normalizedArtist) {
+                return i;
+            }
+        }
+
+        // If no exact match, try title-only match (some services may format artist differently)
+        for (let i = 0; i < playback.currentTracks.length; i++) {
+            const track = playback.currentTracks[i];
+            const trackTitle = (track.title || '').toLowerCase().trim();
+
+            if (trackTitle === normalizedTitle) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     function updateProgress() {
         const playback = QobuzApp.playback;
         if (!playback.audioPlayer.duration) return;
@@ -782,6 +826,55 @@
 
     // Note: checkCurrentPlayback() is called from qobuz-core.js after initialization
 
+    // ==================== Sync Track with Player ====================
+
+    /**
+     * Syncs the current track index with the Bluesound player status.
+     * Called when opening an album/playlist or when app returns to foreground.
+     */
+    async function syncCurrentTrackWithPlayer() {
+        const selectedPlayer = QobuzApp.core.getSelectedPlayer();
+        if (selectedPlayer.type !== 'bluesound' || !selectedPlayer.ip) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/Qobuz?handler=BluesoundStatus&ip=${selectedPlayer.ip}&port=${selectedPlayer.port || 11000}`);
+            const data = await response.json();
+
+            if (data.success && data.status && data.status.title) {
+                const playback = QobuzApp.playback;
+                const newIndex = findTrackIndex(data.status.title, data.status.artist);
+
+                if (newIndex !== -1 && newIndex !== playback.currentTrackIndex) {
+                    playback.currentTrackIndex = newIndex;
+                    playback.isPlaying = data.status.state === 'play' || data.status.state === 'stream';
+                    updateTrackHighlight();
+                }
+            }
+        } catch (error) {
+            console.error('Failed to sync track with player:', error);
+        }
+    }
+
+    // ==================== Visibility Change Handler ====================
+
+    // Handle app returning to foreground (important for mobile)
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            const selectedPlayer = QobuzApp.core?.getSelectedPlayer?.();
+            if (selectedPlayer?.type === 'bluesound' && selectedPlayer.ip) {
+                // Immediately sync track status when app becomes visible
+                syncCurrentTrackWithPlayer();
+
+                // Restart polling if we were playing
+                if (QobuzApp.playback?.isPlaying) {
+                    startBluesoundStatusPolling();
+                }
+            }
+        }
+    });
+
     // ==================== Export Functions ====================
 
     QobuzApp.playbackFn = {
@@ -797,7 +890,9 @@
         updateProgress,
         updateTotalTime,
         checkCurrentPlayback,
-        resetHistoryTracking
+        resetHistoryTracking,
+        syncCurrentTrackWithPlayer,
+        findTrackIndex
     };
 
     // Global exports

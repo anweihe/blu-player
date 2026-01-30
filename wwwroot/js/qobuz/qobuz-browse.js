@@ -1173,6 +1173,12 @@
         } else {
             window.scrollTo(0, 0);
         }
+
+        // Sync current track with Bluesound player to highlight the currently playing track
+        // This is especially important when returning to an album after the app was in background
+        if (QobuzApp.playbackFn?.syncCurrentTrackWithPlayer) {
+            QobuzApp.playbackFn.syncCurrentTrackWithPlayer();
+        }
     }
 
     /**
