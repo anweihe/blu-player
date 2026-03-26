@@ -96,6 +96,12 @@ export class App implements OnInit {
       this.auth.verifyToken().subscribe();
     }
 
+    // If a player was restored from localStorage, immediately fetch current status
+    if (this.playerState.selectedPlayer()) {
+      this.polling.startPolling();
+      this.polling.pollOnce();
+    }
+
     // Handle PWA updates - auto reload when new version is available
     this.setupServiceWorkerUpdates();
   }

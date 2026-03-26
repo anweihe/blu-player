@@ -11,6 +11,8 @@ import {
 } from '../models';
 import { QobuzTrack } from '../models';
 
+const SELECTED_PLAYER_KEY = 'bluesound_selected_player';
+
 /**
  * Player mode: browser (Web Audio) or bluesound (hardware player)
  */
@@ -45,6 +47,21 @@ export class PlayerStateService {
    * Player mode: browser or bluesound
    */
   readonly playerMode = signal<PlayerMode>('browser');
+
+  constructor() {
+    // Restore previously selected player from localStorage
+    try {
+      const stored = localStorage.getItem(SELECTED_PLAYER_KEY);
+      if (stored) {
+        const player: BluesoundPlayer = JSON.parse(stored);
+        this.selectedPlayer.set(player);
+        this.playerMode.set('bluesound');
+        this.volume.set(player.isFixedVolume ? 100 : player.volume);
+      }
+    } catch {
+      localStorage.removeItem(SELECTED_PLAYER_KEY);
+    }
+  }
 
   // ==================== Playback State ====================
   /**
@@ -198,6 +215,7 @@ export class PlayerStateService {
   selectPlayer(player: BluesoundPlayer | null): void {
     this.selectedPlayer.set(player);
     if (player) {
+      localStorage.setItem(SELECTED_PLAYER_KEY, JSON.stringify(player));
       this.playerMode.set('bluesound');
       this.volume.set(player.isFixedVolume ? 100 : player.volume);
     }
@@ -208,6 +226,7 @@ export class PlayerStateService {
    */
   useBrowserPlayback(): void {
     this.selectedPlayer.set(null);
+    localStorage.removeItem(SELECTED_PLAYER_KEY);
     this.playerMode.set('browser');
   }
 
