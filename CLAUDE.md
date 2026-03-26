@@ -1,6 +1,6 @@
 # Bluesound Web Controller
 
-C# ASP.NET Core Razor Pages Anwendung zur Steuerung von Bluesound/BluOS Playern im lokalen Netzwerk mit Qobuz-Integration.
+C# ASP.NET Core 10 + Angular 21 Anwendung zur Steuerung von Bluesound/BluOS Playern im lokalen Netzwerk mit Qobuz-, TuneIn- und Radio Paradise-Integration.
 
 ## Projekt starten
 
@@ -10,89 +10,132 @@ dotnet run
 
 Die Website ist unter `https://localhost:5001` oder `http://localhost:5000` erreichbar.
 
+Angular wird beim `dotnet run` automatisch gebaut (via MSBuild-Target in der `.csproj`).
+
+**Frontend-Entwicklung mit Hot Reload:**
+```bash
+cd bluesound-angular && npm start   # Angular Dev Server auf Port 4200
+dotnet run                          # .NET Backend parallel starten
+```
+
 ## Projektstruktur
 
 ```
+├── Controllers/
+│   ├── PlayersController.cs         # Bluesound Player API Endpoints
+│   ├── QobuzController.cs           # Qobuz API Proxy Endpoints
+│   ├── RadioParadiseController.cs   # Radio Paradise API Endpoints
+│   ├── RatingsController.cs         # Album-Bewertungen
+│   ├── SettingsController.cs        # Einstellungen & Profile
+│   └── TuneInController.cs          # TuneIn Radio API Endpoints
+├── Data/
+│   └── BluesoundDbContext.cs        # Entity Framework Datenbankkontext
 ├── Models/
-│   ├── BluesoundPlayer.cs       # Player-Model mit Gruppen-/Stereopaar-Info
-│   ├── PlayerGroup.cs           # ViewModel für gruppierte Darstellung
-│   ├── PlaybackStatus.cs        # Wiedergabe-Status (Track-Info, Position, ArtistId)
-│   ├── QobuzModels.cs           # Qobuz API Models (Album, Track, Artist, etc.)
-│   └── SettingsDtos.cs          # DTOs für Queue, Settings, etc.
+│   ├── BluesoundPlayer.cs           # Player-Model mit Gruppen-/Stereopaar-Info
+│   ├── PlayerGroup.cs               # ViewModel für gruppierte Darstellung
+│   ├── PlaybackStatus.cs            # Wiedergabe-Status (Track-Info, Position, ArtistId)
+│   ├── UserProfile.cs               # Multi-User Profile
+│   ├── PlaybackQueue.cs             # Queue-Persistierung
+│   ├── ListeningHistory.cs          # Hörverlauf
+│   ├── AlbumRating.cs               # Album-Bewertungen
+│   ├── StoredPlayer.cs              # Gespeicherte Player-Konfiguration
+│   ├── QobuzModels.cs               # Qobuz API Models (Album, Track, Artist, etc.)
+│   └── SettingsDtos.cs              # DTOs für Queue, Settings, etc.
 ├── Services/
-│   ├── BluesoundApiService.cs   # HTTP-Aufrufe zur BluOS API
-│   ├── PlayerDiscoveryService.cs # mDNS-basierte Player-Erkennung
-│   └── QobuzApiService.cs       # Qobuz API Integration
-├── Pages/
-│   ├── Index.cshtml             # Haupt-UI (Player-Liste)
-│   ├── Index.cshtml.cs          # Page Model mit Gruppierungslogik
-│   ├── Qobuz.cshtml             # Qobuz UI Container
-│   ├── Qobuz.cshtml.cs          # Qobuz API Handler (alle Endpoints)
-│   ├── _QobuzContent.cshtml     # Qobuz HTML-Struktur (Tabs, Panels, Modals)
-│   └── Shared/_Layout.cshtml    # Layout mit Global Player & Now Playing Popup
-├── wwwroot/
-│   ├── css/
-│   │   ├── qobuz.css            # Hauptstyles für Qobuz-Bereich
-│   │   └── now-playing-popup.css # Now Playing Popup Styles
-│   └── js/
-│       ├── global-player.js     # Globaler Mini-Player (unten)
-│       ├── now-playing-swipe.js # Now Playing Popup Swipe & Tabs
-│       ├── queue-api.js         # Queue-Management
-│       └── qobuz/
-│           ├── qobuz-core.js       # Init, DOM-Refs, Utilities
-│           ├── qobuz-auth.js       # Login/Logout, Token-Management
-│           ├── qobuz-tabs.js       # Tab-Navigation
-│           ├── qobuz-browse.js     # Browse-Tabs, Album/Playlist-Detail
-│           ├── qobuz-search.js     # Suche
-│           ├── qobuz-artist.js     # Künstlerseite
-│           ├── qobuz-discography.js # Diskografie-Seite
-│           ├── qobuz-playback.js   # Wiedergabe-Steuerung
-│           └── qobuz-context-menu.js # Kontextmenüs (Track/Album)
-└── Program.cs                   # Service-Registrierung
+│   ├── BluesoundApiService.cs       # HTTP-Aufrufe zur BluOS API
+│   ├── BluesoundPlayerService.cs    # Player-Zustandsverwaltung
+│   ├── PlayerDiscoveryService.cs    # mDNS-basierte Player-Erkennung
+│   ├── PlayerCacheService.cs        # Discovery-Cache
+│   ├── StoredPlayerService.cs       # Gespeicherte Player verwalten
+│   ├── QobuzApiService.cs           # Qobuz API Integration
+│   ├── AlbumInfoService.cs          # KI-generierte Album-Infos
+│   ├── AlbumRatingService.cs        # Album-Bewertungen
+│   ├── ListeningHistoryService.cs   # Hörverlauf
+│   ├── QueueService.cs              # Wiedergabe-Queue
+│   ├── SettingsService.cs           # Benutzereinstellungen
+│   └── EncryptionService.cs         # Credential-Verschlüsselung
+├── Pages/                           # Razor Pages (Shell für Angular SPA)
+│   ├── Index.cshtml / Players.cshtml / Qobuz.cshtml
+│   ├── TuneIn.cshtml / RadioParadise.cshtml / Settings.cshtml
+│   └── Shared/_Layout.cshtml
+├── bluesound-angular/               # Angular 21 SPA
+│   └── src/app/
+│       ├── core/
+│       │   ├── models/              # TypeScript Interfaces
+│       │   ├── services/            # API-Services, State-Management
+│       │   ├── guards/              # Route Guards (Auth)
+│       │   └── interceptors/        # HTTP Interceptors
+│       ├── features/
+│       │   ├── home/                # Home / Dashboard
+│       │   ├── players/             # Player-Steuerung
+│       │   ├── qobuz/               # Qobuz (Browse, Suche, Artist, Album, Playlist)
+│       │   ├── tunein/              # TuneIn Radio
+│       │   ├── radio-paradise/      # Radio Paradise
+│       │   └── settings/            # App-Einstellungen
+│       ├── layout/                  # App-Header, FAB-Menü, Hamburger-Menü
+│       └── shared/                  # Wiederverwendbare Komponenten
+│           ├── global-player/       # Mini-Player-Leiste
+│           ├── now-playing-popup/   # Vollbild Now Playing
+│           ├── player-selector/     # Player-Auswahl
+│           ├── profile-switcher/    # Profilverwaltung
+│           ├── quality-selector/    # Streaming-Qualität
+│           └── volume-panel/        # Lautstärkeregelung
+└── Program.cs                       # Service-Registrierung & App-Konfiguration
 ```
+
+## Angular Routing
+
+| Route | Komponente |
+|-------|-----------|
+| `/` | HomeComponent |
+| `/players` | PlayersComponent |
+| `/qobuz` | Redirect → `/qobuz/browse` |
+| `/qobuz/login` | QobuzLoginComponent (nur ohne Auth) |
+| `/qobuz/browse` | QobuzBrowseComponent (Auth required) |
+| `/qobuz/album/:id` | AlbumDetailComponent |
+| `/qobuz/playlist/:id` | PlaylistDetailComponent |
+| `/qobuz/artist/:id` | ArtistComponent |
+| `/qobuz/artist/:id/discography` | DiscographyComponent |
+| `/qobuz/search` | SearchComponent |
+| `/tunein` | TuneInComponent |
+| `/radioparadise` | RadioParadiseComponent |
+| `/settings` | SettingsComponent |
 
 ## Wichtige Entwicklungshinweise
 
-### .NET 9 Static Asset Caching
+### .NET 10 Static Asset Caching
 
-.NET 9 verwendet `MapStaticAssets()` mit Fingerprinting für JS/CSS-Dateien. Nach Änderungen an statischen Dateien:
+.NET 10 verwendet `MapStaticAssets()` mit Fingerprinting für JS/CSS-Dateien. Nach Änderungen an statischen Dateien:
 
 ```bash
-rm -rf obj/Debug/net9.0/*.cache.json obj/Debug/net9.0/staticwebassets*
+rm -rf obj/Debug/net10.0/*.cache.json obj/Debug/net10.0/staticwebassets*
 dotnet run
 ```
 
 Zusätzlich im Browser: Hard Reload (Cmd+Shift+R / Ctrl+Shift+R)
 
-### JavaScript-Architektur
+### Angular Build-Integration
 
-Alle Qobuz-Module nutzen das IIFE-Pattern mit `window.QobuzApp` Namespace:
+Das `.csproj` baut Angular automatisch vor dem .NET-Build:
 
-```javascript
-(function() {
-    'use strict';
-    window.QobuzApp = window.QobuzApp || {};
-
-    // Private Funktionen
-    function privateFunc() { ... }
-
-    // Exports
-    QobuzApp.moduleName = { publicFunc };
-    window.globalFunc = publicFunc; // Für onclick-Handler
-})();
+```xml
+<Target Name="BuildAngular" BeforeTargets="Build">
+  <Exec Command="npm run build" WorkingDirectory="bluesound-angular" />
+</Target>
 ```
 
-**WICHTIG**: `now-playing-swipe.js` überschreibt `openGlobalNowPlayingPopup` aus `global-player.js`. Änderungen am Popup-Öffnen müssen in `now-playing-swipe.js` erfolgen!
+Um nur das Backend zu bauen (Angular überspringen), Angular manuell vorher bauen oder die Targets separat aufrufen.
 
-### Kontextmenü-System
+### Angular-Architektur
 
-`qobuz-context-menu.js` stellt zwei Button-Typen bereit:
+- **Standalone Components** mit Lazy Loading via `loadComponent()` / `loadChildren()`
+- **Signals** und RxJS für State Management in den Core Services
+- **Tailwind CSS** für Styling
+- Route Guards (`qobuzAuthGuard`, `qobuzNoAuthGuard`) schützen Qobuz-Routen
 
-1. **Track-Rows**: `createMenuButton(artistId, artistName, albumId, albumTitle)`
-   - Zeigt "Zum Album" und "Zur Künstlerseite"
+### Backend API Controller
 
-2. **Album-Cards**: `createAlbumMenuButton(artistId, artistName, albumId)`
-   - Zeigt "Zum Album" und "Zur Künstlerseite"
+Alle API-Endpoints sind in `Controllers/` als ASP.NET Core Web API Controller implementiert (nicht mehr als Razor Page Handler). Angular kommuniziert direkt über HTTP mit diesen Endpoints.
 
 ## BluOS API
 
@@ -183,56 +226,55 @@ Die Qobuz API-Credentials werden automatisch aus dem Web Player extrahiert:
 3. Response enthält `user_auth_token`
 4. Token im Browser `localStorage` speichern (nicht das Passwort!)
 
-### Wichtige Backend-Handler (Qobuz.cshtml.cs)
+### Wichtige Backend-Endpoints (QobuzController.cs)
 
-| Handler | Beschreibung |
-|---------|--------------|
-| `OnGetPlaylistAsync` | Playlist mit Tracks laden |
-| `OnGetAlbumAsync` | Album mit Tracks laden |
-| `OnGetSearchAsync` | Suche (Albums, Tracks, Artists, Playlists) |
-| `OnGetArtistPageAsync` | Künstlerseite (Bio, Top Tracks, Discography) |
-| `OnGetNewReleasesAsync` | Neuheiten |
-| `OnGetAlbumChartsAsync` | Album-Charts |
-| `OnGetFavoriteAlbumsAsync` | Favoriten-Alben |
-| `OnGetFavoriteTracksAsync` | Favoriten-Tracks |
-| `OnGetFavoriteArtistsAsync` | Favoriten-Künstler |
-| `OnGetTrackStreamUrlAsync` | Stream-URL für Track |
-| `OnGetBluesoundStatusAsync` | Bluesound Player-Status |
-
-### Token-basierte Session
-
-- `localStorage.qobuz_user_id` - User ID
-- `localStorage.qobuz_auth_token` - Auth Token
-- Token-Verify bei Page Load für Session-Wiederherstellung
+| Endpoint | Beschreibung |
+|----------|--------------|
+| `GET /api/qobuz/playlist/{id}` | Playlist mit Tracks laden |
+| `GET /api/qobuz/album/{id}` | Album mit Tracks laden |
+| `GET /api/qobuz/search` | Suche (Albums, Tracks, Artists, Playlists) |
+| `GET /api/qobuz/artist/{id}` | Künstlerseite (Bio, Top Tracks, Discography) |
+| `GET /api/qobuz/new-releases` | Neuheiten |
+| `GET /api/qobuz/charts` | Album-Charts |
+| `GET /api/qobuz/favorites/albums` | Favoriten-Alben |
+| `GET /api/qobuz/favorites/tracks` | Favoriten-Tracks |
+| `GET /api/qobuz/favorites/artists` | Favoriten-Künstler |
+| `GET /api/qobuz/track/{id}/stream` | Stream-URL für Track |
 
 ## Player Discovery
 
 Verwendet mDNS/Bonjour mit Service-Typ `_musc._tcp.local.` via Zeroconf NuGet Package.
 
-## UI-Komponenten
+## UI-Komponenten (Angular)
 
 ### Global Player (Mini-Player)
-- Fixiert am unteren Bildschirmrand
+- Fixiert am unteren Bildschirmrand (`shared/global-player/`)
 - Zeigt aktuellen Track, Progress, Play/Pause
 - Klick öffnet Now Playing Popup
 
 ### Now Playing Popup
-- Vollbild-Popup mit Swipe-to-Close
+- Vollbild-Popup mit Swipe-to-Close (`shared/now-playing-popup/`)
 - Tabs: Player, Queue
 - Klickbarer Künstlername → Künstlerseite
 
 ### Album-Detail
 - Cover, Titel, klickbarer Künstlername
 - Track-Liste mit Kontextmenü
-- Album-Info Button (AI-generiert)
-
-### Kontextmenü (Track-Rows & Album-Cards)
-- "Zum Album" - Navigiert zur Album-Seite
-- "Zur Künstlerseite" - Navigiert zur Künstlerseite
+- Album-Info Button (KI-generiert via `AlbumInfoService`)
 
 ## NuGet Packages
 
 - `Zeroconf` - mDNS/Bonjour Discovery
+- `Microsoft.EntityFrameworkCore.Sqlite` 10.0.5 - SQLite (Development)
+- `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.1 - PostgreSQL (Production)
+- `Microsoft.EntityFrameworkCore.Design` 10.0.5 - EF Core Tooling
+
+## npm Packages (Angular)
+
+- `@angular/*` ~21.2 - Angular Framework
+- `tailwindcss` ^3.4 - CSS Framework
+- `rxjs` ~7.8 - Reactive Extensions
+- `zone.js` ^0.16 - Angular Change Detection
 
 ## UI-Entwicklung
 
@@ -240,7 +282,8 @@ Für alle UI-Anpassungen wird das **frontend-design** Skill verwendet. Dies stel
 
 ## Debugging-Tipps
 
-1. **JavaScript-Änderungen nicht sichtbar**: Cache löschen (siehe oben)
-2. **Funktion wird nicht aufgerufen**: Prüfen ob Funktion überschrieben wird (z.B. `funcName.toString()`)
-3. **API-Daten prüfen**: Browser DevTools → Network → Response
+1. **Angular-Änderungen nicht sichtbar**: `npm run build` in `bluesound-angular/` ausführen, dann Hard Reload
+2. **API-Fehler**: Browser DevTools → Network → Response; Backend-Logs im Terminal
+3. **Angular Dev Server**: `npm start` für Hot Reload während der Entwicklung
 4. **Backend-Logs**: Terminal-Output von `dotnet run`
+5. **Datenbank**: SQLite DB unter `data/bluesound.db` (lokal), PostgreSQL in Produktion

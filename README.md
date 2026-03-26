@@ -2,7 +2,7 @@
 
 A modern web application for controlling Bluesound/BluOS players on your local network, with integrated Qobuz streaming support.
 
-![.NET](https://img.shields.io/badge/.NET-9.0-512BD4)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
@@ -35,20 +35,29 @@ A modern web application for controlling Bluesound/BluOS players on your local n
 - **Context Menus** - Right-click or tap menu button for "Go to Album" / "Go to Artist"
 - **Album Cards** - Quick access to album and artist from cover art menus
 
+### Radio & Streaming
+- **TuneIn Radio** - Browse and play internet radio stations
+- **Radio Paradise** - Dedicated Radio Paradise integration with quality selection
+
 ### Technical Features
-- **SPA Navigation** - Fast single-page app navigation
+- **Angular SPA** - Full Angular 21 single-page application
+- **Lazy Loading** - Route-based code splitting for fast initial load
 - **Responsive Design** - Works on desktop, tablet, and mobile
+- **PWA Support** - Installable as Progressive Web App with offline support
 - **Dark Mode** - Beautiful dark theme (light mode via system preference)
 - **Persistent State** - Queue and settings persist across sessions
+- **Multi-User Profiles** - Multiple user profiles with separate settings and Qobuz accounts
+- **Listening History** - Track listening history per profile
 - **Docker Support** - Ready for deployment with Docker/Coolify
 
 ## Getting Started
 
 ### Prerequisites
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [Node.js](https://nodejs.org/) (for Angular frontend development)
 - Bluesound players on the same network (for player control)
-- Qobuz subscription (for streaming features)
+- Qobuz subscription (for Qobuz streaming features)
 
 ### Local Development
 
@@ -58,17 +67,24 @@ A modern web application for controlling Bluesound/BluOS players on your local n
    cd blu-player
    ```
 
-2. Run the application:
+2. Install Angular dependencies:
+   ```bash
+   cd bluesound-angular && npm install && cd ..
+   ```
+
+3. Run the application (Angular is built automatically):
    ```bash
    dotnet run
    ```
 
-3. Open your browser and navigate to:
+4. Open your browser and navigate to:
    ```
    http://localhost:5000
    ```
 
 SQLite is used automatically for local development (database stored in `data/bluesound.db`).
+
+> **Tip for frontend development:** Use `cd bluesound-angular && npm start` to run the Angular dev server with hot reload (proxies API calls to the .NET backend).
 
 ### Docker/Coolify Deployment
 
@@ -91,48 +107,66 @@ docker run -e "ConnectionStrings__DefaultConnection=Host=...;Database=...;Userna
 ## Project Structure
 
 ```
+├── Controllers/
+│   ├── PlayersController.cs         # Bluesound player API endpoints
+│   ├── QobuzController.cs           # Qobuz API proxy endpoints
+│   ├── RadioParadiseController.cs   # Radio Paradise API endpoints
+│   ├── RatingsController.cs         # Album rating endpoints
+│   ├── SettingsController.cs        # User settings & profile endpoints
+│   └── TuneInController.cs          # TuneIn radio API endpoints
 ├── Data/
 │   └── BluesoundDbContext.cs        # Entity Framework database context
 ├── Models/
 │   ├── BluesoundPlayer.cs           # Player model with group/stereo pair info
 │   ├── PlayerGroup.cs               # ViewModel for grouped display
-│   ├── PlaybackStatus.cs            # Current playback state (incl. ArtistId)
+│   ├── PlaybackStatus.cs            # Current playback state
 │   ├── UserProfile.cs               # Multi-user profile model
 │   ├── PlaybackQueue.cs             # Queue persistence model
-│   ├── SettingsDtos.cs              # DTOs for queue, settings
-│   └── QobuzModels.cs               # Qobuz API models
+│   ├── ListeningHistory.cs          # Listening history model
+│   ├── AlbumRating.cs               # Album rating model
+│   ├── StoredPlayer.cs              # Persisted player configuration
+│   ├── QobuzModels.cs               # Qobuz API models
+│   └── SettingsDtos.cs              # DTOs for queue, settings
 ├── Services/
 │   ├── BluesoundApiService.cs       # BluOS API communication
+│   ├── BluesoundPlayerService.cs    # Player state management
 │   ├── PlayerDiscoveryService.cs    # mDNS-based player discovery
+│   ├── PlayerCacheService.cs        # Player discovery cache
+│   ├── StoredPlayerService.cs       # Persisted player management
 │   ├── QobuzApiService.cs           # Qobuz API integration
+│   ├── AlbumInfoService.cs          # AI-generated album info
+│   ├── AlbumRatingService.cs        # Album rating management
+│   ├── ListeningHistoryService.cs   # Listening history tracking
+│   ├── QueueService.cs              # Playback queue management
 │   ├── SettingsService.cs           # User settings management
-│   └── QueueService.cs              # Playback queue management
-├── Pages/
-│   ├── Index.cshtml                 # Home page (player selection)
-│   ├── Players.cshtml               # Player control UI
-│   ├── Qobuz.cshtml                 # Qobuz streaming UI
-│   ├── Qobuz.cshtml.cs              # Qobuz API handlers
-│   ├── _QobuzContent.cshtml         # Qobuz HTML structure
-│   └── Shared/_Layout.cshtml        # Layout with global player
-├── wwwroot/
-│   ├── css/
-│   │   ├── qobuz.css                # Main Qobuz styles
-│   │   └── now-playing-popup.css    # Now Playing popup styles
-│   └── js/
-│       ├── global-player.js         # Global mini-player
-│       ├── now-playing-swipe.js     # Now Playing popup (swipe & tabs)
-│       ├── queue-api.js             # Queue management
-│       └── qobuz/
-│           ├── qobuz-core.js        # Init, DOM refs, utilities
-│           ├── qobuz-auth.js        # Login/logout, token management
-│           ├── qobuz-tabs.js        # Tab navigation
-│           ├── qobuz-browse.js      # Browse tabs, album/playlist detail
-│           ├── qobuz-search.js      # Search functionality
-│           ├── qobuz-artist.js      # Artist page
-│           ├── qobuz-discography.js # Full discography page
-│           ├── qobuz-playback.js    # Playback control
-│           └── qobuz-context-menu.js # Context menus (track/album)
-└── Program.cs                       # Application setup
+│   └── EncryptionService.cs         # Credential encryption
+├── Pages/                           # Razor Pages shell (hosts Angular SPA)
+│   ├── Index.cshtml / Players.cshtml / Qobuz.cshtml
+│   ├── TuneIn.cshtml / RadioParadise.cshtml / Settings.cshtml
+│   └── Shared/_Layout.cshtml
+├── bluesound-angular/               # Angular 21 SPA
+│   └── src/app/
+│       ├── core/
+│       │   ├── models/              # TypeScript interfaces
+│       │   ├── services/            # API services, state management
+│       │   ├── guards/              # Route guards (auth)
+│       │   └── interceptors/        # HTTP interceptors
+│       ├── features/
+│       │   ├── home/                # Home / dashboard
+│       │   ├── players/             # Player control
+│       │   ├── qobuz/               # Qobuz (browse, search, artist, album, playlist)
+│       │   ├── tunein/              # TuneIn radio
+│       │   ├── radio-paradise/      # Radio Paradise
+│       │   └── settings/            # App settings
+│       ├── layout/                  # App header, FAB menu, hamburger menu
+│       └── shared/                  # Reusable components, directives, pipes
+│           ├── global-player/       # Mini-player bar
+│           ├── now-playing-popup/   # Full-screen now playing view
+│           ├── player-selector/     # Player picker
+│           ├── profile-switcher/    # Profile management
+│           ├── quality-selector/    # Streaming quality selector
+│           └── volume-panel/        # Volume control
+└── Program.cs                       # Application setup & DI registration
 ```
 
 ## BluOS API Reference
@@ -166,19 +200,19 @@ The application communicates with Bluesound players via the BluOS HTTP API on po
 
 ## Technology Stack
 
-- **Backend:** ASP.NET Core 9.0 with Razor Pages
+- **Backend:** ASP.NET Core 10.0 with Razor Pages
 - **Database:** SQLite (development) / PostgreSQL (production)
-- **ORM:** Entity Framework Core 9.0
-- **Frontend:** Vanilla JavaScript (ES6+) with CSS custom properties
+- **ORM:** Entity Framework Core 10.0
+- **Frontend:** Angular 21 with TypeScript, Tailwind CSS
 - **Player Discovery:** Zeroconf (mDNS/Bonjour)
 - **Qobuz Integration:** Custom implementation based on public API
 
 ## Development
 
 See [CLAUDE.md](CLAUDE.md) for detailed development documentation including:
-- JavaScript architecture (IIFE pattern, QobuzApp namespace)
-- Static asset caching workarounds
-- Context menu system
+- Angular architecture and module structure
+- .NET 10 static asset handling
+- API endpoint reference
 - Debugging tips
 
 ## Contributing
