@@ -1,5 +1,6 @@
 import { Injectable, inject, OnDestroy, signal } from '@angular/core';
-import { Subject, Subscription, interval, switchMap, takeUntil, filter, tap } from 'rxjs';
+import { DOCUMENT } from '@angular/common';
+import { Subject, Subscription, fromEvent, interval, switchMap, takeUntil, filter, tap } from 'rxjs';
 import { BluesoundApiService } from './bluesound-api.service';
 import { PlayerStateService } from './player-state.service';
 
@@ -12,8 +13,37 @@ export class PollingService implements OnDestroy {
   private readonly bluesoundApi = inject(BluesoundApiService);
   private readonly playerState = inject(PlayerStateService);
 
+  private readonly doc = inject(DOCUMENT);
+
   private readonly destroy$ = new Subject<void>();
   private pollingSubscription?: Subscription;
+
+  constructor() {
+    // Sync immediately when app returns to foreground (iOS suspends JS timers in background)
+    fromEvent(this.doc, 'visibilitychange')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (
+          this.doc.visibilityState === 'visible' &&
+          this.playerState.playerMode() === 'bluesound' &&
+          this.playerState.selectedPlayer()
+        ) {
+          this.pollOnce();
+        }
+      });
+
+    // Additional handler for iOS PWA back-forward cache / app resume
+    fromEvent(this.doc.defaultView ?? window, 'pageshow')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (
+          this.playerState.playerMode() === 'bluesound' &&
+          this.playerState.selectedPlayer()
+        ) {
+          this.pollOnce();
+        }
+      });
+  }
 
   /**
    * Polling interval in milliseconds
