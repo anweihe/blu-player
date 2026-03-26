@@ -1,5 +1,5 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Install Node.js for Angular build
@@ -28,7 +28,7 @@ RUN rm -rf wwwroot/* && cp -r bluesound-angular/dist/bluesound-angular/browser/*
 RUN dotnet publish -c Release -o /app/publish -p:SkipAngularBuild=true
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Install dependencies for mDNS/Zeroconf discovery
