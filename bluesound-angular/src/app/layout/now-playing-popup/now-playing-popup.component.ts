@@ -78,7 +78,7 @@ type PopupTab = 'player' | 'queue';
               <!-- Large Cover Art -->
               <div class="w-64 h-64 md:w-80 md:h-80 rounded-xl overflow-hidden bg-bg-secondary shadow-2xl mb-6">
                 @if (coverImage()) {
-                  <img [src]="coverImage()" [alt]="trackTitle()" class="w-full h-full object-cover" />
+                  <img [src]="coverImage()" [alt]="trackTitle()" class="w-full h-full object-cover" (error)="onImageError($event)" />
                 } @else {
                   <div class="w-full h-full flex items-center justify-center text-text-muted">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-24 h-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -317,6 +317,18 @@ export class NowPlayingPopupComponent {
     const offset = this.dragOffset();
     return offset > 0 ? `translateY(${offset}px)` : 'translateY(0)';
   });
+
+  onImageError(event: Event): void {
+    // If status imageUrl fails to load (e.g. local HTTP on HTTPS app), fall back to Qobuz track image
+    const img = event.target as HTMLImageElement;
+    const fallback = this.playerState.currentTrack()?.album?.image?.large
+      || this.playerState.currentTrack()?.album?.image?.small;
+    if (fallback && img.src !== fallback) {
+      img.src = fallback;
+    } else {
+      img.style.display = 'none';
+    }
+  }
 
   setTab(tab: PopupTab): void {
     this.activeTab.set(tab);

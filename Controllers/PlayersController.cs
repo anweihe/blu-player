@@ -309,16 +309,24 @@ public class PlayersController : ControllerBase
 
             // Parse XML and convert to JSON
             var doc = System.Xml.Linq.XDocument.Parse(xmlResponse);
-            var songs = doc.Descendants("song").Select((song, index) => new
+            var songs = doc.Descendants("song").Select((song, index) =>
             {
-                index,
-                id = (int?)song.Attribute("id") ?? index,
-                title = (string?)song.Element("title") ?? "",
-                artist = (string?)song.Element("art") ?? "",
-                album = (string?)song.Element("alb") ?? "",
-                imageUrl = (string?)song.Element("image") ?? "",
-                duration = (int?)song.Element("secs") ?? 0,
-                service = (string?)song.Element("service") ?? ""
+                var rawImage = (string?)song.Element("image") ?? "";
+                // Convert relative image URLs to absolute (same as status endpoint)
+                var absoluteImage = !string.IsNullOrEmpty(rawImage) && rawImage.StartsWith("/")
+                    ? $"http://{ip}:{port}{rawImage}"
+                    : rawImage;
+                return new
+                {
+                    index,
+                    id = (int?)song.Attribute("id") ?? index,
+                    title = (string?)song.Element("title") ?? "",
+                    artist = (string?)song.Element("art") ?? "",
+                    album = (string?)song.Element("alb") ?? "",
+                    imageUrl = absoluteImage,
+                    duration = (int?)song.Element("secs") ?? 0,
+                    service = (string?)song.Element("service") ?? ""
+                };
             }).ToList();
 
             return Ok(songs);

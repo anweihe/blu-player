@@ -30,7 +30,7 @@ import { PlayerSelectorComponent } from '../player-selector/player-selector.comp
         <!-- Cover Art -->
         <div class="w-12 h-12 rounded-md bg-bg-secondary overflow-hidden flex-shrink-0">
           @if (coverImage()) {
-            <img [src]="coverImage()" [alt]="trackTitle()" class="w-full h-full object-cover" />
+            <img [src]="coverImage()" [alt]="trackTitle()" class="w-full h-full object-cover" (error)="onImageError($event)" />
           } @else {
             <div class="w-full h-full flex items-center justify-center text-text-muted">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -189,6 +189,18 @@ export class GlobalPlayerComponent {
     const track = this.playerState.currentTrack();
     return status?.imageUrl || track?.album?.image?.large || track?.album?.image?.small;
   });
+
+  onImageError(event: Event): void {
+    // If status imageUrl fails to load (e.g. local HTTP on HTTPS app), fall back to Qobuz track image
+    const img = event.target as HTMLImageElement;
+    const fallback = this.playerState.currentTrack()?.album?.image?.large
+      || this.playerState.currentTrack()?.album?.image?.small;
+    if (fallback && img.src !== fallback) {
+      img.src = fallback;
+    } else {
+      img.style.display = 'none';
+    }
+  }
 
   readonly trackTitle = computed(() => {
     const status = this.playerState.playbackStatus();
