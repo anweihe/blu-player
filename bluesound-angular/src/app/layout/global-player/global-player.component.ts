@@ -185,30 +185,21 @@ export class GlobalPlayerComponent {
   });
 
   readonly coverImage = computed(() => {
-    const track = this.playerState.currentTrack();
     const status = this.playerState.playbackStatus();
-    // Prefer Qobuz track info over status (status might show "Analog Input" etc.)
-    if (track?.album?.image?.large) {
-      return track.album.image.large;
-    }
-    if (track?.album?.image?.small) {
-      return track.album.image.small;
-    }
-    return status?.imageUrl;
+    const track = this.playerState.currentTrack();
+    return status?.imageUrl || track?.album?.image?.large || track?.album?.image?.small;
   });
 
   readonly trackTitle = computed(() => {
-    const track = this.playerState.currentTrack();
     const status = this.playerState.playbackStatus();
-    // Prefer Qobuz track info over status
-    return track?.title || status?.title;
+    const track = this.playerState.currentTrack();
+    return status?.title || track?.title;
   });
 
   readonly artistName = computed(() => {
-    const track = this.playerState.currentTrack();
     const status = this.playerState.playbackStatus();
-    // Prefer Qobuz track info over status
-    return track?.performer?.name || status?.artist;
+    const track = this.playerState.currentTrack();
+    return status?.artist || track?.performer?.name;
   });
 
   openNowPlaying(): void {
