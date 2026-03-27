@@ -326,6 +326,22 @@ export class PlayerStateService {
   }
 
   /**
+   * Check if a given track is currently playing.
+   * Matches by ID (Bluesound/browser) or by title from playbackStatus
+   * (covers the case where the device advanced tracks while the app was backgrounded).
+   */
+  isTrackPlaying(track: QobuzTrack): boolean {
+    const status = this.playbackStatus();
+    const trackId = this.currentPlayingTrackId();
+    const current = this.currentTrack();
+    const matches =
+      trackId === track.id ||
+      current?.id === track.id ||
+      (!!status?.title && status.title === track.title);
+    return matches && this.isPlaying();
+  }
+
+  /**
    * Reset all state
    */
   reset(): void {

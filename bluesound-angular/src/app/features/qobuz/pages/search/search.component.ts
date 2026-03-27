@@ -864,11 +864,7 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   isTrackPlaying(track: QobuzTrack): boolean {
-    // Check both currentPlayingTrackId (for Bluesound) and currentTrack (for browser)
-    const playingTrackId = this.playerState.currentPlayingTrackId();
-    const current = this.playerState.currentTrack();
-    const isThisTrack = playingTrackId === track.id || current?.id === track.id;
-    return isThisTrack && this.playerState.isPlaying();
+    return this.playerState.isTrackPlaying(track);
   }
 
   playTrack(track: QobuzTrack): void {
