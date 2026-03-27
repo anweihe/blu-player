@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ViewChild } from '@angular/core';
+import { Component, inject, signal, computed, effect, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { PlaybackService } from '../../core/services/playback.service';
@@ -189,15 +189,20 @@ export class GlobalPlayerComponent {
   readonly coverImage = computed(() => {
     const status = this.playerState.playbackStatus();
     const track = this.playerState.currentTrack();
-    const url = status?.imageUrl || track?.album?.image?.large || track?.album?.image?.small;
-    // Reset error state whenever the source URL changes
-    this.coverImageError.set(false);
-    return url;
+    return status?.imageUrl || track?.album?.image?.large || track?.album?.image?.small;
   });
 
   readonly coverImageUrl = computed(() =>
     this.coverImageError() ? null : this.coverImage()
   );
+
+  constructor() {
+    // Reset error flag whenever the source URL changes so a newly valid URL is shown
+    effect(() => {
+      this.coverImage(); // track dependency
+      this.coverImageError.set(false);
+    });
+  }
 
   onImageError(event: Event): void {
     // Primary URL failed – try Qobuz track image as fallback
