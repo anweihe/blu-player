@@ -104,7 +104,20 @@ export class PollingService implements OnDestroy {
     if (!player) return;
 
     this.bluesoundApi.getStatus(player.ipAddress).subscribe(status => {
-      if (status) {
+      if (!status) { this.lastPoll.set(new Date()); return; }
+
+      // If the status has no cover image, try to get it from the queue
+      if (!status.imageUrl && status.title) {
+        this.bluesoundApi.getQueue(player.ipAddress).subscribe({
+          next: queue => {
+            const match = queue.find(item => item.title === status.title);
+            this.playerState.updatePlaybackStatus(
+              match?.imageUrl ? { ...status, imageUrl: match.imageUrl } : status
+            );
+          },
+          error: () => this.playerState.updatePlaybackStatus(status)
+        });
+      } else {
         this.playerState.updatePlaybackStatus(status);
       }
       this.lastPoll.set(new Date());
