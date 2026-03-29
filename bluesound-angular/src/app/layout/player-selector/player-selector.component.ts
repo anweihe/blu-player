@@ -81,9 +81,9 @@ import { BluesoundPlayer } from '../../core/models';
             </div>
           }
 
-          <!-- Bluesound Players -->
+          <!-- Bluesound Players (groups via master, standalone only — no group slaves) -->
           @for (player of players(); track player.id) {
-            @if (!player.isSecondaryStereoPairSpeaker) {
+            @if (!player.isSecondaryStereoPairSpeaker && !(player.isGrouped && !player.isMaster)) {
               <button
                 class="w-full flex items-center gap-4 p-4 rounded-xl transition-colors"
                 [class.bg-accent-qobuz/10]="isSelected(player)"
@@ -234,13 +234,12 @@ export class PlayerSelectorComponent implements OnInit {
   }
 
   getPlayerSubtitle(player: BluesoundPlayer): string {
-    if (player.isStereoPaired) {
-      return `${player.modelName} (Stereopaar)`;
+    if (player.isMaster && player.isGrouped) {
+      const memberCount = player.slaveIps.length + 1;
+      return `Gruppe · ${memberCount} Geräte`;
     }
-    if (player.isGrouped) {
-      return player.isMaster
-        ? `${player.groupName} (Master)`
-        : `${player.groupName}`;
+    if (player.isStereoPaired) {
+      return `${player.modelName} · Stereopaar`;
     }
     return player.modelName;
   }

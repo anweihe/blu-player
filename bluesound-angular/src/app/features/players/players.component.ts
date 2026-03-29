@@ -78,10 +78,20 @@ import { ProfileSwitcherComponent } from '../../layout';
         <!-- Stats -->
         @if (!isLoading() && players().length > 0) {
           <div class="flex items-center gap-2 mb-4 text-sm text-text-secondary">
-            <span><strong class="text-text-primary">{{ players().length }}</strong> Player</span>
-            @if (groupCount() > 0) {
+            @if (organizedPlayers().groups.length > 0) {
+              <span>
+                <strong class="text-text-primary">{{ organizedPlayers().groups.length }}</strong>
+                Gruppe{{ organizedPlayers().groups.length !== 1 ? 'n' : '' }}
+              </span>
+            }
+            @if (organizedPlayers().groups.length > 0 && organizedPlayers().standalone.length > 0) {
               <span class="text-text-muted">·</span>
-              <span><strong class="text-text-primary">{{ groupCount() }}</strong> Gruppen</span>
+            }
+            @if (organizedPlayers().standalone.length > 0) {
+              <span>
+                <strong class="text-text-primary">{{ organizedPlayers().standalone.length }}</strong>
+                Player
+              </span>
             }
           </div>
         }
@@ -135,113 +145,57 @@ import { ProfileSwitcherComponent } from '../../layout';
             </button>
           </div>
         } @else {
-          <!-- Player Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            @for (player of players(); track player.id) {
-              <button
-                class="text-left bg-bg-card border rounded-xl overflow-hidden transition-all hover:bg-bg-card-hover group"
-                [class.border-accent-qobuz]="isSelected(player)"
-                [class.border-border-subtle]="!isSelected(player)"
-                [class.ring-1]="isSelected(player)"
-                [class.ring-accent-qobuz]="isSelected(player)"
-                [class.border-l-4]="true"
-                [class.border-l-green-500]="player.isMaster"
-                [class.border-l-blue-500]="player.isStereoPaired"
-                [class.border-l-transparent]="!player.isMaster && !player.isStereoPaired"
-                (click)="selectPlayer(player)"
+          <div class="space-y-4">
+
+            <!-- ── Multi-Room Groups ──────────────────────────────── -->
+            @for (group of organizedPlayers().groups; track group.master.id) {
+              <div
+                class="bg-bg-card rounded-xl overflow-hidden border transition-shadow"
+                [class.border-accent-qobuz]="isSelected(group.master)"
+                [class.border-border-subtle]="!isSelected(group.master)"
+                [class.ring-1]="isSelected(group.master)"
+                [class.ring-accent-qobuz]="isSelected(group.master)"
               >
-                <div class="p-4">
-                  <!-- Card Header -->
-                  <div class="flex justify-between items-start mb-3">
-                    <h3 class="font-semibold text-text-primary truncate pr-2">{{ player.name }}</h3>
-                    <span
-                      class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shrink-0"
-                      [class]="getPlayerBadgeClass(player)"
-                    >
-                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [innerHTML]="getPlayerBadgeIcon(player)"></svg>
-                      {{ getPlayerBadgeText(player) }}
-                    </span>
-                  </div>
-
-                  <!-- Player Info -->
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-bg-secondary flex items-center justify-center shrink-0">
-                      <svg class="w-5 h-5 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        @if (player.isStereoPaired) {
-                          <rect x="4" y="6" width="6" height="12" rx="1"/>
-                          <rect x="14" y="6" width="6" height="12" rx="1"/>
-                        } @else {
-                          <rect x="6" y="4" width="12" height="16" rx="2"/>
-                          <circle cx="12" cy="14" r="3"/>
-                          <circle cx="12" cy="7" r="1"/>
-                        }
-                      </svg>
-                    </div>
+                <!-- Group Header — click to select for playback -->
+                <button
+                  class="w-full text-left p-4 border-l-4 border-l-green-500 hover:bg-white/[.03] transition-colors"
+                  (click)="selectPlayer(group.master)"
+                >
+                  <div class="flex items-start justify-between gap-3">
                     <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm text-text-primary truncate">{{ player.name }}</span>
-                        @if (player.isMaster) {
-                          <span class="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-semibold uppercase text-text-secondary">Master</span>
-                        }
-                      </div>
-                      <div class="flex items-center gap-2 text-xs text-text-muted">
-                        <span>{{ player.brand }} {{ player.modelName }}</span>
-                        @if (player.channelMode) {
-                          <span class="w-4 h-4 bg-blue-500 text-white rounded text-[10px] font-bold flex items-center justify-center">
-                            {{ player.channelMode === 'left' ? 'L' : 'R' }}
-                          </span>
-                        }
-                      </div>
+                      <h3 class="font-bold text-text-primary text-base truncate leading-snug">
+                        {{ group.master.groupName || group.master.name }}
+                      </h3>
+                      <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Gruppe</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0 mt-0.5">
+                      @if (isSelected(group.master)) {
+                        <div class="w-5 h-5 rounded-full bg-accent-qobuz flex items-center justify-center">
+                          <svg class="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        </div>
+                      }
+                      <!-- Dissolve button -->
+                      <button
+                        class="w-7 h-7 rounded-full bg-bg-secondary border border-border-subtle flex items-center justify-center text-text-muted hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30 transition-colors"
+                        (click)="$event.stopPropagation(); dissolveGroup(group.master, group.members)"
+                        title="Gruppe auflösen"
+                      >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18"/>
+                          <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
                     </div>
                   </div>
+                </button>
 
-                  <!-- Volume Control -->
-                  <div class="mt-3 pl-13">
-                    @if (player.isFixedVolume) {
-                      <div class="flex items-center gap-2 text-text-muted text-xs">
-                        <svg class="w-4 h-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <rect x="3" y="11" width="5" height="8" rx="1"/>
-                          <path d="M8 15l4-4v8l-4-4z"/>
-                          <path d="M16 12a4 4 0 0 1 0 6"/>
-                        </svg>
-                        <span>Fixed Volume</span>
-                      </div>
-                    } @else {
-                      <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
-                        <button
-                          class="w-7 h-7 rounded-full bg-bg-secondary border border-border-accent flex items-center justify-center text-text-secondary hover:text-text-primary hover:border-blue-500 transition-colors"
-                          (click)="adjustVolume(player, -5)"
-                        >
-                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="5" y1="12" x2="19" y2="12"/>
-                          </svg>
-                        </button>
-                        <div class="flex-1 max-w-[100px] sm:max-w-[120px] h-1 bg-bg-secondary rounded-full overflow-hidden">
-                          <div
-                            class="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all"
-                            [style.width.%]="player.volume"
-                          ></div>
-                        </div>
-                        <button
-                          class="w-7 h-7 rounded-full bg-bg-secondary border border-border-accent flex items-center justify-center text-text-secondary hover:text-text-primary hover:border-green-500 transition-colors"
-                          (click)="adjustVolume(player, 5)"
-                        >
-                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"/>
-                            <line x1="5" y1="12" x2="19" y2="12"/>
-                          </svg>
-                        </button>
-                        <span class="text-xs text-text-muted w-8 text-right">{{ player.volume }}%</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-
-                <!-- Selection Indicator -->
-                @if (isSelected(player)) {
-                  <div class="px-4 py-2 bg-accent-qobuz/10 border-t border-accent-qobuz/20">
-                    <div class="flex items-center gap-2 text-accent-qobuz text-xs font-medium">
-                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <!-- Active player bar -->
+                @if (isSelected(group.master)) {
+                  <div class="px-4 py-1.5 bg-accent-qobuz/10 border-t border-accent-qobuz/20">
+                    <div class="flex items-center gap-1.5 text-accent-qobuz text-xs font-medium">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                         <polyline points="22 4 12 14.01 9 11.01"/>
                       </svg>
@@ -249,8 +203,199 @@ import { ProfileSwitcherComponent } from '../../layout';
                     </div>
                   </div>
                 }
-              </button>
+
+                <!-- Members List -->
+                <div class="border-t border-border-subtle divide-y divide-border-subtle/60">
+                  @for (member of [group.master, ...group.members]; track member.id; let i = $index) {
+                    <div class="flex items-center gap-3 px-4 py-3">
+                      <!-- Device icon -->
+                      <div class="w-8 h-8 rounded-md bg-bg-secondary flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                          @if (member.isStereoPaired) {
+                            <rect x="4" y="6" width="6" height="12" rx="1"/>
+                            <rect x="14" y="6" width="6" height="12" rx="1"/>
+                          } @else {
+                            <rect x="6" y="4" width="12" height="16" rx="2"/>
+                            <circle cx="12" cy="14" r="3"/>
+                            <circle cx="12" cy="7" r="1"/>
+                          }
+                        </svg>
+                      </div>
+
+                      <!-- Name + model -->
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium text-text-primary truncate">{{ member.name }}</div>
+                        <div class="text-xs text-text-muted uppercase tracking-wide">{{ member.modelName }}</div>
+                      </div>
+
+                      <!-- Volume -->
+                      @if (member.isFixedVolume) {
+                        <div class="text-text-muted opacity-50">
+                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="5" height="8" rx="1"/>
+                            <path d="M8 15l4-4v8l-4-4z"/>
+                            <path d="M16 12a4 4 0 0 1 0 6"/>
+                          </svg>
+                        </div>
+                      } @else {
+                        <div class="flex items-center gap-1.5" (click)="$event.stopPropagation()">
+                          <button
+                            class="w-5 h-5 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
+                            (click)="adjustVolume(member, -5)"
+                          >
+                            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                              <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                          </button>
+                          <div class="w-14 h-1 bg-bg-secondary rounded-full overflow-hidden">
+                            <div
+                              class="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all"
+                              [style.width.%]="member.volume"
+                            ></div>
+                          </div>
+                          <button
+                            class="w-5 h-5 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
+                            (click)="adjustVolume(member, 5)"
+                          >
+                            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                              <line x1="12" y1="5" x2="12" y2="19"/>
+                              <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                          </button>
+                          <span class="text-xs text-text-muted w-6 tabular-nums text-right">{{ member.volume }}%</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
             }
+
+            <!-- Divider between groups and standalone -->
+            @if (organizedPlayers().groups.length > 0 && organizedPlayers().standalone.length > 0) {
+              <div class="flex items-center gap-3 py-1">
+                <div class="flex-1 h-px bg-border-subtle"></div>
+                <span class="text-xs text-text-muted uppercase tracking-wider">Einzeln</span>
+                <div class="flex-1 h-px bg-border-subtle"></div>
+              </div>
+            }
+
+            <!-- ── Standalone Players ─────────────────────────────── -->
+            @if (organizedPlayers().standalone.length > 0) {
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @for (player of organizedPlayers().standalone; track player.id) {
+                  <button
+                    class="text-left bg-bg-card border rounded-xl overflow-hidden transition-all hover:bg-bg-card-hover group"
+                    [class.border-accent-qobuz]="isSelected(player)"
+                    [class.border-border-subtle]="!isSelected(player)"
+                    [class.ring-1]="isSelected(player)"
+                    [class.ring-accent-qobuz]="isSelected(player)"
+                    [class.border-l-4]="true"
+                    [class.border-l-blue-500]="player.isStereoPaired"
+                    [class.border-l-transparent]="!player.isStereoPaired"
+                    (click)="selectPlayer(player)"
+                  >
+                    <div class="p-4">
+                      <!-- Card Header -->
+                      <div class="flex justify-between items-start mb-3">
+                        <h3 class="font-semibold text-text-primary truncate pr-2">{{ player.name }}</h3>
+                        <span
+                          class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shrink-0"
+                          [class]="getPlayerBadgeClass(player)"
+                        >
+                          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [innerHTML]="getPlayerBadgeIcon(player)"></svg>
+                          {{ getPlayerBadgeText(player) }}
+                        </span>
+                      </div>
+
+                      <!-- Player Info -->
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-bg-secondary flex items-center justify-center shrink-0">
+                          <svg class="w-5 h-5 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            @if (player.isStereoPaired) {
+                              <rect x="4" y="6" width="6" height="12" rx="1"/>
+                              <rect x="14" y="6" width="6" height="12" rx="1"/>
+                            } @else {
+                              <rect x="6" y="4" width="12" height="16" rx="2"/>
+                              <circle cx="12" cy="14" r="3"/>
+                              <circle cx="12" cy="7" r="1"/>
+                            }
+                          </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2">
+                            <span class="text-sm text-text-primary truncate">{{ player.name }}</span>
+                          </div>
+                          <div class="flex items-center gap-2 text-xs text-text-muted">
+                            <span>{{ player.brand }} {{ player.modelName }}</span>
+                            @if (player.channelMode) {
+                              <span class="w-4 h-4 bg-blue-500 text-white rounded text-[10px] font-bold flex items-center justify-center">
+                                {{ player.channelMode === 'left' ? 'L' : 'R' }}
+                              </span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Volume Control -->
+                      <div class="mt-3 pl-13">
+                        @if (player.isFixedVolume) {
+                          <div class="flex items-center gap-2 text-text-muted text-xs">
+                            <svg class="w-4 h-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <rect x="3" y="11" width="5" height="8" rx="1"/>
+                              <path d="M8 15l4-4v8l-4-4z"/>
+                              <path d="M16 12a4 4 0 0 1 0 6"/>
+                            </svg>
+                            <span>Fixed Volume</span>
+                          </div>
+                        } @else {
+                          <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
+                            <button
+                              class="w-7 h-7 rounded-full bg-bg-secondary border border-border-accent flex items-center justify-center text-text-secondary hover:text-text-primary hover:border-blue-500 transition-colors"
+                              (click)="adjustVolume(player, -5)"
+                            >
+                              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                              </svg>
+                            </button>
+                            <div class="flex-1 max-w-[100px] sm:max-w-[120px] h-1 bg-bg-secondary rounded-full overflow-hidden">
+                              <div
+                                class="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all"
+                                [style.width.%]="player.volume"
+                              ></div>
+                            </div>
+                            <button
+                              class="w-7 h-7 rounded-full bg-bg-secondary border border-border-accent flex items-center justify-center text-text-secondary hover:text-text-primary hover:border-green-500 transition-colors"
+                              (click)="adjustVolume(player, 5)"
+                            >
+                              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                              </svg>
+                            </button>
+                            <span class="text-xs text-text-muted w-8 text-right">{{ player.volume }}%</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Selection Indicator -->
+                    @if (isSelected(player)) {
+                      <div class="px-4 py-2 bg-accent-qobuz/10 border-t border-accent-qobuz/20">
+                        <div class="flex items-center gap-2 text-accent-qobuz text-xs font-medium">
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                          </svg>
+                          Aktiver Player
+                        </div>
+                      </div>
+                    }
+                  </button>
+                }
+              </div>
+            }
+
           </div>
 
           <!-- Now Playing Section -->
@@ -391,9 +536,25 @@ export class PlayersComponent implements OnInit, OnDestroy {
   private statusSubscription?: Subscription;
 
   readonly selectedPlayer = computed(() => this.playerState.selectedPlayer());
-  readonly groupCount = computed(() =>
-    this.players().filter(p => p.isMaster || p.isStereoPaired).length
-  );
+
+  /**
+   * Organizes players into multi-room groups and standalone players.
+   * Groups: master player + slave members shown together.
+   * Standalone: ungrouped players shown individually.
+   */
+  readonly organizedPlayers = computed(() => {
+    const all = this.players();
+    const masters = all.filter(p => p.isMaster && p.isGrouped);
+    const slaves = all.filter(p => p.isGrouped && !p.isMaster);
+    const standalone = all.filter(p => !p.isGrouped);
+
+    const groups = masters.map(master => ({
+      master,
+      members: slaves.filter(s => s.masterIp?.split(':')[0] === master.ipAddress)
+    }));
+
+    return { groups, standalone };
+  });
 
   ngOnInit(): void {
     // Hide app header - this page has its own header
@@ -463,6 +624,17 @@ export class PlayersComponent implements OnInit, OnDestroy {
     return this.playerState.selectedPlayer()?.id === player.id;
   }
 
+  /**
+   * Dissolve a multi-room group by removing all slave members from the master.
+   */
+  dissolveGroup(master: BluesoundPlayer, members: BluesoundPlayer[]): void {
+    for (const member of members) {
+      this.bluesoundApi.removeFromGroup(master.ipAddress, member.ipAddress).subscribe();
+    }
+    // Refresh after a short delay to allow the players to update their state
+    setTimeout(() => this.refreshPlayers(), 1200);
+  }
+
   adjustVolume(player: BluesoundPlayer, delta: number): void {
     const newVolume = Math.max(0, Math.min(100, player.volume + delta));
     this.bluesoundApi.setVolume(player.ipAddress, newVolume).subscribe({
@@ -480,22 +652,13 @@ export class PlayersComponent implements OnInit, OnDestroy {
   }
 
   getPlayerBadgeClass(player: BluesoundPlayer): string {
-    if (player.isMaster) {
-      return 'bg-green-500/15 text-green-500';
-    }
     if (player.isStereoPaired) {
       return 'bg-blue-500/15 text-blue-500';
-    }
-    if (player.isGrouped) {
-      return 'bg-yellow-500/15 text-yellow-500';
     }
     return 'bg-zinc-500/15 text-zinc-400';
   }
 
   getPlayerBadgeIcon(player: BluesoundPlayer): string {
-    if (player.isMaster) {
-      return '<rect x="2" y="7" width="6" height="10" rx="1"/><rect x="16" y="7" width="6" height="10" rx="1"/><path d="M8 12h8"/>';
-    }
     if (player.isStereoPaired) {
       return '<rect x="4" y="6" width="6" height="12" rx="1"/><rect x="14" y="6" width="6" height="12" rx="1"/>';
     }
@@ -503,9 +666,7 @@ export class PlayersComponent implements OnInit, OnDestroy {
   }
 
   getPlayerBadgeText(player: BluesoundPlayer): string {
-    if (player.isMaster) return 'Gruppe';
     if (player.isStereoPaired) return 'Stereo';
-    if (player.isGrouped) return 'Mitglied';
     return 'Einzeln';
   }
 
