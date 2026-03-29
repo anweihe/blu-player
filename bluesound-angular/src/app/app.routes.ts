@@ -14,6 +14,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/tunein/tunein.component').then(m => m.TuneInComponent)
   },
   {
+    path: 'airable',
+    loadComponent: () => import('./features/airable/airable.component').then(m => m.AirableComponent)
+  },
+  {
     path: 'radioparadise',
     loadComponent: () => import('./features/radio-paradise/radio-paradise.component').then(m => m.RadioParadiseComponent)
   },

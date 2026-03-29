@@ -32,3 +32,6 @@ export * from './tunein.models';
 
 // Radio Paradise models
 export * from './radioparadise.models';
+
+// Airable models
+export * from './airable.models';

@@ -122,6 +122,7 @@ export class FabMenuComponent {
   private readonly colors = {
     tunein: '#f97316',
     radioparadise: '#f97316',
+    airable: '#3b82f6',
     qobuz: '#1db954',
     player: '#a1a1aa'
   };
@@ -153,6 +154,12 @@ export class FabMenuComponent {
         <circle cx="18" cy="16" r="3"/>
       </svg>
     `),
+    airable: this.sanitizer.bypassSecurityTrustHtml(`
+      <svg style="width:24px;height:24px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <path d="M9 22V12h6v10"/>
+      </svg>
+    `),
     player: this.sanitizer.bypassSecurityTrustHtml(`
       <svg style="width:24px;height:24px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="4" y="4" width="16" height="16" rx="2"/>
@@ -169,6 +176,13 @@ export class FabMenuComponent {
       iconHtml: this.icons.tunein,
       route: '/tunein',
       color: this.colors.tunein
+    },
+    {
+      id: 'airable',
+      label: 'Airable',
+      iconHtml: this.icons.airable,
+      route: '/airable',
+      color: this.colors.airable
     },
     {
       id: 'radio-paradise',

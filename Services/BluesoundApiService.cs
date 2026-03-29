@@ -67,6 +67,26 @@ public interface IBluesoundApiService
     /// Play a Radio Paradise station on the player
     /// </summary>
     Task<bool> PlayRadioParadiseStationAsync(string ipAddress, int port, string playUrl, string? title = null, string? imageUrl = null);
+
+    /// <summary>
+    /// Get the Airable main menu from the player
+    /// </summary>
+    Task<string?> GetAirableMenuXmlAsync(string ipAddress, int port = 11000);
+
+    /// <summary>
+    /// Browse an Airable category or subcategory
+    /// </summary>
+    Task<string?> BrowseAirableAsync(string ipAddress, int port, string uri);
+
+    /// <summary>
+    /// Play an Airable station on the player
+    /// </summary>
+    Task<bool> PlayAirableStationAsync(string ipAddress, int port, string playUrl, string? title = null, string? imageUrl = null);
+
+    /// <summary>
+    /// Execute a player-link action (e.g. filter/selector actions)
+    /// </summary>
+    Task<bool> ExecutePlayerLinkAsync(string ipAddress, int port, string uri);
 }
 
 public class BluesoundApiService : IBluesoundApiService
@@ -847,6 +867,109 @@ public class BluesoundApiService : IBluesoundApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to play Radio Paradise station on {IpAddress}:{Port}", ipAddress, port);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Get the Airable main menu from the player's built-in Airable integration
+    /// </summary>
+    public async Task<string?> GetAirableMenuXmlAsync(string ipAddress, int port = 11000)
+    {
+        try
+        {
+            var url = $"http://{ipAddress}:{port}/ui/browseMenuGroup?service=Airable";
+            _logger.LogDebug("Fetching Airable menu from {Url}", url);
+
+            var response = await _httpClient.GetStringAsync(url);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get Airable menu from {IpAddress}:{Port}", ipAddress, port);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Browse an Airable category or subcategory by following the action URI
+    /// </summary>
+    public async Task<string?> BrowseAirableAsync(string ipAddress, int port, string uri)
+    {
+        try
+        {
+            var url = $"http://{ipAddress}:{port}{uri}";
+            _logger.LogDebug("Browsing Airable at {Url}", url);
+
+            var response = await _httpClient.GetStringAsync(url);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to browse Airable at {Uri} on {IpAddress}:{Port}", uri, ipAddress, port);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Play an Airable station on the player.
+    /// The playUrl can be either:
+    /// - An Airable station URL (e.g., "Airable:radio:https://...") which will be wrapped in /Play?url=
+    /// - A direct player URI from player-link action (e.g., "/Play?url=Airable%3A...")
+    /// </summary>
+    public async Task<bool> PlayAirableStationAsync(string ipAddress, int port, string playUrl, string? title = null, string? imageUrl = null)
+    {
+        try
+        {
+            string url;
+
+            if (playUrl.StartsWith("/Play?") || playUrl.StartsWith("/Play"))
+            {
+                url = $"http://{ipAddress}:{port}{playUrl}";
+                _logger.LogInformation("Playing Airable via direct URI on {IpAddress}:{Port}: {Uri}", ipAddress, port, playUrl);
+            }
+            else
+            {
+                var queryParams = new List<string>
+                {
+                    $"url={Uri.EscapeDataString(playUrl)}"
+                };
+
+                if (!string.IsNullOrEmpty(title))
+                    queryParams.Add($"title1={Uri.EscapeDataString(title)}");
+                if (!string.IsNullOrEmpty(imageUrl))
+                    queryParams.Add($"image={Uri.EscapeDataString(imageUrl)}");
+
+                url = $"http://{ipAddress}:{port}/Play?{string.Join("&", queryParams)}";
+                _logger.LogInformation("Playing Airable station on {IpAddress}:{Port}: {Title}", ipAddress, port, title ?? playUrl);
+            }
+
+            var response = await _httpClient.GetAsync(url);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to play Airable station on {IpAddress}:{Port}", ipAddress, port);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Execute a player-link action URI (e.g. filter/selector actions)
+    /// </summary>
+    public async Task<bool> ExecutePlayerLinkAsync(string ipAddress, int port, string uri)
+    {
+        try
+        {
+            var url = $"http://{ipAddress}:{port}{uri}";
+            _logger.LogDebug("Executing player-link action {Url}", url);
+
+            var response = await _httpClient.GetAsync(url);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to execute player-link action {Uri} on {IpAddress}:{Port}", uri, ipAddress, port);
             return false;
         }
     }
