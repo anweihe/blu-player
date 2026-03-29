@@ -188,7 +188,7 @@ Alle API-Endpoints sind in `Controllers/` als ASP.NET Core Web API Controller im
 | `mac` | MAC-Adresse |
 | `channelMode` | Stereo-Kanal: "left" oder "right" (bei Stereopaaren) |
 | `pairSlaveOnly` | "true" = Secondary Speaker eines Stereopaars |
-| `managedZoneSlave` | "true" = wird von Zone verwaltet (Secondary) |
+| `managedZoneSlave` | "true" = wird von Zone verwaltet; erscheint auf Stereopaar-Secondary UND auf Multi-Room-Slaves einer Zone (z.B. Node in Gruppe, deren Master ein Stereopaar ist). Allein kein ausreichendes Kriterium für Secondary-Erkennung – nur `pairSlaveOnly="true"` ist eindeutig. |
 | `zoneController` | "true" = Primary/Controller eines Stereopaars |
 
 ### Gruppen-Erkennung

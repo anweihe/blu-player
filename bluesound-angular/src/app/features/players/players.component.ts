@@ -486,6 +486,9 @@ export class PlayersComponent implements OnInit, OnDestroy {
     if (player.isStereoPaired) {
       return 'bg-blue-500/15 text-blue-500';
     }
+    if (player.isGrouped) {
+      return 'bg-yellow-500/15 text-yellow-500';
+    }
     return 'bg-zinc-500/15 text-zinc-400';
   }
 
@@ -502,6 +505,7 @@ export class PlayersComponent implements OnInit, OnDestroy {
   getPlayerBadgeText(player: BluesoundPlayer): string {
     if (player.isMaster) return 'Gruppe';
     if (player.isStereoPaired) return 'Stereo';
+    if (player.isGrouped) return 'Mitglied';
     return 'Einzeln';
   }
 

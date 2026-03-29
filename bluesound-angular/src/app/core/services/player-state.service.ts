@@ -234,6 +234,11 @@ export class PlayerStateService {
    * Update playback status from polling
    */
   updatePlaybackStatus(status: PlaybackStatus): void {
+    // Preserve imageUrl from existing status if new status lacks it but same track is playing
+    const existing = this.playbackStatus();
+    if (!status.imageUrl && existing?.imageUrl && existing.title === status.title) {
+      status = { ...status, imageUrl: existing.imageUrl };
+    }
     this.playbackStatus.set(status);
     if (status.currentSeconds !== undefined) {
       this.progress.set(status.currentSeconds);

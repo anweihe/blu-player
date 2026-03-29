@@ -671,12 +671,15 @@ public class BluesoundApiService : IBluesoundApiService
             }
 
             // Check if this is a secondary speaker of a stereo pair
-            // Secondary speakers have: pairSlaveOnly="true" or managedZoneSlave="true"
+            // Only pairSlaveOnly="true" definitively identifies the physical secondary of a stereo pair.
+            // managedZoneSlave="true" alone also appears on multi-room slaves of a zone controller
+            // (e.g., a Node added to a group where the stereo pair is the master) — do NOT use it
+            // alone to hide a player.
             // NOT modelName="Stereo Pair" - that's actually the PRIMARY/controller of the stereo pair!
             var pairSlaveOnly = syncStatus.Attribute("pairSlaveOnly")?.Value;
             var managedZoneSlave = syncStatus.Attribute("managedZoneSlave")?.Value;
 
-            if (pairSlaveOnly == "true" || managedZoneSlave == "true")
+            if (pairSlaveOnly == "true")
             {
                 player.IsSecondaryStereoPairSpeaker = true;
                 _logger.LogInformation("Player {Name} is secondary stereo pair speaker (pairSlaveOnly={PairSlaveOnly}, managedZoneSlave={ManagedZoneSlave})",
