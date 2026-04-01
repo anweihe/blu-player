@@ -18,7 +18,6 @@ public class AlbumInfoService : IAlbumInfoService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AlbumInfoService> _logger;
 
-    private const string MistralAgentId = "ag_019be5dea96577adb582ddbcec22305f";
     private const int CacheDurationDays = 28; // 4 weeks
 
     public AlbumInfoService(
@@ -109,11 +108,27 @@ public class AlbumInfoService : IAlbumInfoService
             // Format: "Artist:Album:AlbumId"
             var content = $"{artist}:{title}:{albumId}";
 
+            // System prompt for Album Reception
+            var systemPrompt = """
+                Du bist ein Musikredakteur und ein Spezialist für alle Arten von Genres.
+                Gib außerdem eine Zusammenfassung über die Rezeptionen eines Albums zurück.
+                Antworte auf Deutsch.
+                # Request Format
+                Als Eingabe erhältst du ein Album mit <Künstler:Albumname:AlbumId>.
+                # Response Format
+                Deine Antwort muss dieses Format haben:
+                { 'albumId': <albumId>, 'summary': <summary>, 'style': <style> }
+                Die Summary enthält keine Unterknoten und hat maximal 10 Sätze.
+                Beschreibe außerdem im style Element in zwei bis drei Sätzen, wie der Stil des Albums ist.
+                """;
+
+
             var requestBody = new
             {
-                agent_id = MistralAgentId,
+                model = "mistral-small-latest", // Using a default model - could be configurable
                 messages = new[]
                 {
+                    new { role = "system", content = systemPrompt },
                     new { role = "user", content = content }
                 }
             };
@@ -125,9 +140,9 @@ public class AlbumInfoService : IAlbumInfoService
             var jsonContent = JsonSerializer.Serialize(requestBody);
             var httpContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-            _logger.LogInformation("Calling Mistral AI Agent for album: {Artist} - {Title}", artist, title);
+            _logger.LogInformation("Calling Mistral AI Chat for album: {Artist} - {Title}", artist, title);
 
-            var response = await httpClient.PostAsync("https://api.mistral.ai/v1/agents/completions", httpContent);
+            var response = await httpClient.PostAsync("https://api.mistral.ai/v1/chat/completions", httpContent);
             var responseText = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)

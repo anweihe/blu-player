@@ -18,7 +18,6 @@ public class AlbumRatingService : IAlbumRatingService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AlbumRatingService> _logger;
 
-    private const string MistralAgentId = "ag_019be5da3459715385dd0d5dad010869";
     private const int CacheDurationDays = 28; // 4 weeks
 
     public AlbumRatingService(
@@ -138,11 +137,21 @@ public class AlbumRatingService : IAlbumRatingService
             var content = string.Join(",", albums.Select(a =>
                 $"{EscapeField(a.Artist)}:{EscapeField(a.Title)}:{a.AlbumId}"));
 
+            var systemPrompt = """
+                Du bist ein Musikredakteur und ein Spezialist für alle Arten von Genres.
+                Du sollst Alben von Künstlern bewerten und auf einer Skala von 1 (niedrigste) bis 10 (höchste) bewerten. Zum einen aufgrund von Userbewertungen und zum Anderen aufgrund von Kritikerbewertungen.
+                Das Rückgabeformat sollte so aussehen:
+                [{ "albumId": <albumId>, "userScore": <userScore>, "criticsScore": <criticsScore>}]
+                WICHTIG: userScore und criticsScore sind Ganzzahlen. Liefere ausschließlich das Rückgabeformat zurück, ohne weiteren Text.
+                Als Eingabe erhältst du eine Liste mit <Künstler:Albumname:AlbumId>. Antworte auf Deutsch.
+                """;
+
             var requestBody = new
             {
-                agent_id = MistralAgentId,
-                messages = new[]
+                model = "mistral-small-latest",
+                messages = new object[]
                 {
+                    new { role = "system", content = systemPrompt },
                     new { role = "user", content = content }
                 }
             };
@@ -152,7 +161,7 @@ public class AlbumRatingService : IAlbumRatingService
             httpClient.Timeout = TimeSpan.FromSeconds(60);
 
             var response = await httpClient.PostAsJsonAsync(
-                "https://api.mistral.ai/v1/agents/completions",
+                "https://api.mistral.ai/v1/chat/completions",
                 requestBody);
 
             if (!response.IsSuccessStatusCode)
@@ -189,20 +198,10 @@ public class AlbumRatingService : IAlbumRatingService
             using var doc = JsonDocument.Parse(responseText);
             var root = doc.RootElement;
 
-            // Navigate to the content - try multiple response formats
+            // Navigate to the content: chat/completions uses "choices" array
             string? content = null;
 
-            // Format 1: Mistral conversation API uses "outputs" array
-            if (root.TryGetProperty("outputs", out var outputs) && outputs.GetArrayLength() > 0)
-            {
-                var firstOutput = outputs[0];
-                if (firstOutput.TryGetProperty("content", out var contentElement))
-                {
-                    content = contentElement.GetString();
-                }
-            }
-            // Format 2: Mistral agents/completions API uses "choices" array
-            else if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+            if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
             {
                 var firstChoice = choices[0];
                 if (firstChoice.TryGetProperty("message", out var message) &&

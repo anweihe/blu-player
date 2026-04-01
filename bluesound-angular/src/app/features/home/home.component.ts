@@ -112,6 +112,14 @@ interface SourceCard {
                       <path d="M10 50l40 25 40-25"/>
                     </svg>
                   }
+                  @case ('airable') {
+                    <svg class="w-5 h-5" [class]="source.colorClass" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5">
+                      <circle cx="50" cy="50" r="40"/>
+                      <path d="M25 40c10-15 40-15 50 0"/>
+                      <path d="M30 55c8-12 32-12 40 0"/>
+                      <circle cx="50" cy="65" r="5" fill="currentColor"/>
+                    </svg>
+                  }
                 }
               </div>
               <span class="text-xs font-semibold text-text-primary">{{ source.name }}</span>
@@ -290,6 +298,15 @@ export class HomeComponent implements OnInit {
       colorClass: 'text-emerald-500',
       bgClass: 'bg-emerald-500/15',
       hoverBorderClass: 'emerald-500'
+    },
+    {
+      id: 'airable',
+      name: 'Airable',
+      description: 'Internet Radio',
+      route: '/airable',
+      colorClass: 'text-sky-500',
+      bgClass: 'bg-sky-500/15',
+      hoverBorderClass: 'sky-500'
     }
   ];
 
