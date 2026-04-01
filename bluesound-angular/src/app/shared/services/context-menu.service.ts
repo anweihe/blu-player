@@ -1,6 +1,7 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { QobuzTrack, QobuzAlbum, QobuzPlaylist } from '../../core/models';
+import { TranslationService } from '../../core/services/translation.service';
 
 /**
  * Menu item definition
@@ -21,6 +22,7 @@ export class ContextMenuService {
   readonly isOpen = signal(false);
   readonly position = signal({ x: 0, y: 0 });
   readonly items = signal<MenuItem[]>([]);
+  private readonly t = inject(TranslationService);
 
   constructor(private router: Router) {}
 
@@ -44,7 +46,7 @@ export class ContextMenuService {
     // Play option
     if (options?.onPlay) {
       menuItems.push({
-        label: 'Jetzt abspielen',
+        label: this.t.t('context.playNow'),
         icon: 'play',
         action: options.onPlay
       });
@@ -53,7 +55,7 @@ export class ContextMenuService {
     // Add to queue
     if (options?.onAddToQueue) {
       menuItems.push({
-        label: 'Zur Warteschlange',
+        label: this.t.t('context.addToQueue'),
         icon: 'queue',
         action: options.onAddToQueue
       });
@@ -67,7 +69,7 @@ export class ContextMenuService {
     // Go to album
     if (track.album?.id) {
       menuItems.push({
-        label: 'Zum Album',
+        label: this.t.t('context.goToAlbum'),
         icon: 'album',
         action: () => this.router.navigate(['/qobuz/album', track.album!.id])
       });
@@ -76,7 +78,7 @@ export class ContextMenuService {
     // Go to artist
     if (track.performer?.id) {
       menuItems.push({
-        label: 'Zur Künstlerseite',
+        label: this.t.t('context.goToArtist'),
         icon: 'artist',
         action: () => this.router.navigate(['/qobuz/artist', track.performer!.id])
       });
@@ -86,7 +88,7 @@ export class ContextMenuService {
     if (options?.onAddToFavorites) {
       menuItems.push({ label: '', action: () => {}, divider: true });
       menuItems.push({
-        label: 'Zu Favoriten',
+        label: this.t.t('context.addToFavorites'),
         icon: 'favorite',
         action: options.onAddToFavorites
       });
@@ -110,7 +112,7 @@ export class ContextMenuService {
     // Go to album
     if (album.id) {
       menuItems.push({
-        label: 'Zum Album',
+        label: this.t.t('context.goToAlbum'),
         icon: 'album',
         action: () => this.router.navigate(['/qobuz/album', album.id])
       });
@@ -119,7 +121,7 @@ export class ContextMenuService {
     // Go to artist
     if (album.artist?.id) {
       menuItems.push({
-        label: 'Zur Künstlerseite',
+        label: this.t.t('context.goToArtist'),
         icon: 'artist',
         action: () => this.router.navigate(['/qobuz/artist', album.artist!.id])
       });
@@ -146,7 +148,7 @@ export class ContextMenuService {
     // Play option
     if (options?.onPlay) {
       menuItems.push({
-        label: 'Abspielen',
+        label: this.t.t('common.play'),
         icon: 'play',
         action: options.onPlay
       });
@@ -155,7 +157,7 @@ export class ContextMenuService {
     // Go to playlist
     if (playlist.id) {
       menuItems.push({
-        label: 'Zur Playlist',
+        label: this.t.t('context.goToPlaylist'),
         icon: 'album',
         action: () => this.router.navigate(['/qobuz/playlist', playlist.id])
       });

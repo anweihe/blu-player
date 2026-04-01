@@ -34,6 +34,7 @@ public class ProfileSettingsDto
     public string? SelectedPlayerIp { get; set; }
     public int? SelectedPlayerPort { get; set; }
     public string? SelectedPlayerModel { get; set; }
+    public string? Language { get; set; }
 }
 
 /// <summary>
@@ -83,6 +84,14 @@ public class UpdatePlayerRequest
     public string? Ip { get; set; }
     public int? Port { get; set; }
     public string? Model { get; set; }
+}
+
+/// <summary>
+/// Request DTO for updating language preference
+/// </summary>
+public class UpdateLanguageRequest
+{
+    public string? Language { get; set; }
 }
 
 /// <summary>

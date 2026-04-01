@@ -61,7 +61,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
         {
-            return BadRequest(new { success = false, message = "E-Mail und Passwort erforderlich" });
+            return BadRequest(new { success = false, message = "error.missingParameters" });
         }
 
         _logger.LogInformation("API Login attempt for {Email}", request.Email);
@@ -72,7 +72,7 @@ public class QobuzController : ControllerBase
             var credentials = await _qobuzService.ExtractAppCredentialsAsync();
             if (credentials == null)
             {
-                return StatusCode(503, new { success = false, message = "Qobuz-Dienst nicht verfügbar" });
+                return StatusCode(503, new { success = false, message = "error.qobuzServiceUnavailable" });
             }
         }
 
@@ -80,7 +80,7 @@ public class QobuzController : ControllerBase
 
         if (loginResponse?.User == null || string.IsNullOrEmpty(loginResponse.UserAuthToken))
         {
-            return Unauthorized(new { success = false, message = "Login fehlgeschlagen" });
+            return Unauthorized(new { success = false, message = "error.loginFailed" });
         }
 
         return Ok(new
@@ -112,7 +112,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(authToken) || string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out var userId))
         {
-            return Unauthorized(new { success = false, message = "Auth-Token erforderlich" });
+            return Unauthorized(new { success = false, message = "error.authTokenRequired" });
         }
 
         _logger.LogInformation("API Token verification for user {UserId}", userId);
@@ -123,7 +123,7 @@ public class QobuzController : ControllerBase
             var credentials = await _qobuzService.ExtractAppCredentialsAsync();
             if (credentials == null)
             {
-                return StatusCode(503, new { success = false, message = "Qobuz-Dienst nicht verfügbar" });
+                return StatusCode(503, new { success = false, message = "error.qobuzServiceUnavailable" });
             }
         }
 
@@ -131,7 +131,7 @@ public class QobuzController : ControllerBase
 
         if (loginResponse?.User == null)
         {
-            return Unauthorized(new { success = false, message = "Token ungültig" });
+            return Unauthorized(new { success = false, message = "error.tokenInvalid" });
         }
 
         return Ok(new
@@ -273,7 +273,7 @@ public class QobuzController : ControllerBase
         var (authToken, userId) = GetAuthFromHeaders();
         if (userId == null || string.IsNullOrEmpty(authToken))
         {
-            return Unauthorized(new { success = false, error = "Authentifizierung erforderlich" });
+            return Unauthorized(new { success = false, error = "error.authRequired" });
         }
 
         _logger.LogInformation("Fetching playlists for user {UserId}", userId);
@@ -307,7 +307,7 @@ public class QobuzController : ControllerBase
         var (authToken, _) = GetAuthFromHeaders();
         if (string.IsNullOrEmpty(authToken))
         {
-            return Unauthorized(new { success = false, error = "Authentifizierung erforderlich" });
+            return Unauthorized(new { success = false, error = "error.authRequired" });
         }
 
         _logger.LogInformation("Fetching tracks for playlist {PlaylistId}", playlistId);
@@ -316,7 +316,7 @@ public class QobuzController : ControllerBase
 
         if (playlist == null)
         {
-            return NotFound(new { success = false, error = "Playlist nicht gefunden" });
+            return NotFound(new { success = false, error = "error.playlistNotFound" });
         }
 
         return Ok(new
@@ -367,7 +367,7 @@ public class QobuzController : ControllerBase
         var (authToken, _) = GetAuthFromHeaders();
         if (string.IsNullOrEmpty(authToken))
         {
-            return Unauthorized(new { success = false, error = "Authentifizierung erforderlich" });
+            return Unauthorized(new { success = false, error = "error.authRequired" });
         }
 
         _logger.LogInformation("Fetching tracks for album {AlbumId}", albumId);
@@ -376,7 +376,7 @@ public class QobuzController : ControllerBase
 
         if (album == null)
         {
-            return NotFound(new { success = false, error = "Album nicht gefunden" });
+            return NotFound(new { success = false, error = "error.albumNotFound" });
         }
 
         var trackItemsList = album.Tracks?.Items ?? new List<QobuzTrack>();
@@ -444,7 +444,7 @@ public class QobuzController : ControllerBase
 
         if (artistPage == null)
         {
-            return NotFound(new { success = false, error = "Künstler nicht gefunden" });
+            return NotFound(new { success = false, error = "error.artistNotFound" });
         }
 
         return Ok(new
@@ -558,7 +558,7 @@ public class QobuzController : ControllerBase
         var (authToken, _) = GetAuthFromHeaders();
         if (string.IsNullOrEmpty(authToken))
         {
-            return Unauthorized(new { success = false, error = "Authentifizierung erforderlich" });
+            return Unauthorized(new { success = false, error = "error.authRequired" });
         }
 
         _logger.LogInformation("Fetching favorite albums (limit: {Limit})", limit);
@@ -597,7 +597,7 @@ public class QobuzController : ControllerBase
         var (authToken, _) = GetAuthFromHeaders();
         if (string.IsNullOrEmpty(authToken))
         {
-            return Unauthorized(new { success = false, error = "Authentifizierung erforderlich" });
+            return Unauthorized(new { success = false, error = "error.authRequired" });
         }
 
         _logger.LogInformation("Fetching favorite tracks (limit: {Limit})", limit);
@@ -643,7 +643,7 @@ public class QobuzController : ControllerBase
         var (authToken, _) = GetAuthFromHeaders();
         if (string.IsNullOrEmpty(authToken))
         {
-            return Unauthorized(new { success = false, error = "Authentifizierung erforderlich" });
+            return Unauthorized(new { success = false, error = "error.authRequired" });
         }
 
         _logger.LogInformation("Fetching favorite artists (limit: {Limit})", limit);
@@ -680,7 +680,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return BadRequest(new { success = false, error = "Suchbegriff erforderlich" });
+            return BadRequest(new { success = false, error = "error.searchTermRequired" });
         }
 
         _logger.LogInformation("Searching for: {Query} (offset={Offset}, limit={Limit})", query, offset, limit);
@@ -776,7 +776,7 @@ public class QobuzController : ControllerBase
         var (authToken, _) = GetAuthFromHeaders();
         if (string.IsNullOrEmpty(authToken))
         {
-            return Unauthorized(new { success = false, error = "Authentifizierung erforderlich" });
+            return Unauthorized(new { success = false, error = "error.authRequired" });
         }
 
         _logger.LogInformation("Getting stream URL for track {TrackId} with format {FormatId}", trackId, formatId);
@@ -785,7 +785,7 @@ public class QobuzController : ControllerBase
 
         if (string.IsNullOrEmpty(streamUrl))
         {
-            return BadRequest(new { success = false, error = "Stream URL nicht verfügbar" });
+            return BadRequest(new { success = false, error = "error.streamUrlUnavailable" });
         }
 
         return Ok(new
@@ -853,7 +853,7 @@ public class QobuzController : ControllerBase
             return Ok(new
             {
                 success = false,
-                error = "Player-Suche fehlgeschlagen",
+                error = "error.playerSearchFailed",
                 players = selectorItems.Select(p => new
                 {
                     id = p.Id,
@@ -893,14 +893,14 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(ip))
         {
-            return BadRequest(new { success = false, error = "Fehlende IP-Adresse" });
+            return BadRequest(new { success = false, error = "error.missingIpAddress" });
         }
 
         var status = await _playerService.GetPlaybackStatusAsync(ip, port);
 
         if (status == null)
         {
-            return BadRequest(new { success = false, error = "Status konnte nicht abgerufen werden" });
+            return BadRequest(new { success = false, error = "error.statusFetchFailed" });
         }
 
         // Convert direct Bluesound URL to proxy URL to avoid mixed content issues
@@ -937,7 +937,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(ip))
         {
-            return BadRequest(new { success = false, error = "Fehlende IP-Adresse" });
+            return BadRequest(new { success = false, error = "error.missingIpAddress" });
         }
 
         _logger.LogInformation("Fetching queue from Bluesound player {Ip}:{Port}", ip, port);
@@ -972,7 +972,7 @@ public class QobuzController : ControllerBase
 
                 if (queue == null)
                 {
-                    return BadRequest(new { success = false, error = "Ungültiges Queue-Format" });
+                    return BadRequest(new { success = false, error = "error.invalidQueueFormat" });
                 }
 
                 total = int.Parse(queue.Attribute("total")?.Value ?? "0");
@@ -1029,7 +1029,7 @@ public class QobuzController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch queue from Bluesound player {Ip}:{Port}", ip, port);
-            return BadRequest(new { success = false, error = "Queue konnte nicht abgerufen werden" });
+            return BadRequest(new { success = false, error = "error.queueFetchFailed" });
         }
     }
 
@@ -1078,7 +1078,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(request.Ip) || request.TrackId <= 0 || string.IsNullOrEmpty(request.AuthToken))
         {
-            return BadRequest(new { success = false, error = "Fehlende Parameter" });
+            return BadRequest(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Playing track {TrackId} on Bluesound player {Ip}:{Port} with format {FormatId}",
@@ -1088,7 +1088,7 @@ public class QobuzController : ControllerBase
 
         if (string.IsNullOrEmpty(streamUrl))
         {
-            return BadRequest(new { success = false, error = "Stream URL nicht verfügbar" });
+            return BadRequest(new { success = false, error = "error.streamUrlUnavailable" });
         }
 
         var success = await _bluesoundService.PlayUrlAsync(
@@ -1102,7 +1102,7 @@ public class QobuzController : ControllerBase
 
         if (!success)
         {
-            return BadRequest(new { success = false, error = "Wiedergabe auf Player fehlgeschlagen" });
+            return BadRequest(new { success = false, error = "error.playerPlaybackFailed" });
         }
 
         return Ok(new { success = true });
@@ -1116,7 +1116,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(request.Ip))
         {
-            return BadRequest(new { success = false, error = "Fehlende IP-Adresse" });
+            return BadRequest(new { success = false, error = "error.missingIpAddress" });
         }
 
         _logger.LogInformation("Native Qobuz playback on {Ip}:{Port} - Type: {Type}, Id: {Id}, TrackIndex: {TrackIndex}",
@@ -1128,7 +1128,7 @@ public class QobuzController : ControllerBase
         {
             if (string.IsNullOrEmpty(request.AlbumId) || request.TrackId == null)
             {
-                return BadRequest(new { success = false, error = "Fehlende Album-ID oder Track-ID" });
+                return BadRequest(new { success = false, error = "error.missingAlbumOrTrackId" });
             }
 
             success = await _bluesoundService.PlayQobuzAlbumAsync(
@@ -1142,7 +1142,7 @@ public class QobuzController : ControllerBase
         {
             if (request.PlaylistId == null || request.TrackId == null)
             {
-                return BadRequest(new { success = false, error = "Fehlende Playlist-ID oder Track-ID" });
+                return BadRequest(new { success = false, error = "error.missingPlaylistOrTrackId" });
             }
 
             success = await _bluesoundService.PlayQobuzPlaylistAsync(
@@ -1154,12 +1154,12 @@ public class QobuzController : ControllerBase
         }
         else
         {
-            return BadRequest(new { success = false, error = "Unbekannter Quelltyp" });
+            return BadRequest(new { success = false, error = "error.unknownSourceType" });
         }
 
         if (!success)
         {
-            return BadRequest(new { success = false, error = "Native Wiedergabe auf Player fehlgeschlagen" });
+            return BadRequest(new { success = false, error = "error.nativePlaybackFailed" });
         }
 
         return Ok(new { success = true, native = true });
@@ -1173,7 +1173,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(playerIp))
         {
-            return BadRequest(new { success = false, error = "Fehlende IP-Adresse" });
+            return BadRequest(new { success = false, error = "error.missingIpAddress" });
         }
 
         _logger.LogInformation("Getting Qobuz quality from Bluesound player {Ip}", playerIp);
@@ -1182,7 +1182,7 @@ public class QobuzController : ControllerBase
 
         if (quality == null)
         {
-            return BadRequest(new { success = false, error = "Qualitätseinstellung konnte nicht abgerufen werden" });
+            return BadRequest(new { success = false, error = "error.qualityGetFailed" });
         }
 
         var formatId = MapBluesoundToFormatId(quality);
@@ -1203,7 +1203,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(request.PlayerIp))
         {
-            return BadRequest(new { success = false, error = "Fehlende IP-Adresse" });
+            return BadRequest(new { success = false, error = "error.missingIpAddress" });
         }
 
         var quality = MapFormatIdToBluesound(request.FormatId);
@@ -1214,7 +1214,7 @@ public class QobuzController : ControllerBase
 
         if (!success)
         {
-            return BadRequest(new { success = false, error = "Qualitätseinstellung konnte nicht gesetzt werden" });
+            return BadRequest(new { success = false, error = "error.qualitySetFailed" });
         }
 
         return Ok(new { success = true, quality, formatId = request.FormatId });
@@ -1252,7 +1252,7 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(request.Ip) || string.IsNullOrEmpty(request.Action))
         {
-            return BadRequest(new { success = false, error = "Fehlende Parameter" });
+            return BadRequest(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Bluesound control: {Action} on {Ip}:{Port}", request.Action, request.Ip, request.Port);
@@ -1269,7 +1269,7 @@ public class QobuzController : ControllerBase
             }
             else
             {
-                return BadRequest(new { success = false, error = "Ungültiger Queue-Index" });
+                return BadRequest(new { success = false, error = "error.invalidQueueIndex" });
             }
         }
         else
@@ -1314,9 +1314,9 @@ public class QobuzController : ControllerBase
         var genres = new[]
         {
             new { id = 112, name = "Pop/Rock" },
-            new { id = 80, name = "Jazz" },
-            new { id = 10, name = "Klassik" },
-            new { id = 160, name = "Deutsche Musik" },
+            new { id = 80, name = "genre.jazz" },
+            new { id = 10, name = "genre.classical" },
+            new { id = 160, name = "genre.germanMusic" },
             new { id = 64, name = "Electronic" },
             new { id = 127, name = "Soul/Funk/R&B" },
             new { id = 116, name = "Metal" },
@@ -1324,8 +1324,8 @@ public class QobuzController : ControllerBase
             new { id = 2, name = "Blues/Country/Folk" },
             new { id = 91, name = "Soundtracks" },
             new { id = 94, name = "World Music" },
-            new { id = 167, name = "Kinder" },
-            new { id = 59, name = "Hörbücher" }
+            new { id = 167, name = "genre.children" },
+            new { id = 59, name = "genre.audiobooks" }
         };
 
         return Ok(new { success = true, genres });
@@ -1350,7 +1350,7 @@ public class QobuzController : ControllerBase
                 return Ok(new
                 {
                     success = false,
-                    error = "Album-Info nicht verfügbar. Bitte Mistral API Key in den Einstellungen konfigurieren."
+                    error = "error.albumInfoUnavailable"
                 });
             }
 
@@ -1367,7 +1367,7 @@ public class QobuzController : ControllerBase
             return Ok(new
             {
                 success = false,
-                error = "Fehler beim Laden der Album-Info"
+                error = "error.albumInfoLoadFailed"
             });
         }
     }
@@ -1382,12 +1382,12 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(request.ProfileId))
         {
-            return BadRequest(new { success = false, error = "Fehlende ProfileId" });
+            return BadRequest(new { success = false, error = "error.missingProfileId" });
         }
 
         if (string.IsNullOrEmpty(request.AlbumId))
         {
-            return BadRequest(new { success = false, error = "Fehlende AlbumId" });
+            return BadRequest(new { success = false, error = "error.missingAlbumId" });
         }
 
         await _historyService.SaveQobuzAlbumAsync(request.ProfileId, request.AlbumId, request.AlbumName, request.Artist, request.CoverUrl);
@@ -1403,12 +1403,12 @@ public class QobuzController : ControllerBase
     {
         if (string.IsNullOrEmpty(request.ProfileId))
         {
-            return BadRequest(new { success = false, error = "Fehlende ProfileId" });
+            return BadRequest(new { success = false, error = "error.missingProfileId" });
         }
 
         if (string.IsNullOrEmpty(request.PlaylistId))
         {
-            return BadRequest(new { success = false, error = "Fehlende PlaylistId" });
+            return BadRequest(new { success = false, error = "error.missingPlaylistId" });
         }
 
         await _historyService.SaveQobuzPlaylistAsync(request.ProfileId, request.PlaylistId, request.PlaylistName, request.CoverUrl, request.Tracks);

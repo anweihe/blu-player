@@ -34,7 +34,7 @@ export const HEADER_PRESETS = {
   qobuzAlbum: {
     leftAction: 'back' as const,
     backRoute: '/qobuz/browse',
-    title: 'Album',
+    title: 'navPreset.album',
     showPlayButton: true,
     rightItems: ['search'] as HeaderRightItem[]
   },
@@ -42,7 +42,7 @@ export const HEADER_PRESETS = {
   qobuzPlaylist: {
     leftAction: 'back' as const,
     backRoute: '/qobuz/browse',
-    title: 'Playlist',
+    title: 'navPreset.playlist',
     showPlayButton: true,
     rightItems: ['search'] as HeaderRightItem[]
   },
@@ -50,20 +50,20 @@ export const HEADER_PRESETS = {
   qobuzArtist: {
     leftAction: 'back' as const,
     backRoute: '/qobuz/browse',
-    title: 'Künstler',
+    title: 'navPreset.artist',
     rightItems: ['search'] as HeaderRightItem[]
   },
   /** Qobuz discography */
   qobuzDiscography: {
     leftAction: 'back' as const,
-    title: 'Diskografie',
+    title: 'navPreset.discography',
     rightItems: ['search'] as HeaderRightItem[]
   },
   /** Qobuz search */
   qobuzSearch: {
     leftAction: 'back' as const,
     backRoute: '/qobuz/browse',
-    title: 'Suche',
+    title: 'navPreset.search',
     rightItems: [] as HeaderRightItem[]
   }
 };

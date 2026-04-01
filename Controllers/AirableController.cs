@@ -82,7 +82,7 @@ public class AirableController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to discover players");
-            return Ok(new { success = false, error = "Player-Suche fehlgeschlagen" });
+            return Ok(new { success = false, error = "error.playerSearchFailed" });
         }
     }
 
@@ -90,7 +90,7 @@ public class AirableController : ControllerBase
     {
         if (string.IsNullOrEmpty(playerIp))
         {
-            return Ok(new { success = false, error = "Fehlende Player-IP" });
+            return Ok(new { success = false, error = "error.missingPlayerIp" });
         }
 
         _logger.LogInformation("Fetching Airable menu from player {Ip}:{Port}", playerIp, port);
@@ -99,7 +99,7 @@ public class AirableController : ControllerBase
 
         if (string.IsNullOrEmpty(xml))
         {
-            return Ok(new { success = false, error = "Airable-Menu konnte nicht geladen werden" });
+            return Ok(new { success = false, error = "error.airableMenuFailed" });
         }
 
         try
@@ -110,7 +110,7 @@ public class AirableController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to parse Airable menu XML");
-            return Ok(new { success = false, error = "Fehler beim Parsen der Airable-Daten" });
+            return Ok(new { success = false, error = "error.airableParseFailed" });
         }
     }
 
@@ -118,7 +118,7 @@ public class AirableController : ControllerBase
     {
         if (string.IsNullOrEmpty(playerIp) || string.IsNullOrEmpty(uri))
         {
-            return Ok(new { success = false, error = "Fehlende Parameter" });
+            return Ok(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Browsing Airable at {Uri} on player {Ip}:{Port}", uri, playerIp, port);
@@ -127,7 +127,7 @@ public class AirableController : ControllerBase
 
         if (string.IsNullOrEmpty(xml))
         {
-            return Ok(new { success = false, error = "Airable-Kategorie konnte nicht geladen werden" });
+            return Ok(new { success = false, error = "error.airableCategoryFailed" });
         }
 
         try
@@ -165,7 +165,7 @@ public class AirableController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to parse Airable browse XML");
-            return Ok(new { success = false, error = "Fehler beim Parsen der Airable-Daten" });
+            return Ok(new { success = false, error = "error.airableParseFailed" });
         }
     }
 
@@ -189,7 +189,7 @@ public class AirableController : ControllerBase
 
         if (request == null || string.IsNullOrEmpty(request.Ip) || string.IsNullOrEmpty(request.PlayUrl))
         {
-            return Ok(new { success = false, error = "Fehlende Parameter" });
+            return Ok(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Playing Airable station on {Ip}:{Port}: {Title}", request.Ip, request.Port, request.Title ?? request.PlayUrl);
@@ -203,7 +203,7 @@ public class AirableController : ControllerBase
 
         if (!success)
         {
-            return Ok(new { success = false, error = "Station konnte nicht abgespielt werden" });
+            return Ok(new { success = false, error = "error.stationPlayFailed" });
         }
 
         return Ok(new { success = true });
@@ -216,7 +216,7 @@ public class AirableController : ControllerBase
 
         if (request == null || string.IsNullOrEmpty(request.Ip) || string.IsNullOrEmpty(request.Uri))
         {
-            return Ok(new { success = false, error = "Fehlende Parameter" });
+            return Ok(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Executing player-link action on {Ip}:{Port}: {Uri}", request.Ip, request.Port, request.Uri);
@@ -229,14 +229,14 @@ public class AirableController : ControllerBase
     {
         if (string.IsNullOrEmpty(ip))
         {
-            return Ok(new { success = false, error = "Fehlende IP-Adresse" });
+            return Ok(new { success = false, error = "error.missingIpAddress" });
         }
 
         var status = await _playerService.GetPlaybackStatusAsync(ip, port);
 
         if (status == null)
         {
-            return Ok(new { success = false, error = "Status konnte nicht abgerufen werden" });
+            return Ok(new { success = false, error = "error.statusFetchFailed" });
         }
 
         var imageUrl = status.ImageUrl;
@@ -270,7 +270,7 @@ public class AirableController : ControllerBase
 
         if (request == null || string.IsNullOrEmpty(request.Ip) || string.IsNullOrEmpty(request.Action))
         {
-            return Ok(new { success = false, error = "Fehlende Parameter" });
+            return Ok(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Bluesound control: {Action} on {Ip}:{Port}", request.Action, request.Ip, request.Port);
@@ -296,12 +296,12 @@ public class AirableController : ControllerBase
 
         if (request == null || string.IsNullOrEmpty(request.ProfileId))
         {
-            return Ok(new { success = false, error = "Fehlende ProfileId" });
+            return Ok(new { success = false, error = "error.missingProfileId" });
         }
 
         if (string.IsNullOrEmpty(request.ActionUrl))
         {
-            return Ok(new { success = false, error = "Fehlende ActionUrl" });
+            return Ok(new { success = false, error = "error.missingActionUrl" });
         }
 
         await _historyService.SaveTuneInAsync(request.ProfileId, request.Title ?? "", request.ImageUrl, request.ActionUrl);

@@ -3,11 +3,12 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { NavigationStateService } from '../../../../core/services/navigation-state.service';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-qobuz-login',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TranslatePipe],
   template: `
     <div class="min-h-screen bg-bg-primary flex items-center justify-center p-4 safe-area-top">
       <div class="login-card">
@@ -16,7 +17,7 @@ import { NavigationStateService } from '../../../../core/services/navigation-sta
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
-          <span class="text-sm">Zurück</span>
+          <span class="text-sm">{{ 'common.back' | translate }}</span>
         </a>
 
         <div class="login-header">
@@ -27,8 +28,8 @@ import { NavigationStateService } from '../../../../core/services/navigation-sta
               <path d="M35 65V35L70 50L35 65Z" fill="currentColor"/>
             </svg>
           </div>
-          <h2>{{ isAddingAccount() ? 'Weiteres Konto hinzufügen' : 'Bei Qobuz anmelden' }}</h2>
-          <p>Hi-Res Audio Streaming</p>
+          <h2>{{ isAddingAccount() ? ('auth.addAccount' | translate) : ('auth.loginToQobuz' | translate) }}</h2>
+          <p>{{ 'auth.hiResStreaming' | translate }}</p>
         </div>
 
         @if (auth.authError()) {
@@ -42,7 +43,7 @@ import { NavigationStateService } from '../../../../core/services/navigation-sta
 
         <form class="login-form" (ngSubmit)="onLogin()">
           <div class="form-group">
-            <label for="email">E-Mail</label>
+            <label for="email">{{ 'auth.email' | translate }}</label>
             <div class="input-wrapper">
               <svg xmlns="http://www.w3.org/2000/svg" class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -52,7 +53,7 @@ import { NavigationStateService } from '../../../../core/services/navigation-sta
                 id="email"
                 [(ngModel)]="email"
                 name="email"
-                placeholder="ihre@email.de"
+                [placeholder]="'auth.emailPlaceholder' | translate"
                 required
                 autocomplete="email"
               />
@@ -60,7 +61,7 @@ import { NavigationStateService } from '../../../../core/services/navigation-sta
           </div>
 
           <div class="form-group">
-            <label for="password">Passwort</label>
+            <label for="password">{{ 'auth.password' | translate }}</label>
             <div class="input-wrapper">
               <svg xmlns="http://www.w3.org/2000/svg" class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -101,12 +102,12 @@ import { NavigationStateService } from '../../../../core/services/navigation-sta
           >
             @if (auth.isAuthenticating()) {
               <div class="spinner"></div>
-              <span>Anmelden...</span>
+              <span>{{ 'auth.loggingIn' | translate }}</span>
             } @else {
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
               </svg>
-              <span>Anmelden</span>
+              <span>{{ 'auth.login' | translate }}</span>
             }
           </button>
         </form>
@@ -117,7 +118,7 @@ import { NavigationStateService } from '../../../../core/services/navigation-sta
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline-block mr-1 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Ihre Anmeldedaten werden sicher übertragen und nicht gespeichert.
+            {{ 'auth.loginHint' | translate }}
           </p>
         </div>
       </div>

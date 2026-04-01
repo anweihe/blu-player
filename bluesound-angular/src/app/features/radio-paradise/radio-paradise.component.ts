@@ -8,11 +8,13 @@ import { ProfileService } from '../../core/services/profile.service';
 import { NavigationStateService } from '../../core/services/navigation-state.service';
 import { RadioParadiseItem, RadioParadiseSection } from '../../core/models';
 import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../core/services/translation.service';
 
 @Component({
   selector: 'app-radio-paradise',
   standalone: true,
-  imports: [CommonModule, PlayerSelectorComponent, ProfileSwitcherComponent],
+  imports: [CommonModule, PlayerSelectorComponent, ProfileSwitcherComponent, TranslatePipe],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -71,15 +73,15 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
                 <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
               </svg>
             </div>
-            <h2 class="text-xl font-bold mb-2">Bluesound Player erforderlich</h2>
+            <h2 class="text-xl font-bold mb-2">{{ 'player.playerRequired' | translate }}</h2>
             <p class="text-text-secondary mb-6 max-w-sm">
-              Radio Paradise verwendet die integrierte Radio-Funktion deines Bluesound Players. Bitte wähle einen Player aus.
+              {{ 'radio.playerRequired' | translate }}
             </p>
             <button
               class="px-5 py-2.5 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors"
               (click)="openPlayerSelector()"
             >
-              Player auswählen
+              {{ 'player.selectPlayer' | translate }}
             </button>
           </div>
         } @else {
@@ -105,7 +107,7 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
             <div class="flex items-center justify-center py-16">
               <div class="flex flex-col items-center gap-4">
                 <div class="w-10 h-10 border-3 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
-                <span class="text-text-secondary">Laden...</span>
+                <span class="text-text-secondary">{{ 'common.loading' | translate }}</span>
               </div>
             </div>
           } @else if (error()) {
@@ -123,7 +125,7 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
                 class="px-4 py-2 bg-bg-card text-text-primary rounded-lg hover:bg-bg-card-hover transition-colors"
                 (click)="loadChannels()"
               >
-                Erneut versuchen
+                {{ 'common.retry' | translate }}
               </button>
             </div>
           } @else if (currentSections().length > 0) {
@@ -188,8 +190,8 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
                 <path d="M2 17l10 5 10-5"/>
                 <path d="M2 12l10 5 10-5"/>
               </svg>
-              <h3 class="text-lg font-medium mb-2">Keine Kanäle</h3>
-              <p class="text-text-secondary">Radio Paradise konnte nicht geladen werden.</p>
+              <h3 class="text-lg font-medium mb-2">{{ 'radio.noChannels' | translate }}</h3>
+              <p class="text-text-secondary">{{ 'radio.noChannelsDescription' | translate }}</p>
             </div>
           }
         }
@@ -215,6 +217,7 @@ export class RadioParadiseComponent implements OnInit, OnDestroy {
   private readonly rpApi = inject(RadioParadiseApiService);
   private readonly playerState = inject(PlayerStateService);
   private readonly navState = inject(NavigationStateService);
+  private readonly t = inject(TranslationService);
 
   // Profile switcher
   readonly showProfileSwitcher = signal(false);
@@ -304,12 +307,12 @@ export class RadioParadiseComponent implements OnInit, OnDestroy {
         if (response.success) {
           this.currentSections.set(response.sections);
         } else {
-          this.error.set(response.error || 'Radio Paradise konnte nicht geladen werden');
+          this.error.set(response.error || this.t.t('radio.loadError'));
         }
         this.isLoading.set(false);
       },
       error: () => {
-        this.error.set('Radio Paradise konnte nicht geladen werden');
+        this.error.set(this.t.t('radio.loadError'));
         this.isLoading.set(false);
       }
     });
@@ -331,7 +334,7 @@ export class RadioParadiseComponent implements OnInit, OnDestroy {
             this.rpApi.saveToHistory(profileId, item).subscribe();
           }
         } else {
-          this.error.set(response.error || 'Kanal konnte nicht abgespielt werden');
+          this.error.set(response.error || this.t.t('radio.channelPlayError'));
         }
       }
     });

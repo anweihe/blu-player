@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { PlaybackService } from '../../core/services/playback.service';
 import { PlayerSelectorComponent } from '../player-selector/player-selector.component';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-global-player',
   standalone: true,
-  imports: [CommonModule, PlayerSelectorComponent],
+  imports: [CommonModule, PlayerSelectorComponent, TranslatePipe],
   template: `
     <!-- Mobile Mini Player Bar -->
     <div
@@ -42,8 +43,8 @@ import { PlayerSelectorComponent } from '../player-selector/player-selector.comp
 
         <!-- Track Info -->
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate text-text-primary">{{ trackTitle() || 'Kein Titel' }}</p>
-          <p class="text-xs text-text-muted truncate">{{ artistName() || 'Unbekannter Künstler' }}</p>
+          <p class="text-sm font-medium truncate text-text-primary">{{ trackTitle() || ('common.noTitle' | translate) }}</p>
+          <p class="text-xs text-text-muted truncate">{{ artistName() || ('common.unknownArtist' | translate) }}</p>
           @if (playerState.selectedPlayer(); as player) {
             <p class="text-[10px] text-text-muted truncate flex items-center gap-1 mt-0.5">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

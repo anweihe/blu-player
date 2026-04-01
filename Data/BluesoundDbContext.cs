@@ -63,6 +63,7 @@ public class BluesoundDbContext : DbContext
             entity.Property(e => e.SelectedPlayerName).HasMaxLength(200);
             entity.Property(e => e.SelectedPlayerIp).HasMaxLength(50);
             entity.Property(e => e.SelectedPlayerModel).HasMaxLength(200);
+            entity.Property(e => e.Language).HasMaxLength(10);
 
             entity.HasOne(e => e.UserProfile)
                   .WithOne(p => p.Settings)

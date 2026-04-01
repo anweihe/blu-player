@@ -5,6 +5,8 @@ import { QobuzApiService } from '../../../../core/services/qobuz-api.service';
 import { NavigationStateService } from '../../../../core/services/navigation-state.service';
 import { QobuzAlbum } from '../../../../core/models';
 import { AlbumCardComponent } from '../../../../shared/components';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../../core/services/translation.service';
 
 /**
  * Release type filter options - matching Razor implementation
@@ -16,12 +18,12 @@ interface ReleaseFilter {
 }
 
 const RELEASE_FILTERS: ReleaseFilter[] = [
-  { value: null, label: 'Alle' },
-  { value: 'album', label: 'Alben' },
-  { value: 'epSingle', label: 'EPs & Singles' },
-  { value: 'live', label: 'Live' },
-  { value: 'compilation', label: 'Compilations' },
-  { value: 'other', label: 'Andere' }
+  { value: null, label: 'discography.allFilter' },
+  { value: 'album', label: 'discography.albumsFilter' },
+  { value: 'epSingle', label: 'discography.epSingleFilter' },
+  { value: 'live', label: 'discography.liveFilter' },
+  { value: 'compilation', label: 'discography.compilationFilter' },
+  { value: 'other', label: 'discography.otherFilter' }
 ];
 
 /**
@@ -33,8 +35,8 @@ interface SortOption {
 }
 
 const SORT_OPTIONS: SortOption[] = [
-  { value: 'release_date', label: 'Erscheinungsdatum' },
-  { value: 'relevant', label: 'Beliebtheit' }
+  { value: 'release_date', label: 'discography.sortReleaseDate' },
+  { value: 'relevant', label: 'discography.sortPopularity' }
 ];
 
 /**
@@ -59,13 +61,13 @@ function mapReleaseType(type: string | null): string | null {
 @Component({
   selector: 'app-discography',
   standalone: true,
-  imports: [CommonModule, AlbumCardComponent],
+  imports: [CommonModule, AlbumCardComponent, TranslatePipe],
   template: `
     <div class="discography-page bg-bg-primary min-h-screen pb-28">
       <!-- Header - back button removed, now in AppHeader -->
       <div class="discography-page-header flex items-center gap-4 p-4 mb-6">
         <div class="discography-page-title-area flex flex-col gap-0.5">
-          <h1 class="text-lg sm:text-xl font-bold m-0 leading-tight">Diskografie</h1>
+          <h1 class="text-lg sm:text-xl font-bold m-0 leading-tight">{{ 'discography.title' | translate }}</h1>
           @if (artistName()) {
             <span class="discography-artist-subtitle text-sm text-text-secondary">{{ artistName() }}</span>
           }
@@ -89,7 +91,7 @@ function mapReleaseType(type: string | null): string | null {
               [class.hover:text-text-primary]="currentFilter() !== filter.value"
               (click)="setFilter(filter.value)"
             >
-              {{ filter.label }}
+              {{ filter.label | translate }}
             </button>
           }
         </div>
@@ -102,7 +104,7 @@ function mapReleaseType(type: string | null): string | null {
             (change)="onSortChange($event)"
           >
             @for (option of sortOptions; track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
+              <option [value]="option.value">{{ option.label | translate }}</option>
             }
           </select>
         </div>
@@ -129,7 +131,7 @@ function mapReleaseType(type: string | null): string | null {
             <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
-            <p class="font-medium mb-1">Keine Veröffentlichungen in dieser Kategorie</p>
+            <p class="font-medium mb-1">{{ 'discography.noReleases' | translate }}</p>
           </div>
         } @else {
           <!-- Album Grid -->
@@ -147,7 +149,7 @@ function mapReleaseType(type: string | null): string | null {
           @if (loadingMore()) {
             <div class="discography-loading flex flex-col items-center justify-center gap-3 py-10 text-text-secondary text-sm">
               <div class="loading-spinner-small w-6 h-6 border-2 border-border-accent border-t-accent-qobuz rounded-full animate-spin"></div>
-              <span>Lade weitere Alben...</span>
+              <span>{{ 'discography.loadingMore' | translate }}</span>
             </div>
           }
 

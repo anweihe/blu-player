@@ -17,30 +17,32 @@ import {
   BackendAppearsOnTrack,
   formatDuration
 } from '../../../../core/models';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../../core/services/translation.service';
 
 /**
- * Release type labels in German
+ * Release type to translation key mapping
  */
-const RELEASE_TYPE_LABELS: Record<string, string> = {
-  'album': 'Alben',
-  'single': 'Singles',
-  'ep': 'EPs',
-  'epSingle': 'EPs & Singles',
-  'ep-single': 'EPs & Singles',
-  'ep_single': 'EPs & Singles',
-  'live': 'Live',
-  'compilation': 'Compilations',
-  'soundtrack': 'Soundtracks',
-  'awardedRelease': 'Ausgezeichnet',
-  'awardedReleases': 'Ausgezeichnet',
-  'awarded_release': 'Ausgezeichnet',
-  'other': 'Andere'
+const RELEASE_TYPE_KEYS: Record<string, string> = {
+  'album': 'artist.releaseTypes.album',
+  'single': 'artist.releaseTypes.single',
+  'ep': 'artist.releaseTypes.ep',
+  'epSingle': 'artist.releaseTypes.epSingle',
+  'ep-single': 'artist.releaseTypes.epSingle',
+  'ep_single': 'artist.releaseTypes.epSingle',
+  'live': 'artist.releaseTypes.live',
+  'compilation': 'artist.releaseTypes.compilation',
+  'soundtrack': 'artist.releaseTypes.soundtrack',
+  'awardedRelease': 'artist.releaseTypes.awarded',
+  'awardedReleases': 'artist.releaseTypes.awarded',
+  'awarded_release': 'artist.releaseTypes.awarded',
+  'other': 'artist.releaseTypes.other'
 };
 
 @Component({
   selector: 'app-artist',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   template: `
     <div class="artist-page bg-bg-primary min-h-screen pb-28">
       @if (loading()) {
@@ -101,7 +103,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
                 class="btn-expand-bio mt-3 flex items-center gap-1 text-sm text-accent-qobuz hover:underline"
                 (click)="bioExpanded.set(!bioExpanded())"
               >
-                <span>{{ bioExpanded() ? 'Weniger anzeigen' : 'Mehr anzeigen' }}</span>
+                <span>{{ bioExpanded() ? ('common.showLess' | translate) : ('common.showMore' | translate) }}</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   class="w-4 h-4 transition-transform duration-300"
@@ -121,7 +123,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
         <!-- Top Tracks Section -->
         @if (artist()?.topTracks?.length) {
           <section class="artist-section mx-4 mb-8">
-            <h2 class="text-lg font-semibold mb-4 text-text-primary">Beliebte Titel</h2>
+            <h2 class="text-lg font-semibold mb-4 text-text-primary">{{ 'artist.popularTracks' | translate }}</h2>
             <div class="artist-top-tracks space-y-1">
               @for (track of visibleTopTracks(); track track.id; let i = $index) {
                 <div
@@ -155,7 +157,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
                 class="btn-expand-tracks mt-3 flex items-center gap-1 text-sm text-accent-qobuz hover:underline mx-auto"
                 (click)="topTracksExpanded.set(!topTracksExpanded())"
               >
-                <span>{{ topTracksExpanded() ? 'Weniger anzeigen' : 'Mehr anzeigen' }}</span>
+                <span>{{ topTracksExpanded() ? ('common.showLess' | translate) : ('common.showMore' | translate) }}</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   class="w-4 h-4 transition-transform duration-300"
@@ -175,7 +177,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
         <!-- Discography Section -->
         @if (artist()?.releases?.length) {
           <section class="artist-section mx-4 mb-8">
-            <h2 class="text-lg font-semibold mb-4 text-text-primary">Diskografie</h2>
+            <h2 class="text-lg font-semibold mb-4 text-text-primary">{{ 'artist.discography' | translate }}</h2>
 
             <!-- Sub-Navigation Tabs with "Alles" button -->
             <div class="discography-sub-nav flex gap-2 mb-4 pb-1 overflow-x-auto scrollbar-hide">
@@ -199,7 +201,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
                 [routerLink]="['/qobuz/artist', id, 'discography']"
                 class="discography-all-btn ml-auto flex items-center gap-1 flex-shrink-0 px-4 py-2 text-sm rounded-full border border-border-accent text-text-secondary hover:bg-bg-card hover:text-text-primary transition-colors"
               >
-                Alles
+                {{ 'common.all' | translate }}
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
@@ -253,7 +255,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-accent-qobuz" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
-                    <span class="text-sm font-medium">Mehr</span>
+                    <span class="text-sm font-medium">{{ 'common.more' | translate }}</span>
                   </div>
                 </a>
               }
@@ -264,7 +266,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
         <!-- Similar Artists Section -->
         @if (artist()?.similarArtists?.length) {
           <section class="artist-section mx-4 mb-8">
-            <h2 class="text-lg font-semibold mb-4 text-text-primary">Ähnliche Künstler</h2>
+            <h2 class="text-lg font-semibold mb-4 text-text-primary">{{ 'artist.similarArtists' | translate }}</h2>
             <div class="similar-artists-scroll flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
               @for (similar of artist()!.similarArtists; track similar.id) {
                 <a
@@ -300,7 +302,7 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
         <!-- Appears On Section -->
         @if (artist()?.appearsOn?.length) {
           <section class="artist-section mx-4 mb-8">
-            <h2 class="text-lg font-semibold mb-4 text-text-primary">Tritt auf in</h2>
+            <h2 class="text-lg font-semibold mb-4 text-text-primary">{{ 'artist.appearsOn' | translate }}</h2>
             <div class="appears-on-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               @for (track of artist()!.appearsOn!.slice(0, 10); track track.albumId) {
                 <a
@@ -331,12 +333,12 @@ const RELEASE_TYPE_LABELS: Record<string, string> = {
           <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <p>Künstler konnte nicht geladen werden</p>
+          <p>{{ 'artist.couldNotLoad' | translate }}</p>
           <button
             routerLink="/qobuz/browse"
             class="mt-4 px-4 py-2 bg-accent-qobuz text-white rounded-lg hover:bg-accent-qobuz/90 transition-colors"
           >
-            Zurück zum Browser
+            {{ 'qobuz.backToBrowser' | translate }}
           </button>
         </div>
       }
@@ -487,6 +489,7 @@ export class ArtistComponent implements OnInit, OnDestroy {
   private readonly playback = inject(PlaybackService);
   private readonly navState = inject(NavigationStateService);
   private readonly ratingService = inject(AlbumRatingService);
+  private readonly t = inject(TranslationService);
 
   readonly loading = signal(true);
   readonly artist = signal<BackendArtistPageResponse | null>(null);
@@ -616,7 +619,8 @@ export class ArtistComponent implements OnInit, OnDestroy {
   }
 
   getReleaseTypeLabel(type: string): string {
-    return RELEASE_TYPE_LABELS[type] ?? type;
+    const key = RELEASE_TYPE_KEYS[type];
+    return key ? this.t.t(key) : type;
   }
 
   getYear(timestamp?: number): string {

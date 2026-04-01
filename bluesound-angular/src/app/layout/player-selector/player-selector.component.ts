@@ -4,11 +4,13 @@ import { PlayerStateService } from '../../core/services/player-state.service';
 import { PlaybackService } from '../../core/services/playback.service';
 import { BluesoundApiService } from '../../core/services/bluesound-api.service';
 import { BluesoundPlayer } from '../../core/models';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../core/services/translation.service';
 
 @Component({
   selector: 'app-player-selector',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     @if (isVisible()) {
       <!-- Backdrop -->
@@ -23,7 +25,7 @@ import { BluesoundPlayer } from '../../core/models';
       >
         <!-- Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
-          <h2 class="text-lg font-semibold">Wiedergabegerät</h2>
+          <h2 class="text-lg font-semibold">{{ 'player.playbackDevice' | translate }}</h2>
           <button
             class="w-8 h-8 rounded-full hover:bg-bg-card flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
             (click)="close()"
@@ -59,9 +61,9 @@ import { BluesoundPlayer } from '../../core/models';
             </div>
             <div class="flex-1 text-left">
               <p class="font-medium" [class.text-accent-qobuz]="playerState.playerMode() === 'browser'">
-                Dieser Browser
+                {{ 'player.thisBrowser' | translate }}
               </p>
-              <p class="text-sm text-text-muted">Wiedergabe auf diesem Gerät</p>
+              <p class="text-sm text-text-muted">{{ 'player.playbackOnThisDevice' | translate }}</p>
             </div>
             @if (playerState.playerMode() === 'browser') {
               <div class="w-6 h-6 rounded-full bg-accent-qobuz text-white flex items-center justify-center">
@@ -76,7 +78,7 @@ import { BluesoundPlayer } from '../../core/models';
           @if (players().length > 0) {
             <div class="flex items-center gap-3 py-3">
               <div class="flex-1 h-px bg-border-subtle"></div>
-              <span class="text-xs text-text-muted uppercase tracking-wide">Bluesound Player</span>
+              <span class="text-xs text-text-muted uppercase tracking-wide">{{ 'player.bluesoundPlayers' | translate }}</span>
               <div class="flex-1 h-px bg-border-subtle"></div>
             </div>
           }
@@ -130,8 +132,8 @@ import { BluesoundPlayer } from '../../core/models';
               <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
               </svg>
-              <p class="font-medium mb-1">Keine Player gefunden</p>
-              <p class="text-sm">Stellen Sie sicher, dass Ihre Bluesound Player eingeschaltet sind</p>
+              <p class="font-medium mb-1">{{ 'player.noPlayersFoundShort' | translate }}</p>
+              <p class="text-sm">{{ 'player.noPlayersFoundHint' | translate }}</p>
             </div>
           }
 
@@ -139,7 +141,7 @@ import { BluesoundPlayer } from '../../core/models';
           @if (isLoading()) {
             <div class="text-center py-8">
               <div class="w-8 h-8 border-2 border-accent-qobuz border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-              <p class="text-text-muted">Suche nach Playern...</p>
+              <p class="text-text-muted">{{ 'player.searchingPlayersShort' | translate }}</p>
             </div>
           }
         </div>
@@ -161,7 +163,7 @@ import { BluesoundPlayer } from '../../core/models';
             >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Player aktualisieren
+            {{ 'player.refreshPlayers' | translate }}
           </button>
         </div>
       </div>
@@ -186,6 +188,7 @@ export class PlayerSelectorComponent implements OnInit {
   readonly playerState = inject(PlayerStateService);
   private readonly playback = inject(PlaybackService);
   private readonly bluesoundApi = inject(BluesoundApiService);
+  private readonly t = inject(TranslationService);
 
   readonly isVisible = signal(false);
   readonly isLoading = signal(false);
@@ -236,10 +239,10 @@ export class PlayerSelectorComponent implements OnInit {
   getPlayerSubtitle(player: BluesoundPlayer): string {
     if (player.isMaster && player.isGrouped) {
       const memberCount = player.slaveIps.length + 1;
-      return `Gruppe · ${memberCount} Geräte`;
+      return this.t.t('player.groupDeviceCount', { count: memberCount });
     }
     if (player.isStereoPaired) {
-      return `${player.modelName} · Stereopaar`;
+      return `${player.modelName} · ${this.t.t('player.stereoPair')}`;
     }
     return player.modelName;
   }

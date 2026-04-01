@@ -20,6 +20,7 @@ public interface ISettingsService
     // Settings
     Task<ProfileDto?> UpdateStreamingQualityAsync(string profileId, int formatId);
     Task<ProfileDto?> UpdatePlayerSelectionAsync(string profileId, UpdatePlayerRequest request);
+    Task<ProfileDto?> UpdateLanguageAsync(string profileId, string? language);
 
     // Migration
     Task<bool> MigrateFromLocalStorageAsync(MigrateRequest request);

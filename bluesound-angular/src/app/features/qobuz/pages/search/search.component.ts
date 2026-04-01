@@ -34,16 +34,13 @@ import {
   ArtistCardComponent
 } from '../../../../shared/components';
 import { InfiniteScrollDirective } from '../../../../shared/directives';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../../core/services/translation.service';
 
 /**
  * Search result tabs
  */
 type SearchTab = 'all' | 'albums' | 'artists' | 'tracks' | 'playlists';
-
-interface TabConfig {
-  value: SearchTab;
-  label: string;
-}
 
 /**
  * Pagination state for each result category
@@ -54,13 +51,13 @@ interface TabPaginationState {
   hasMore: boolean;
 }
 
-const TABS: TabConfig[] = [
-  { value: 'all', label: 'Alle' },
-  { value: 'albums', label: 'Alben' },
-  { value: 'artists', label: 'Künstler' },
-  { value: 'tracks', label: 'Titel' },
-  { value: 'playlists', label: 'Playlists' }
-];
+const TAB_KEYS: Record<SearchTab, string> = {
+  all: 'search.all',
+  albums: 'search.albums',
+  artists: 'search.artists',
+  tracks: 'search.tracks',
+  playlists: 'search.playlists'
+};
 
 const RECENT_SEARCHES_KEY = 'qobuz_recent_searches';
 const MAX_RECENT_SEARCHES = 8;
@@ -76,7 +73,8 @@ const SEARCH_LIMIT = 20;
     TrackItemComponent,
     PlaylistCardComponent,
     ArtistCardComponent,
-    InfiniteScrollDirective
+    InfiniteScrollDirective,
+    TranslatePipe
   ],
   template: `
     <div class="search-page bg-bg-primary min-h-screen pb-28">
@@ -112,7 +110,7 @@ const SEARCH_LIMIT = 20;
                 [(ngModel)]="query"
                 (ngModelChange)="onSearch($event)"
                 (keydown.escape)="clearSearch()"
-                placeholder="Künstler, Alben, Titel..."
+                [placeholder]="'search.placeholder' | translate"
                 class="w-full py-2.5 pl-10 pr-10 bg-bg-card border border-border-subtle rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-qobuz transition-colors"
               />
               @if (query) {
@@ -131,7 +129,7 @@ const SEARCH_LIMIT = 20;
             <button
               (click)="goBack()"
               class="flex-shrink-0 w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-card-hover transition-colors"
-              title="Zurück"
+              [title]="'common.back' | translate"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -142,21 +140,21 @@ const SEARCH_LIMIT = 20;
           <!-- Tabs (only show when we have results) -->
           @if (hasResults()) {
             <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
-              @for (tab of tabs; track tab.value) {
+              @for (tab of tabValues; track tab) {
                 <button
                   class="flex-shrink-0 px-4 py-2 text-sm rounded-full border transition-colors whitespace-nowrap"
-                  [class.bg-accent-qobuz]="currentTab() === tab.value"
-                  [class.text-white]="currentTab() === tab.value"
-                  [class.border-accent-qobuz]="currentTab() === tab.value"
-                  [class.bg-transparent]="currentTab() !== tab.value"
-                  [class.text-text-secondary]="currentTab() !== tab.value"
-                  [class.border-border-subtle]="currentTab() !== tab.value"
-                  [class.hover:border-border-accent]="currentTab() !== tab.value"
-                  (click)="currentTab.set(tab.value)"
+                  [class.bg-accent-qobuz]="currentTab() === tab"
+                  [class.text-white]="currentTab() === tab"
+                  [class.border-accent-qobuz]="currentTab() === tab"
+                  [class.bg-transparent]="currentTab() !== tab"
+                  [class.text-text-secondary]="currentTab() !== tab"
+                  [class.border-border-subtle]="currentTab() !== tab"
+                  [class.hover:border-border-accent]="currentTab() !== tab"
+                  (click)="currentTab.set(tab)"
                 >
-                  {{ tab.label }}
-                  @if (getTabCount(tab.value) > 0) {
-                    <span class="ml-1 opacity-70">({{ getTabCount(tab.value) }})</span>
+                  {{ getTabKey(tab) | translate }}
+                  @if (getTabCount(tab) > 0) {
+                    <span class="ml-1 opacity-70">({{ getTabCount(tab) }})</span>
                   }
                 </button>
               }
@@ -176,12 +174,12 @@ const SEARCH_LIMIT = 20;
           @if (recentSearches().length > 0) {
             <section class="mb-8">
               <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold">Letzte Suchen</h2>
+                <h2 class="text-lg font-semibold">{{ 'search.recentSearches' | translate }}</h2>
                 <button
                   class="text-sm text-text-muted hover:text-accent-qobuz transition-colors"
                   (click)="clearRecentSearches()"
                 >
-                  Löschen
+                  {{ 'search.clear' | translate }}
                 </button>
               </div>
               <div class="flex flex-wrap gap-2">
@@ -205,8 +203,8 @@ const SEARCH_LIMIT = 20;
             <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p class="text-lg mb-2">Suche nach Musik</p>
-            <p class="text-sm">Finde Künstler, Alben, Titel und Playlists</p>
+            <p class="text-lg mb-2">{{ 'search.searchForMusic' | translate }}</p>
+            <p class="text-sm">{{ 'search.findArtistsAlbums' | translate }}</p>
           </div>
         }
 
@@ -252,8 +250,8 @@ const SEARCH_LIMIT = 20;
             <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p class="text-lg mb-2">Keine Ergebnisse</p>
-            <p class="text-sm">Keine Ergebnisse für "{{ query }}"</p>
+            <p class="text-lg mb-2">{{ 'search.noResults' | translate }}</p>
+            <p class="text-sm">{{ 'search.noResultsFor' | translate }} "{{ query }}"</p>
           </div>
         }
 
@@ -265,13 +263,13 @@ const SEARCH_LIMIT = 20;
             @if (albums().length > 0) {
               <section class="mb-8">
                 <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-lg font-semibold">Alben</h2>
+                  <h2 class="text-lg font-semibold">{{ 'search.albums' | translate }}</h2>
                   @if (albumsPagination().total > 4) {
                     <button
                       class="text-sm text-accent-qobuz hover:underline"
                       (click)="currentTab.set('albums')"
                     >
-                      Alle anzeigen ({{ albumsPagination().total }})
+                      {{ 'common.showAll' | translate }} ({{ albumsPagination().total }})
                     </button>
                   }
                 </div>
@@ -290,13 +288,13 @@ const SEARCH_LIMIT = 20;
             @if (artists().length > 0) {
               <section class="mb-8">
                 <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-lg font-semibold">Künstler</h2>
+                  <h2 class="text-lg font-semibold">{{ 'search.artists' | translate }}</h2>
                   @if (artistsPagination().total > 4) {
                     <button
                       class="text-sm text-accent-qobuz hover:underline"
                       (click)="currentTab.set('artists')"
                     >
-                      Alle anzeigen ({{ artistsPagination().total }})
+                      {{ 'common.showAll' | translate }} ({{ artistsPagination().total }})
                     </button>
                   }
                 </div>
@@ -312,13 +310,13 @@ const SEARCH_LIMIT = 20;
             @if (tracks().length > 0) {
               <section class="mb-8">
                 <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-lg font-semibold">Titel</h2>
+                  <h2 class="text-lg font-semibold">{{ 'search.tracks' | translate }}</h2>
                   @if (tracksPagination().total > 5) {
                     <button
                       class="text-sm text-accent-qobuz hover:underline"
                       (click)="currentTab.set('tracks')"
                     >
-                      Alle anzeigen ({{ tracksPagination().total }})
+                      {{ 'common.showAll' | translate }} ({{ tracksPagination().total }})
                     </button>
                   }
                 </div>
@@ -346,13 +344,13 @@ const SEARCH_LIMIT = 20;
             @if (playlists().length > 0) {
               <section class="mb-8">
                 <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-lg font-semibold">Playlists</h2>
+                  <h2 class="text-lg font-semibold">{{ 'search.playlists' | translate }}</h2>
                   @if (playlistsPagination().total > 4) {
                     <button
                       class="text-sm text-accent-qobuz hover:underline"
                       (click)="currentTab.set('playlists')"
                     >
-                      Alle anzeigen ({{ playlistsPagination().total }})
+                      {{ 'common.showAll' | translate }} ({{ playlistsPagination().total }})
                     </button>
                   }
                 </div>
@@ -380,7 +378,7 @@ const SEARCH_LIMIT = 20;
               }
             </div>
             @if (albums().length === 0) {
-              <div class="text-center py-8 text-text-muted">Keine Alben gefunden</div>
+              <div class="text-center py-8 text-text-muted">{{ 'search.noAlbumsFound' | translate }}</div>
             }
           }
 
@@ -392,7 +390,7 @@ const SEARCH_LIMIT = 20;
               }
             </div>
             @if (artists().length === 0) {
-              <div class="text-center py-8 text-text-muted">Keine Künstler gefunden</div>
+              <div class="text-center py-8 text-text-muted">{{ 'search.noArtistsFound' | translate }}</div>
             }
           }
 
@@ -416,7 +414,7 @@ const SEARCH_LIMIT = 20;
               }
             </div>
             @if (tracks().length === 0) {
-              <div class="text-center py-8 text-text-muted">Keine Titel gefunden</div>
+              <div class="text-center py-8 text-text-muted">{{ 'search.noTracksFound' | translate }}</div>
             }
           }
 
@@ -432,7 +430,7 @@ const SEARCH_LIMIT = 20;
               }
             </div>
             @if (playlists().length === 0) {
-              <div class="text-center py-8 text-text-muted">Keine Playlists gefunden</div>
+              <div class="text-center py-8 text-text-muted">{{ 'search.noPlaylistsFound' | translate }}</div>
             }
           }
 
@@ -440,7 +438,7 @@ const SEARCH_LIMIT = 20;
           @if (loadingMore()) {
             <div class="flex items-center justify-center gap-3 py-8 text-text-muted">
               <div class="w-5 h-5 border-2 border-border-accent border-t-accent-qobuz rounded-full animate-spin"></div>
-              <span>Lade mehr...</span>
+              <span>{{ 'common.loadingMore' | translate }}</span>
             </div>
           }
         }
@@ -470,6 +468,7 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly contextMenu = inject(ContextMenuService);
   private readonly ratingService = inject(AlbumRatingService);
   private readonly navState = inject(NavigationStateService);
+  private readonly t = inject(TranslationService);
 
   private readonly searchSubject = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
@@ -494,7 +493,7 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly tracksPagination = signal<TabPaginationState>({ offset: 0, total: 0, hasMore: false });
   readonly playlistsPagination = signal<TabPaginationState>({ offset: 0, total: 0, hasMore: false });
 
-  readonly tabs = TABS;
+  readonly tabValues: SearchTab[] = ['all', 'albums', 'artists', 'tracks', 'playlists'];
 
   // Computed
   readonly hasResults = computed(() => {
@@ -808,6 +807,10 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
 
   toggleMenu(): void {
     this.navState.toggleHamburger();
+  }
+
+  getTabKey(tab: SearchTab): string {
+    return TAB_KEYS[tab] ?? tab;
   }
 
   getTabCount(tab: SearchTab): number {

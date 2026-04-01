@@ -27,6 +27,7 @@ export interface ProfileSettings {
   selectedPlayerIp?: string;
   selectedPlayerPort?: number;
   selectedPlayerModel?: string;
+  language?: string;
 }
 
 interface ApiResponse<T> {

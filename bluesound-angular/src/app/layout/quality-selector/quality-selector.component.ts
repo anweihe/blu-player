@@ -2,6 +2,8 @@ import { Component, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PlayerStateService, StreamingQuality } from '../../core/services/player-state.service';
 import { PlaybackService } from '../../core/services/playback.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../core/services/translation.service';
 
 interface QualityOption {
   id: StreamingQuality;
@@ -13,7 +15,7 @@ interface QualityOption {
 @Component({
   selector: 'app-quality-selector',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     @if (isVisible()) {
       <!-- Backdrop -->
@@ -29,8 +31,8 @@ interface QualityOption {
         <!-- Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
           <div>
-            <h2 class="text-lg font-semibold">Streaming-Qualität</h2>
-            <p class="text-sm text-text-muted">Änderungen gelten ab dem nächsten Track</p>
+            <h2 class="text-lg font-semibold">{{ 'quality.title' | translate }}</h2>
+            <p class="text-sm text-text-muted">{{ 'quality.changeNote' | translate }}</p>
           </div>
           <button
             class="w-8 h-8 rounded-full hover:bg-bg-card flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
@@ -71,15 +73,15 @@ interface QualityOption {
               <div class="flex-1 text-left">
                 <div class="flex items-center gap-2">
                   <p class="font-medium" [class.text-accent-qobuz]="isSelected(option.id)">
-                    {{ option.label }}
+                    {{ option.label | translate }}
                   </p>
                   @if (option.badge) {
                     <span class="px-1.5 py-0.5 bg-accent-qobuz/20 text-accent-qobuz text-xs font-medium rounded">
-                      {{ option.badge }}
+                      {{ option.badge | translate }}
                     </span>
                   }
                 </div>
-                <p class="text-sm text-text-muted">{{ option.description }}</p>
+                <p class="text-sm text-text-muted">{{ option.description | translate }}</p>
               </div>
               @if (isSelected(option.id)) {
                 <div class="w-6 h-6 rounded-full bg-accent-qobuz text-white flex items-center justify-center">
@@ -95,7 +97,7 @@ interface QualityOption {
         <!-- Info Note -->
         <div class="px-6 pb-6 text-center">
           <p class="text-xs text-text-muted">
-            Höhere Qualität benötigt mehr Bandbreite und Speicher
+            {{ 'quality.bandwidthNote' | translate }}
           </p>
         </div>
       </div>
@@ -125,24 +127,24 @@ export class QualitySelectorComponent {
   readonly qualityOptions: QualityOption[] = [
     {
       id: 27,
-      label: 'Hi-Res Max',
-      description: 'FLAC 24-Bit bis 192 kHz',
-      badge: 'Beste Qualität'
+      label: 'quality.hiResMax',
+      description: 'quality.hiResMaxDescription',
+      badge: 'quality.bestQuality'
     },
     {
       id: 7,
-      label: 'Hi-Res',
-      description: 'FLAC 24-Bit bis 96 kHz'
+      label: 'quality.hiRes',
+      description: 'quality.hiResDescription'
     },
     {
       id: 6,
-      label: 'CD-Qualität',
-      description: 'FLAC 16-Bit / 44.1 kHz'
+      label: 'quality.cdQuality',
+      description: 'quality.cdQualityDescription'
     },
     {
       id: 5,
-      label: 'MP3',
-      description: '320 kbps'
+      label: 'quality.mp3',
+      description: 'quality.mp3Description'
     }
   ];
 

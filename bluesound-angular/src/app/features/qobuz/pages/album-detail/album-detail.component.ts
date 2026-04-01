@@ -15,11 +15,13 @@ import {
   getAlbumTypeLabel
 } from '../../../../core/models';
 import { TrackItemComponent } from '../../../../shared/components';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../../core/services/translation.service';
 
 @Component({
   selector: 'app-album-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, TrackItemComponent],
+  imports: [CommonModule, RouterLink, TrackItemComponent, TranslatePipe],
   template: `
     <div class="album-detail bg-bg-primary min-h-screen pb-28">
       @if (loading()) {
@@ -102,7 +104,7 @@ import { TrackItemComponent } from '../../../../shared/components';
                     <span>{{ releaseYear() }}</span>
                     <span class="text-border-subtle">•</span>
                   }
-                  <span>{{ album()?.tracks_count }} Tracks</span>
+                  <span>{{ album()?.tracks_count }} {{ 'common.tracks' | translate }}</span>
                   <span class="text-border-subtle">•</span>
                   <span>{{ formatAlbumDuration(album()?.duration ?? 0) }}</span>
                 </div>
@@ -128,7 +130,7 @@ import { TrackItemComponent } from '../../../../shared/components';
                   <button
                     class="w-12 h-12 flex items-center justify-center bg-accent-qobuz text-white rounded-full hover:bg-[#1ed760] hover:scale-110 transition-all shadow-lg"
                     (click)="playAll()"
-                    title="Alle abspielen"
+                    [title]="'qobuz.playAll' | translate"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z"/>
@@ -140,7 +142,7 @@ import { TrackItemComponent } from '../../../../shared/components';
                     class="w-12 h-12 flex items-center justify-center bg-bg-card border border-border-accent rounded-full text-text-primary hover:bg-bg-card-hover hover:border-accent-blue hover:scale-110 transition-all"
                     (click)="fetchAlbumInfo()"
                     [disabled]="loadingAlbumInfo()"
-                    title="Album-Info"
+                    [title]="'qobuz.albumInfo' | translate"
                   >
                     @if (loadingAlbumInfo()) {
                       <svg class="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -158,7 +160,7 @@ import { TrackItemComponent } from '../../../../shared/components';
                   <button
                     class="w-12 h-12 flex items-center justify-center bg-bg-card border border-border-accent rounded-full text-text-primary hover:bg-bg-card-hover hover:border-accent-qobuz hover:scale-110 transition-all"
                     (click)="openArtistMenu($event)"
-                    title="Mehr Optionen"
+                    [title]="'qobuz.moreOptions' | translate"
                   >
                     <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="12" cy="5" r="2"/>
@@ -177,7 +179,7 @@ import { TrackItemComponent } from '../../../../shared/components';
           <div class="album-info-container mx-4 md:mx-6 mt-5 mb-6 p-5 bg-bg-card border border-border-subtle rounded-xl">
             <!-- Header -->
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-base font-semibold">Album-Info</h3>
+              <h3 class="text-base font-semibold">{{ 'qobuz.albumInfo' | translate }}</h3>
               <button
                 class="w-8 h-8 flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-bg-card-hover transition-colors"
                 (click)="closeAlbumInfo()"
@@ -223,8 +225,8 @@ import { TrackItemComponent } from '../../../../shared/components';
           <!-- Header (desktop) -->
           <div class="hidden md:flex items-center gap-3 px-3 py-2 text-xs text-text-muted border-b border-border-subtle mb-2">
             <span class="w-8 text-center">#</span>
-            <span class="flex-1">Titel</span>
-            <span class="w-20 text-right">Dauer</span>
+            <span class="flex-1">{{ 'common.title' | translate }}</span>
+            <span class="w-20 text-right">{{ 'common.duration' | translate }}</span>
             <span class="w-8"></span>
           </div>
 
@@ -248,7 +250,7 @@ import { TrackItemComponent } from '../../../../shared/components';
         <!-- Album Description (from API) -->
         @if (album()?.description) {
           <div class="album-description mx-6 mt-6 p-4 bg-bg-card border border-border-subtle rounded-lg">
-            <h3 class="text-sm font-semibold mb-2">Über das Album</h3>
+            <h3 class="text-sm font-semibold mb-2">{{ 'qobuz.aboutAlbum' | translate }}</h3>
             <div
               class="description-content text-sm text-text-secondary leading-relaxed"
               [innerHTML]="album()?.description"
@@ -261,12 +263,12 @@ import { TrackItemComponent } from '../../../../shared/components';
           <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <p>Album konnte nicht geladen werden</p>
+          <p>{{ 'qobuz.albumCouldNotLoad' | translate }}</p>
           <button
             routerLink="/qobuz/browse"
             class="mt-4 px-4 py-2 bg-accent-qobuz text-white rounded-lg hover:bg-accent-qobuz/90 transition-colors"
           >
-            Zurück zum Browser
+            {{ 'qobuz.backToBrowser' | translate }}
           </button>
         </div>
       }
@@ -388,6 +390,7 @@ export class AlbumDetailComponent implements OnInit, OnDestroy {
   private readonly playbackService = inject(PlaybackService);
   private readonly navState = inject(NavigationStateService);
   private readonly contextMenu = inject(ContextMenuService);
+  private readonly t = inject(TranslationService);
 
   readonly loading = signal(true);
   readonly album = signal<QobuzAlbumWithTracks | null>(null);
@@ -461,9 +464,9 @@ export class AlbumDetailComponent implements OnInit, OnDestroy {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     if (hours > 0) {
-      return `${hours} Std. ${mins} Min.`;
+      return this.t.t('qobuz.hoursMinutes', { hours, minutes: mins });
     }
-    return `${mins} Min.`;
+    return this.t.t('qobuz.minutes', { minutes: mins });
   }
 
   isTrackHiRes(track: QobuzTrack): boolean {
@@ -544,7 +547,7 @@ export class AlbumDetailComponent implements OnInit, OnDestroy {
 
     const alb = this.album();
     if (!alb?.id || !alb?.title || !alb?.artist?.name) {
-      this.albumInfoError.set('Album-Informationen nicht verfügbar');
+      this.albumInfoError.set(this.t.t('qobuz.albumCouldNotLoad'));
       return;
     }
 
@@ -555,7 +558,7 @@ export class AlbumDetailComponent implements OnInit, OnDestroy {
         this.loadingAlbumInfo.set(false);
       },
       error: (err: Error) => {
-        this.albumInfoError.set(err.message || 'Fehler beim Laden der Album-Info');
+        this.albumInfoError.set(err.message || this.t.t('error.albumInfoLoadFailed'));
         this.loadingAlbumInfo.set(false);
       }
     });

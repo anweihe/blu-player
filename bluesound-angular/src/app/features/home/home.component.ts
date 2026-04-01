@@ -7,6 +7,7 @@ import { ProfileService } from '../../core/services/profile.service';
 import { NavigationStateService } from '../../core/services/navigation-state.service';
 import { HistorySection, HistoryDisplayItem } from '../../core/models';
 import { ProfileSwitcherComponent } from '../../layout';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface SourceCard {
   id: string;
@@ -21,7 +22,7 @@ interface SourceCard {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, ProfileSwitcherComponent],
+  imports: [CommonModule, RouterLink, ProfileSwitcherComponent, TranslatePipe],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -33,7 +34,7 @@ interface SourceCard {
             <button
               class="w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
               (click)="toggleMenu()"
-              aria-label="Menü"
+              [attr.aria-label]="'nav.menu' | translate"
             >
               <svg class="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
@@ -74,8 +75,8 @@ interface SourceCard {
       <main class="px-4 py-8 max-w-xl mx-auto pb-28">
         <!-- Title -->
         <div class="text-center mb-6">
-          <h2 class="text-2xl font-bold tracking-tight mb-1.5">Musik streamen</h2>
-          <p class="text-sm text-text-secondary">Wähle eine Quelle um loszulegen</p>
+          <h2 class="text-2xl font-bold tracking-tight mb-1.5">{{ 'home.streamMusic' | translate }}</h2>
+          <p class="text-sm text-text-secondary">{{ 'home.chooseSource' | translate }}</p>
         </div>
 
         <!-- Source Grid -->
@@ -219,7 +220,7 @@ interface SourceCard {
               <circle cx="12" cy="12" r="3"/>
               <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
             </svg>
-            <span>Bluesound Players verwalten</span>
+            <span>{{ 'home.managePlayers' | translate }}</span>
           </a>
         </div>
       </main>

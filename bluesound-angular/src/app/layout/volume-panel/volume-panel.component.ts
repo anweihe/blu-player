@@ -2,11 +2,12 @@ import { Component, inject, HostListener, ElementRef, ViewChild } from '@angular
 import { CommonModule } from '@angular/common';
 import { PlayerStateService } from '../../core/services/player-state.service';
 import { PlaybackService } from '../../core/services/playback.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-volume-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     @if (playerState.isVolumePanelVisible()) {
       <!-- Backdrop -->
@@ -22,7 +23,7 @@ import { PlaybackService } from '../../core/services/playback.service';
       >
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-semibold">Lautstärke</h3>
+          <h3 class="text-lg font-semibold">{{ 'volume.title' | translate }}</h3>
           <button
             class="w-8 h-8 rounded-full hover:bg-bg-card flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
             (click)="close()"
@@ -39,8 +40,8 @@ import { PlaybackService } from '../../core/services/playback.service';
             <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
             </svg>
-            <p class="font-medium">Fixed Volume</p>
-            <p class="text-sm mt-1">Die Lautstärke wird extern gesteuert</p>
+            <p class="font-medium">{{ 'volume.fixedVolume' | translate }}</p>
+            <p class="text-sm mt-1">{{ 'volume.externalControl' | translate }}</p>
           </div>
         } @else {
           <!-- Volume Slider -->
@@ -120,7 +121,7 @@ import { PlaybackService } from '../../core/services/playback.service';
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              Browser-Wiedergabe
+              {{ 'player.browserPlayback' | translate }}
             </span>
           } @else if (playerState.selectedPlayer()) {
             <span class="flex items-center justify-center gap-2">

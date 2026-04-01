@@ -81,7 +81,7 @@ public class TuneInController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to discover players");
-            return Ok(new { success = false, error = "Player-Suche fehlgeschlagen" });
+            return Ok(new { success = false, error = "error.playerSearchFailed" });
         }
     }
 
@@ -89,7 +89,7 @@ public class TuneInController : ControllerBase
     {
         if (string.IsNullOrEmpty(playerIp))
         {
-            return Ok(new { success = false, error = "Fehlende Player-IP" });
+            return Ok(new { success = false, error = "error.missingPlayerIp" });
         }
 
         _logger.LogInformation("Fetching TuneIn menu from player {Ip}:{Port}", playerIp, port);
@@ -98,7 +98,7 @@ public class TuneInController : ControllerBase
 
         if (string.IsNullOrEmpty(xml))
         {
-            return Ok(new { success = false, error = "TuneIn-Menu konnte nicht geladen werden" });
+            return Ok(new { success = false, error = "error.tuneInMenuFailed" });
         }
 
         try
@@ -109,7 +109,7 @@ public class TuneInController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to parse TuneIn menu XML");
-            return Ok(new { success = false, error = "Fehler beim Parsen der TuneIn-Daten" });
+            return Ok(new { success = false, error = "error.tuneInParseFailed" });
         }
     }
 
@@ -117,7 +117,7 @@ public class TuneInController : ControllerBase
     {
         if (string.IsNullOrEmpty(playerIp) || string.IsNullOrEmpty(uri))
         {
-            return Ok(new { success = false, error = "Fehlende Parameter" });
+            return Ok(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Browsing TuneIn at {Uri} on player {Ip}:{Port}", uri, playerIp, port);
@@ -126,7 +126,7 @@ public class TuneInController : ControllerBase
 
         if (string.IsNullOrEmpty(xml))
         {
-            return Ok(new { success = false, error = "TuneIn-Kategorie konnte nicht geladen werden" });
+            return Ok(new { success = false, error = "error.categoryLoadFailed" });
         }
 
         try
@@ -175,7 +175,7 @@ public class TuneInController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to parse TuneIn browse XML");
-            return Ok(new { success = false, error = "Fehler beim Parsen der TuneIn-Daten" });
+            return Ok(new { success = false, error = "error.tuneInParseFailed" });
         }
     }
 
@@ -186,7 +186,7 @@ public class TuneInController : ControllerBase
 
         if (request == null || string.IsNullOrEmpty(request.Ip) || string.IsNullOrEmpty(request.PlayUrl))
         {
-            return Ok(new { success = false, error = "Fehlende Parameter" });
+            return Ok(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Playing TuneIn station on {Ip}:{Port}: {Title}", request.Ip, request.Port, request.Title ?? request.PlayUrl);
@@ -200,7 +200,7 @@ public class TuneInController : ControllerBase
 
         if (!success)
         {
-            return Ok(new { success = false, error = "Station konnte nicht abgespielt werden" });
+            return Ok(new { success = false, error = "error.stationPlayFailed" });
         }
 
         return Ok(new { success = true });
@@ -210,14 +210,14 @@ public class TuneInController : ControllerBase
     {
         if (string.IsNullOrEmpty(ip))
         {
-            return Ok(new { success = false, error = "Fehlende IP-Adresse" });
+            return Ok(new { success = false, error = "error.missingIpAddress" });
         }
 
         var status = await _playerService.GetPlaybackStatusAsync(ip, port);
 
         if (status == null)
         {
-            return Ok(new { success = false, error = "Status konnte nicht abgerufen werden" });
+            return Ok(new { success = false, error = "error.statusFetchFailed" });
         }
 
         var imageUrl = status.ImageUrl;
@@ -251,7 +251,7 @@ public class TuneInController : ControllerBase
 
         if (request == null || string.IsNullOrEmpty(request.Ip) || string.IsNullOrEmpty(request.Action))
         {
-            return Ok(new { success = false, error = "Fehlende Parameter" });
+            return Ok(new { success = false, error = "error.missingParameters" });
         }
 
         _logger.LogInformation("Bluesound control: {Action} on {Ip}:{Port}", request.Action, request.Ip, request.Port);
@@ -277,12 +277,12 @@ public class TuneInController : ControllerBase
 
         if (request == null || string.IsNullOrEmpty(request.ProfileId))
         {
-            return Ok(new { success = false, error = "Fehlende ProfileId" });
+            return Ok(new { success = false, error = "error.missingProfileId" });
         }
 
         if (string.IsNullOrEmpty(request.ActionUrl))
         {
-            return Ok(new { success = false, error = "Fehlende ActionUrl" });
+            return Ok(new { success = false, error = "error.missingActionUrl" });
         }
 
         await _historyService.SaveTuneInAsync(request.ProfileId, request.Title, request.ImageUrl, request.ActionUrl);

@@ -2,11 +2,13 @@ import { Component, inject, signal, Output, EventEmitter, OnInit, HostListener }
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProfileService, Profile } from '../../core/services/profile.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../core/services/translation.service';
 
 @Component({
   selector: 'app-profile-switcher',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <!-- Modal Backdrop -->
     <div
@@ -27,7 +29,7 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
     >
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b border-border-subtle">
-        <h2 class="text-lg font-semibold">Profile</h2>
+        <h2 class="text-lg font-semibold">{{ 'profile.profiles' | translate }}</h2>
         <button
           class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bg-card transition-colors"
           (click)="close()"
@@ -42,11 +44,11 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
       <div class="max-h-80 overflow-y-auto p-2">
         @if (profileService.isLoading()) {
           <div class="p-4 text-center text-text-muted">
-            Lade Profile...
+            {{ 'profile.loading' | translate }}
           </div>
         } @else if (profileService.profiles().length === 0) {
           <div class="p-4 text-center text-text-muted">
-            Keine Profile vorhanden
+            {{ 'profile.noProfiles' | translate }}
           </div>
         } @else {
           @for (profile of profileService.profiles(); track profile.id) {
@@ -75,13 +77,13 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
                 </div>
                 <div class="text-sm text-text-muted">
                   @if (profile.qobuz?.authToken) {
-                    <span class="text-green-600">Qobuz verbunden</span>
+                    <span class="text-green-600">{{ 'profile.qobuzConnected' | translate }}</span>
                     @if (profile.qobuz?.displayName) {
                       <span class="mx-1">-</span>
                       <span>{{ profile.qobuz!.displayName }}</span>
                     }
                   } @else {
-                    <span class="text-text-muted">Nicht bei Qobuz eingeloggt</span>
+                    <span class="text-text-muted">{{ 'profile.notLoggedIn' | translate }}</span>
                   }
                 </div>
               </div>
@@ -91,7 +93,7 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
                 <button
                   class="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-error hover:bg-error/10 transition-colors flex-shrink-0"
                   (click)="confirmDeleteProfile($event, profile)"
-                  title="Profil löschen"
+                  [title]="'profile.deleteTooltip' | translate"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -111,7 +113,7 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
             <input
               type="text"
               [(ngModel)]="newProfileName"
-              placeholder="Profilname"
+              [placeholder]="'profile.namePlaceholder' | translate"
               class="flex-1 px-3 py-2 bg-bg-card border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-qobuz/50"
               (keydown.enter)="createProfile()"
               (keydown.escape)="cancelCreate()"
@@ -122,13 +124,13 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
               [disabled]="!newProfileName.trim()"
               (click)="createProfile()"
             >
-              Erstellen
+              {{ 'common.create' | translate }}
             </button>
             <button
               class="px-3 py-2 text-text-muted hover:bg-bg-card rounded-lg text-sm transition-colors"
               (click)="cancelCreate()"
             >
-              Abbrechen
+              {{ 'common.cancel' | translate }}
             </button>
           </div>
         } @else {
@@ -140,7 +142,7 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            <span class="font-medium">Neues Profil erstellen</span>
+            <span class="font-medium">{{ 'profile.createNew' | translate }}</span>
           </button>
         }
       </div>
@@ -156,11 +158,11 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
           class="bg-bg-primary rounded-2xl p-6 max-w-sm w-full shadow-2xl"
           (click)="$event.stopPropagation()"
         >
-          <h3 class="text-lg font-semibold mb-2">Profil löschen?</h3>
+          <h3 class="text-lg font-semibold mb-2">{{ 'profile.deleteTitle' | translate }}</h3>
           <p class="text-text-muted mb-4">
-            Möchtest du das Profil "{{ profileToDelete()?.name }}" wirklich löschen?
+            {{ t.t('profile.deleteConfirm', { name: profileToDelete()?.name ?? '' }) }}
             @if (profileToDelete()?.qobuz) {
-              Die Qobuz-Verbindung wird dabei ebenfalls entfernt.
+              {{ 'profile.deleteQobuzHint' | translate }}
             }
           </p>
           <div class="flex gap-3 justify-end">
@@ -168,13 +170,13 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
               class="px-4 py-2 rounded-lg text-text-muted hover:bg-bg-card transition-colors"
               (click)="cancelDelete()"
             >
-              Abbrechen
+              {{ 'common.cancel' | translate }}
             </button>
             <button
               class="px-4 py-2 bg-error text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
               (click)="deleteProfile()"
             >
-              Löschen
+              {{ 'profile.deleteButton' | translate }}
             </button>
           </div>
         </div>
@@ -189,6 +191,7 @@ import { ProfileService, Profile } from '../../core/services/profile.service';
 })
 export class ProfileSwitcherComponent implements OnInit {
   readonly profileService = inject(ProfileService);
+  readonly t = inject(TranslationService);
 
   // Outputs
   @Output() closed = new EventEmitter<void>();
@@ -220,7 +223,7 @@ export class ProfileSwitcherComponent implements OnInit {
     this.newProfileName = '';
     // Focus input after render
     setTimeout(() => {
-      const input = document.querySelector('input[placeholder="Profilname"]') as HTMLInputElement;
+      const input = document.querySelector('input[type="text"]') as HTMLInputElement;
       input?.focus();
     });
   }

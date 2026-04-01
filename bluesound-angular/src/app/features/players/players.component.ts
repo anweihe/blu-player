@@ -8,11 +8,13 @@ import { ProfileService } from '../../core/services/profile.service';
 import { NavigationStateService } from '../../core/services/navigation-state.service';
 import { BluesoundPlayer, PlayerGroup } from '../../core/models';
 import { ProfileSwitcherComponent } from '../../layout';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../core/services/translation.service';
 
 @Component({
   selector: 'app-players',
   standalone: true,
-  imports: [CommonModule, ProfileSwitcherComponent],
+  imports: [CommonModule, ProfileSwitcherComponent, TranslatePipe],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -23,7 +25,7 @@ import { ProfileSwitcherComponent } from '../../layout';
             <button
               class="w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
               (click)="toggleMenu()"
-              aria-label="Menü"
+              [attr.aria-label]="'nav.menu' | translate"
             >
               <svg class="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
@@ -49,7 +51,7 @@ import { ProfileSwitcherComponent } from '../../layout';
                 <path d="M23 4v6h-6M1 20v-6h6"/>
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
               </svg>
-              <span class="hidden sm:inline text-sm">Aktualisieren</span>
+              <span class="hidden sm:inline text-sm">{{ 'common.refresh' | translate }}</span>
             </button>
 
             @if (auth.isLoggedIn()) {
@@ -81,7 +83,7 @@ import { ProfileSwitcherComponent } from '../../layout';
             @if (organizedPlayers().groups.length > 0) {
               <span>
                 <strong class="text-text-primary">{{ organizedPlayers().groups.length }}</strong>
-                Gruppe{{ organizedPlayers().groups.length !== 1 ? 'n' : '' }}
+                {{ organizedPlayers().groups.length !== 1 ? ('player.groups' | translate) : ('player.group' | translate) }}
               </span>
             }
             @if (organizedPlayers().groups.length > 0 && organizedPlayers().standalone.length > 0) {
@@ -117,7 +119,7 @@ import { ProfileSwitcherComponent } from '../../layout';
           </div>
           <div class="flex items-center justify-center gap-3 mt-8 text-text-secondary">
             <div class="w-5 h-5 border-2 border-accent-qobuz/30 border-t-accent-qobuz rounded-full animate-spin"></div>
-            <span class="text-sm">Suche nach Playern im Netzwerk...</span>
+            <span class="text-sm">{{ 'player.searchingPlayers' | translate }}</span>
           </div>
         } @else if (players().length === 0) {
           <!-- Empty State -->
@@ -129,9 +131,9 @@ import { ProfileSwitcherComponent } from '../../layout';
                 <line x1="12" y1="6" x2="12" y2="6.01"/>
               </svg>
             </div>
-            <h2 class="text-xl font-bold mb-2">Keine Player gefunden</h2>
+            <h2 class="text-xl font-bold mb-2">{{ 'player.noPlayersFound' | translate }}</h2>
             <p class="text-text-secondary mb-6 max-w-sm">
-              Stellen Sie sicher, dass Ihre Bluesound Player eingeschaltet sind und Sie sich im selben Netzwerk befinden.
+              {{ 'player.noPlayersFoundDescription' | translate }}
             </p>
             <button
               class="flex items-center gap-2 px-5 py-2.5 bg-accent-qobuz text-white rounded-lg font-medium hover:bg-accent-qobuz/90 transition-colors"
@@ -141,7 +143,7 @@ import { ProfileSwitcherComponent } from '../../layout';
                 <path d="M23 4v6h-6M1 20v-6h6"/>
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
               </svg>
-              Erneut suchen
+              {{ 'common.retry' | translate }}
             </button>
           </div>
         } @else {
@@ -166,7 +168,7 @@ import { ProfileSwitcherComponent } from '../../layout';
                       <h3 class="font-bold text-text-primary text-base truncate leading-snug">
                         {{ group.master.groupName || group.master.name }}
                       </h3>
-                      <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Gruppe</span>
+                      <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">{{ 'player.group' | translate }}</span>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0 mt-0.5">
                       @if (isSelected(group.master)) {
@@ -180,7 +182,7 @@ import { ProfileSwitcherComponent } from '../../layout';
                       <button
                         class="w-7 h-7 rounded-full bg-bg-secondary border border-border-subtle flex items-center justify-center text-text-muted hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30 transition-colors"
                         (click)="$event.stopPropagation(); dissolveGroup(group.master, group.members)"
-                        title="Gruppe auflösen"
+                        [title]="'player.dissolveGroup' | translate"
                       >
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -199,7 +201,7 @@ import { ProfileSwitcherComponent } from '../../layout';
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                         <polyline points="22 4 12 14.01 9 11.01"/>
                       </svg>
-                      Aktiver Player
+                      {{ 'player.activePlayer' | translate }}
                     </div>
                   </div>
                 }
@@ -275,7 +277,7 @@ import { ProfileSwitcherComponent } from '../../layout';
             @if (organizedPlayers().groups.length > 0 && organizedPlayers().standalone.length > 0) {
               <div class="flex items-center gap-3 py-1">
                 <div class="flex-1 h-px bg-border-subtle"></div>
-                <span class="text-xs text-text-muted uppercase tracking-wider">Einzeln</span>
+                <span class="text-xs text-text-muted uppercase tracking-wider">{{ 'player.standalone' | translate }}</span>
                 <div class="flex-1 h-px bg-border-subtle"></div>
               </div>
             }
@@ -346,7 +348,7 @@ import { ProfileSwitcherComponent } from '../../layout';
                               <path d="M8 15l4-4v8l-4-4z"/>
                               <path d="M16 12a4 4 0 0 1 0 6"/>
                             </svg>
-                            <span>Fixed Volume</span>
+                            <span>{{ 'player.fixedVolume' | translate }}</span>
                           </div>
                         } @else {
                           <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
@@ -387,7 +389,7 @@ import { ProfileSwitcherComponent } from '../../layout';
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                             <polyline points="22 4 12 14.01 9 11.01"/>
                           </svg>
-                          Aktiver Player
+                          {{ 'player.activePlayer' | translate }}
                         </div>
                       </div>
                     }
@@ -402,7 +404,7 @@ import { ProfileSwitcherComponent } from '../../layout';
           @if (selectedPlayer() && nowPlaying()) {
             <div class="mt-6 bg-bg-card border border-border-subtle rounded-xl overflow-hidden">
               <div class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-                <h2 class="font-semibold">Wiedergabe</h2>
+                <h2 class="font-semibold">{{ 'player.nowPlaying' | translate }}</h2>
                 <span class="px-2.5 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium">
                   {{ selectedPlayer()!.name }}
                 </span>
@@ -425,7 +427,7 @@ import { ProfileSwitcherComponent } from '../../layout';
 
                   <!-- Info -->
                   <div class="flex-1 min-w-0">
-                    <h3 class="font-semibold text-text-primary truncate mb-1">{{ nowPlaying()!.title || 'Kein Titel' }}</h3>
+                    <h3 class="font-semibold text-text-primary truncate mb-1">{{ nowPlaying()!.title || ('common.noTitle' | translate) }}</h3>
                     <p class="text-sm text-text-secondary truncate mb-0.5">{{ nowPlaying()!.artist }}</p>
                     <p class="text-xs text-text-muted truncate mb-3">{{ nowPlaying()!.album }}</p>
 
@@ -508,6 +510,7 @@ export class PlayersComponent implements OnInit, OnDestroy {
   private readonly bluesoundApi = inject(BluesoundApiService);
   private readonly playerState = inject(PlayerStateService);
   private readonly navState = inject(NavigationStateService);
+  private readonly t = inject(TranslationService);
 
   // Profile switcher
   readonly showProfileSwitcher = signal(false);
@@ -666,8 +669,8 @@ export class PlayersComponent implements OnInit, OnDestroy {
   }
 
   getPlayerBadgeText(player: BluesoundPlayer): string {
-    if (player.isStereoPaired) return 'Stereo';
-    return 'Einzeln';
+    if (player.isStereoPaired) return this.t.t('player.stereoPair');
+    return this.t.t('player.standalone');
   }
 
   controlPlayback(action: 'toggle' | 'previous' | 'next'): void {

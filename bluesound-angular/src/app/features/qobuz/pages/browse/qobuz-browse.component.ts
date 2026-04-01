@@ -21,6 +21,7 @@ import {
 } from '../../../../shared/components';
 import { InfiniteScrollDirective } from '../../../../shared/directives';
 import { ProfileSwitcherComponent } from '../../../../layout';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-qobuz-browse',
@@ -35,7 +36,8 @@ import { ProfileSwitcherComponent } from '../../../../layout';
     GenreFilterComponent,
     PlaylistTagsFilterComponent,
     InfiniteScrollDirective,
-    ProfileSwitcherComponent
+    ProfileSwitcherComponent,
+    TranslatePipe
   ],
   template: `
     <div class="qobuz-browse" appInfiniteScroll [scrollDisabled]="!canLoadMore()" (scrolled)="loadMore()">
@@ -62,7 +64,7 @@ import { ProfileSwitcherComponent } from '../../../../layout';
             </div>
           </div>
           <div class="header-actions">
-            <a routerLink="/qobuz/search" class="search-btn" title="Suchen">
+            <a routerLink="/qobuz/search" class="search-btn" [title]="'qobuz.search' | translate">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -97,25 +99,25 @@ import { ProfileSwitcherComponent } from '../../../../layout';
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Neuheiten</span>
+            <span>{{ 'qobuz.newReleases' | translate }}</span>
           </button>
           <button class="tab-btn" [class.active]="activeTab() === 'album-charts'" (click)="setTab('album-charts')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            <span>Album-Charts</span>
+            <span>{{ 'qobuz.albumCharts' | translate }}</span>
           </button>
           <button class="tab-btn" [class.active]="activeTab() === 'playlists'" (click)="setTab('playlists')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
-            <span>Qobuz Playlists</span>
+            <span>{{ 'qobuz.playlists' | translate }}</span>
           </button>
           <button class="tab-btn" [class.active]="activeTab() === 'favorites'" (click)="setTab('favorites')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
-            <span>Favoriten</span>
+            <span>{{ 'qobuz.favorites' | translate }}</span>
           </button>
         </nav>
 
@@ -144,21 +146,21 @@ import { ProfileSwitcherComponent } from '../../../../layout';
               [class.active]="favoritesSubTab() === 'albums'"
               (click)="setFavoritesSubTab('albums')"
             >
-              Alben
+              {{ 'qobuz.albums' | translate }}
             </button>
             <button
               class="sub-tab"
               [class.active]="favoritesSubTab() === 'tracks'"
               (click)="setFavoritesSubTab('tracks')"
             >
-              Tracks
+              {{ 'common.tracks' | translate }}
             </button>
             <button
               class="sub-tab"
               [class.active]="favoritesSubTab() === 'artists'"
               (click)="setFavoritesSubTab('artists')"
             >
-              Künstler
+              {{ 'qobuz.artists' | translate }}
             </button>
           </div>
         }
@@ -195,7 +197,7 @@ import { ProfileSwitcherComponent } from '../../../../layout';
               <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
               </svg>
-              <p>Keine Alben gefunden</p>
+              <p>{{ 'qobuz.noAlbumsFound' | translate }}</p>
             </div>
           }
         }
@@ -217,7 +219,7 @@ import { ProfileSwitcherComponent } from '../../../../layout';
               <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
-              <p>Keine Playlists gefunden</p>
+              <p>{{ 'qobuz.noPlaylistsFound' | translate }}</p>
             </div>
           }
         }
@@ -241,7 +243,7 @@ import { ProfileSwitcherComponent } from '../../../../layout';
               <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
-              <p>Keine Favoriten-Tracks</p>
+              <p>{{ 'qobuz.noFavoriteTracks' | translate }}</p>
             </div>
           }
         }
@@ -259,7 +261,7 @@ import { ProfileSwitcherComponent } from '../../../../layout';
               <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              <p>Keine Favoriten-Künstler</p>
+              <p>{{ 'qobuz.noFavoriteArtists' | translate }}</p>
             </div>
           }
         }
@@ -268,7 +270,7 @@ import { ProfileSwitcherComponent } from '../../../../layout';
         @if (loadingMore()) {
           <div class="loading-more">
             <div class="spinner"></div>
-            <span>Lade mehr...</span>
+            <span>{{ 'common.loadingMore' | translate }}</span>
           </div>
         }
       </main>

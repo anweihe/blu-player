@@ -111,6 +111,7 @@ public class SettingsController : ControllerBase
             "qobuz" => await UpdateQobuzCredentials(id!, body),
             "quality" => await UpdateQuality(id!, body),
             "player" => await UpdatePlayer(id!, body),
+            "language" => await UpdateLanguage(id!, body),
             "mistralapikey" => await SetMistralApiKey(body),
             _ => BadRequest("Unknown handler")
         };
@@ -172,19 +173,33 @@ public class SettingsController : ControllerBase
         return Ok(ApiResponse<ProfileDto>.Ok(profile));
     }
 
+    private async Task<IActionResult> UpdateLanguage(string id, object body)
+    {
+        var request = System.Text.Json.JsonSerializer.Deserialize<UpdateLanguageRequest>(
+            System.Text.Json.JsonSerializer.Serialize(body));
+        if (request == null) return BadRequest("Invalid request");
+
+        var profile = await _settingsService.UpdateLanguageAsync(id, request.Language);
+        if (profile == null)
+        {
+            return Ok(ApiResponse<ProfileDto>.Fail("Profile not found"));
+        }
+        return Ok(ApiResponse<ProfileDto>.Ok(profile));
+    }
+
     private async Task<IActionResult> SetMistralApiKey(object body)
     {
         var request = System.Text.Json.JsonSerializer.Deserialize<SetApiKeyRequest>(
             System.Text.Json.JsonSerializer.Serialize(body));
         if (request == null || string.IsNullOrWhiteSpace(request.ApiKey))
         {
-            return Ok(ApiResponse.Fail("API Key darf nicht leer sein"));
+            return Ok(ApiResponse.Fail("error.apiKeyEmpty"));
         }
 
         var success = await _settingsService.SetMistralApiKeyAsync(request.ApiKey);
         if (!success)
         {
-            return Ok(ApiResponse.Fail("Fehler beim Speichern des API Keys"));
+            return Ok(ApiResponse.Fail("error.apiKeySaveFailed"));
         }
         return Ok(ApiResponse.Ok());
     }
@@ -225,6 +240,6 @@ public class SettingsController : ControllerBase
     private async Task<IActionResult> DeleteMistralApiKey()
     {
         var success = await _settingsService.DeleteMistralApiKeyAsync();
-        return Ok(success ? ApiResponse.Ok() : ApiResponse.Fail("Fehler beim Löschen"));
+        return Ok(success ? ApiResponse.Ok() : ApiResponse.Fail("error.deleteFailed"));
     }
 }

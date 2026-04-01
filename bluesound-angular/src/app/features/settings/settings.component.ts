@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { NavigationStateService } from '../../core/services/navigation-state.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../core/services/translation.service';
+import { ProfileService } from '../../core/services/profile.service';
 
 interface ApiKeyStatus {
   isConfigured: boolean;
@@ -17,7 +20,7 @@ interface ApiResponse<T> {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="settings-page min-h-screen bg-bg-primary pb-24">
       <!-- Header -->
@@ -27,7 +30,7 @@ interface ApiResponse<T> {
           <button
             class="w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center hover:bg-bg-card-hover transition-colors"
             (click)="toggleMenu()"
-            aria-label="Menü"
+            [attr.aria-label]="'nav.menu' | translate"
           >
             <svg class="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>
@@ -37,7 +40,7 @@ interface ApiResponse<T> {
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
           </svg>
-          <h1 class="text-xl font-bold">Einstellungen</h1>
+          <h1 class="text-xl font-bold">{{ 'settings.title' | translate }}</h1>
         </div>
       </header>
 
@@ -54,8 +57,8 @@ interface ApiResponse<T> {
               </svg>
             </div>
             <div>
-              <h2 class="text-lg font-semibold">KI-Integration</h2>
-              <p class="text-sm text-text-muted">Verbinde externe KI-Dienste</p>
+              <h2 class="text-lg font-semibold">{{ 'settings.aiIntegration' | translate }}</h2>
+              <p class="text-sm text-text-muted">{{ 'settings.aiIntegrationDescription' | translate }}</p>
             </div>
           </div>
 
@@ -85,7 +88,7 @@ interface ApiResponse<T> {
               <!-- Status -->
               <div class="flex items-center gap-2 text-sm" [class.text-accent-qobuz]="isConfigured()" [class.text-text-muted]="!isConfigured()">
                 <span class="w-2 h-2 rounded-full" [class.bg-accent-qobuz]="isConfigured()" [class.bg-text-muted]="!isConfigured()"></span>
-                <span>{{ isConfigured() ? 'Konfiguriert' : 'Nicht konfiguriert' }}</span>
+                <span>{{ isConfigured() ? ('settings.configured' | translate) : ('settings.notConfigured' | translate) }}</span>
               </div>
             </div>
 
@@ -124,7 +127,7 @@ interface ApiResponse<T> {
                       </button>
                     </div>
                     <p class="mt-2 text-xs text-text-muted">
-                      Der Key wird verschlüsselt gespeichert und ist danach nicht mehr einsehbar.
+                      {{ 'settings.apiKeyHint' | translate }}
                     </p>
                   </div>
 
@@ -143,7 +146,7 @@ interface ApiResponse<T> {
                         <polyline points="7 3 7 8 15 8"/>
                       </svg>
                     }
-                    <span>Speichern</span>
+                    <span>{{ 'common.save' | translate }}</span>
                   </button>
                 </div>
               } @else {
@@ -155,7 +158,7 @@ interface ApiResponse<T> {
                         <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
                         <polyline points="22 4 12 14.01 9 11.01"/>
                       </svg>
-                      <span class="text-sm font-medium">API Key konfiguriert</span>
+                      <span class="text-sm font-medium">{{ 'settings.apiKeyConfigured' | translate }}</span>
                     </div>
                     <span class="text-text-muted text-sm tracking-widest">::::::::::::::::::</span>
                   </div>
@@ -171,7 +174,7 @@ interface ApiResponse<T> {
                       <line x1="10" y1="11" x2="10" y2="17"/>
                       <line x1="14" y1="11" x2="14" y2="17"/>
                     </svg>
-                    <span>Löschen</span>
+                    <span>{{ 'common.delete' | translate }}</span>
                   </button>
                 </div>
               }
@@ -179,18 +182,46 @@ interface ApiResponse<T> {
           </div>
         </section>
 
-        <!-- Future Section Placeholder -->
-        <section class="opacity-50">
+        <!-- Language Section -->
+        <section class="mb-8">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center">
-              <svg class="w-5 h-5 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+            <div class="w-10 h-10 rounded-lg bg-accent-qobuz/10 flex items-center justify-center">
+              <svg class="w-5 h-5 text-accent-qobuz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M2 12h20"/>
+                <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
               </svg>
             </div>
             <div>
-              <h2 class="text-lg font-semibold">Weitere Einstellungen</h2>
-              <p class="text-sm text-text-muted">Demnächst verfügbar</p>
+              <h2 class="text-lg font-semibold">{{ 'settings.language' | translate }}</h2>
+              <p class="text-sm text-text-muted">{{ 'settings.languageDescription' | translate }}</p>
+            </div>
+          </div>
+
+          <div class="bg-bg-card border border-border-subtle rounded-xl p-4">
+            <div class="flex gap-3">
+              <button
+                class="flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-all"
+                [class.bg-accent-qobuz]="translationService.currentLang() === 'de'"
+                [class.text-white]="translationService.currentLang() === 'de'"
+                [class.bg-bg-secondary]="translationService.currentLang() !== 'de'"
+                [class.text-text-secondary]="translationService.currentLang() !== 'de'"
+                [class.hover:bg-bg-card-hover]="translationService.currentLang() !== 'de'"
+                (click)="setLanguage('de')"
+              >
+                Deutsch
+              </button>
+              <button
+                class="flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-all"
+                [class.bg-accent-qobuz]="translationService.currentLang() === 'en'"
+                [class.text-white]="translationService.currentLang() === 'en'"
+                [class.bg-bg-secondary]="translationService.currentLang() !== 'en'"
+                [class.text-text-secondary]="translationService.currentLang() !== 'en'"
+                [class.hover:bg-bg-card-hover]="translationService.currentLang() !== 'en'"
+                (click)="setLanguage('en')"
+              >
+                English
+              </button>
             </div>
           </div>
         </section>
@@ -234,6 +265,9 @@ interface ApiResponse<T> {
 export class SettingsComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly navState = inject(NavigationStateService);
+  readonly translationService = inject(TranslationService);
+  private readonly t = this.translationService;
+  private readonly profileService = inject(ProfileService);
 
   readonly isConfigured = signal(false);
   readonly saving = signal(false);
@@ -261,7 +295,7 @@ export class SettingsComponent implements OnInit {
             this.isConfigured.set(response.data.isConfigured);
           }
         },
-        error: () => this.showToast('Fehler beim Laden des Status', 'error')
+        error: () => this.showToast(this.t.t('settings.loadStatusError'), 'error')
       });
   }
 
@@ -278,33 +312,42 @@ export class SettingsComponent implements OnInit {
           if (response.success) {
             this.apiKeyInput = '';
             this.isConfigured.set(true);
-            this.showToast('API Key erfolgreich gespeichert', 'success');
+            this.showToast(this.t.t('settings.saveSuccess'), 'success');
           } else {
-            this.showToast(response.error || 'Fehler beim Speichern', 'error');
+            this.showToast(response.error || this.t.t('settings.saveError'), 'error');
           }
         },
         error: () => {
           this.saving.set(false);
-          this.showToast('Verbindungsfehler', 'error');
+          this.showToast(this.t.t('settings.connectionError'), 'error');
         }
       });
   }
 
   deleteApiKey(): void {
-    if (!confirm('API Key wirklich löschen?')) return;
+    if (!confirm(this.t.t('settings.deleteConfirm'))) return;
 
     this.http.delete<ApiResponse<void>>('/api/settings?handler=mistralApiKey')
       .subscribe({
         next: response => {
           if (response.success) {
             this.isConfigured.set(false);
-            this.showToast('API Key gelöscht', 'success');
+            this.showToast(this.t.t('settings.deleteSuccess'), 'success');
           } else {
-            this.showToast(response.error || 'Fehler beim Löschen', 'error');
+            this.showToast(response.error || this.t.t('settings.deleteError'), 'error');
           }
         },
-        error: () => this.showToast('Verbindungsfehler', 'error')
+        error: () => this.showToast(this.t.t('settings.connectionError'), 'error')
       });
+  }
+
+  setLanguage(lang: 'de' | 'en'): void {
+    this.translationService.setLanguage(lang);
+    const profileId = this.profileService.activeProfile()?.id;
+    if (profileId) {
+      this.http.put(`/api/settings?handler=language&id=${profileId}`, { language: lang })
+        .subscribe();
+    }
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {

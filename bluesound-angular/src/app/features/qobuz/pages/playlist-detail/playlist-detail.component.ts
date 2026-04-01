@@ -13,11 +13,13 @@ import {
   getPlaylistCoverUrl
 } from '../../../../core/models';
 import { TrackItemComponent } from '../../../../shared/components';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../../core/services/translation.service';
 
 @Component({
   selector: 'app-playlist-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, TrackItemComponent],
+  imports: [CommonModule, RouterLink, TrackItemComponent, TranslatePipe],
   template: `
     <div class="playlist-detail bg-bg-primary min-h-screen pb-28">
       @if (loading()) {
@@ -64,7 +66,7 @@ import { TrackItemComponent } from '../../../../shared/components';
               <div class="playlist-meta flex flex-col justify-center text-center md:text-left flex-1 min-w-0">
                 <!-- Type -->
                 <span class="text-xs text-text-muted uppercase tracking-wider mb-2">
-                  Playlist
+                  {{ 'navPreset.playlist' | translate }}
                 </span>
 
                 <!-- Title -->
@@ -75,18 +77,18 @@ import { TrackItemComponent } from '../../../../shared/components';
                 <!-- Owner -->
                 @if (playlist()?.owner?.name) {
                   <p class="text-text-secondary">
-                    von {{ playlist()?.owner?.name }}
+                    {{ 'qobuz.byOwner' | translate }} {{ playlist()?.owner?.name }}
                   </p>
                 }
 
                 <!-- Meta info -->
                 <div class="flex items-center justify-center md:justify-start gap-2 mt-3 text-sm text-text-muted flex-wrap">
-                  <span>{{ playlist()?.tracks_count }} Tracks</span>
+                  <span>{{ playlist()?.tracks_count }} {{ 'common.tracks' | translate }}</span>
                   <span class="text-border-subtle">•</span>
                   <span>{{ formatPlaylistDuration(playlist()?.duration ?? 0) }}</span>
                   @if (playlist()?.updated_at) {
                     <span class="text-border-subtle">•</span>
-                    <span>Aktualisiert {{ formatDate(playlist()!.updated_at!) }}</span>
+                    <span>{{ 'common.updated' | translate }} {{ formatDate(playlist()!.updated_at!) }}</span>
                   }
                 </div>
 
@@ -106,13 +108,13 @@ import { TrackItemComponent } from '../../../../shared/components';
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z"/>
                     </svg>
-                    Abspielen
+                    {{ 'common.play' | translate }}
                   </button>
 
                   <button
                     class="flex items-center gap-2 px-4 py-2.5 bg-bg-secondary border border-border-subtle rounded-full text-sm hover:border-border-accent transition-colors"
                     (click)="shufflePlay()"
-                    title="Zufällige Wiedergabe"
+                    [title]="'qobuz.shufflePlay' | translate"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -130,8 +132,8 @@ import { TrackItemComponent } from '../../../../shared/components';
           <div class="hidden md:flex items-center gap-3 px-3 py-2 text-xs text-text-muted border-b border-border-subtle mb-2">
             <span class="w-8 text-center">#</span>
             <span class="w-10"></span>
-            <span class="flex-1">Titel</span>
-            <span class="w-20 text-right">Dauer</span>
+            <span class="flex-1">{{ 'common.title' | translate }}</span>
+            <span class="w-20 text-right">{{ 'common.duration' | translate }}</span>
             <span class="w-8"></span>
           </div>
 
@@ -157,7 +159,7 @@ import { TrackItemComponent } from '../../../../shared/components';
               <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
               </svg>
-              <p>Diese Playlist enthält keine Tracks</p>
+              <p>{{ 'qobuz.playlistEmpty' | translate }}</p>
             </div>
           }
         </div>
@@ -167,12 +169,12 @@ import { TrackItemComponent } from '../../../../shared/components';
           <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <p>Playlist konnte nicht geladen werden</p>
+          <p>{{ 'qobuz.playlistCouldNotLoad' | translate }}</p>
           <button
             routerLink="/qobuz/browse"
             class="mt-4 px-4 py-2 bg-accent-qobuz text-white rounded-lg hover:bg-accent-qobuz/90 transition-colors"
           >
-            Zurück zum Browser
+            {{ 'qobuz.backToBrowser' | translate }}
           </button>
         </div>
       }
@@ -253,6 +255,7 @@ export class PlaylistDetailComponent implements OnInit, OnDestroy {
   private readonly playbackService = inject(PlaybackService);
   private readonly navState = inject(NavigationStateService);
   private readonly contextMenu = inject(ContextMenuService);
+  private readonly t = inject(TranslationService);
 
   readonly loading = signal(true);
   readonly playlist = signal<QobuzPlaylistWithTracks | null>(null);
@@ -302,9 +305,9 @@ export class PlaylistDetailComponent implements OnInit, OnDestroy {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     if (hours > 0) {
-      return `${hours} Std. ${mins} Min.`;
+      return this.t.t('qobuz.hoursMinutes', { hours, minutes: mins });
     }
-    return `${mins} Min.`;
+    return this.t.t('qobuz.minutes', { minutes: mins });
   }
 
   formatDate(timestamp: number): string {

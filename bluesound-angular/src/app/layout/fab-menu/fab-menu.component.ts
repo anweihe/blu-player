@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { PlayerStateService } from '../../core/services/player-state.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface FabAction {
   id: string;
@@ -16,7 +17,7 @@ interface FabAction {
 @Component({
   selector: 'app-fab-menu',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     <!-- Backdrop when open -->
     @if (isOpen()) {
@@ -52,7 +53,7 @@ interface FabAction {
         class="fab-main w-14 h-14 rounded-2xl bg-accent-qobuz border-none cursor-pointer flex items-center justify-center shadow-xl transition-all duration-200 hover:shadow-2xl active:scale-95 relative z-[2]"
         [attr.aria-expanded]="isOpen()"
         aria-haspopup="true"
-        aria-label="Menü öffnen"
+        [attr.aria-label]="'nav.menu' | translate"
         (click)="toggle()"
       >
         <svg

@@ -40,7 +40,7 @@ public class RatingsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get album ratings");
-            return Ok(ApiResponse<List<AlbumRatingDto>>.Fail("Ratings konnten nicht geladen werden"));
+            return Ok(ApiResponse<List<AlbumRatingDto>>.Fail("error.ratingsLoadFailed"));
         }
     }
 }

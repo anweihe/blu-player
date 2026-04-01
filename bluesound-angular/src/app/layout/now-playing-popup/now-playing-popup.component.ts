@@ -6,13 +6,14 @@ import { PlaybackService } from '../../core/services/playback.service';
 import { formatDuration } from '../../core/models';
 import { QualitySelectorComponent } from '../quality-selector/quality-selector.component';
 import { PlayerSelectorComponent } from '../player-selector/player-selector.component';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 type PopupTab = 'player' | 'queue';
 
 @Component({
   selector: 'app-now-playing-popup',
   standalone: true,
-  imports: [CommonModule, RouterLink, QualitySelectorComponent, PlayerSelectorComponent],
+  imports: [CommonModule, RouterLink, QualitySelectorComponent, PlayerSelectorComponent, TranslatePipe],
   template: `
     <!-- Backdrop -->
     @if (playerState.isNowPlayingVisible()) {
@@ -47,7 +48,7 @@ type PopupTab = 'player' | 'queue';
             [class.text-text-muted]="activeTab() !== 'player'"
             (click)="setTab('player')"
           >
-            Aktueller Titel
+            {{ 'nowPlaying.currentTrack' | translate }}
             @if (activeTab() === 'player') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-qobuz"></div>
             }
@@ -58,7 +59,7 @@ type PopupTab = 'player' | 'queue';
             [class.text-text-muted]="activeTab() !== 'queue'"
             (click)="setTab('queue')"
           >
-            Warteschlange
+            {{ 'nowPlaying.queue' | translate }}
             @if (playerState.queue().length > 0) {
               <span class="ml-1 px-1.5 py-0.5 bg-accent-qobuz/10 text-accent-qobuz text-xs rounded">
                 {{ playerState.queue().length }}
@@ -90,17 +91,17 @@ type PopupTab = 'player' | 'queue';
 
               <!-- Track Info -->
               <div class="text-center mb-6 w-full max-w-md">
-                <h2 class="text-xl font-bold truncate mb-1">{{ trackTitle() || 'Kein Titel' }}</h2>
+                <h2 class="text-xl font-bold truncate mb-1">{{ trackTitle() || ('common.noTitle' | translate) }}</h2>
                 @if (artistId()) {
                   <a
                     [routerLink]="['/qobuz/artist', artistId()]"
                     class="text-text-secondary hover:text-accent-qobuz transition-colors"
                     (click)="close()"
                   >
-                    {{ artistName() || 'Unbekannter Künstler' }}
+                    {{ artistName() || ('common.unknownArtist' | translate) }}
                   </a>
                 } @else {
-                  <p class="text-text-secondary">{{ artistName() || 'Unbekannter Künstler' }}</p>
+                  <p class="text-text-secondary">{{ artistName() || ('common.unknownArtist' | translate) }}</p>
                 }
                 @if (albumTitle()) {
                   <p class="text-sm text-text-muted mt-1 truncate">{{ albumTitle() }}</p>
@@ -216,7 +217,7 @@ type PopupTab = 'player' | 'queue';
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                   </svg>
-                  <p>Warteschlange ist leer</p>
+                  <p>{{ 'nowPlaying.queueEmpty' | translate }}</p>
                 </div>
               } @else {
                 <div class="space-y-1">

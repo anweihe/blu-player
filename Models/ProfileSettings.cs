@@ -43,6 +43,11 @@ public class ProfileSettings
     /// </summary>
     public string? SelectedPlayerModel { get; set; }
 
+    /// <summary>
+    /// Preferred UI language: "de" or "en". Null = use browser default.
+    /// </summary>
+    public string? Language { get; set; }
+
     // Navigation property
     public UserProfile? UserProfile { get; set; }
 }

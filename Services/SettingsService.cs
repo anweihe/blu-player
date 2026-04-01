@@ -194,6 +194,29 @@ public class SettingsService : ISettingsService
         return ToDto(profile);
     }
 
+    public async Task<ProfileDto?> UpdateLanguageAsync(string profileId, string? language)
+    {
+        var profile = await _context.UserProfiles
+            .Include(p => p.QobuzCredential)
+            .Include(p => p.Settings)
+            .FirstOrDefaultAsync(p => p.ProfileId == profileId);
+
+        if (profile == null) return null;
+
+        if (profile.Settings == null)
+        {
+            profile.Settings = new ProfileSettings
+            {
+                UserProfileId = profile.Id
+            };
+        }
+
+        profile.Settings.Language = language;
+        await _context.SaveChangesAsync();
+
+        return ToDto(profile);
+    }
+
     #endregion
 
     #region Migration
@@ -240,7 +263,8 @@ public class SettingsService : ISettingsService
                     SelectedPlayerName = migrateProfile.Settings?.SelectedPlayerName,
                     SelectedPlayerIp = migrateProfile.Settings?.SelectedPlayerIp,
                     SelectedPlayerPort = migrateProfile.Settings?.SelectedPlayerPort,
-                    SelectedPlayerModel = migrateProfile.Settings?.SelectedPlayerModel
+                    SelectedPlayerModel = migrateProfile.Settings?.SelectedPlayerModel,
+                    Language = migrateProfile.Settings?.Language
                 };
 
                 _context.UserProfiles.Add(profile);
@@ -308,7 +332,8 @@ public class SettingsService : ISettingsService
                     SelectedPlayerName = profile.Settings.SelectedPlayerName,
                     SelectedPlayerIp = profile.Settings.SelectedPlayerIp,
                     SelectedPlayerPort = profile.Settings.SelectedPlayerPort,
-                    SelectedPlayerModel = profile.Settings.SelectedPlayerModel
+                    SelectedPlayerModel = profile.Settings.SelectedPlayerModel,
+                    Language = profile.Settings.Language
                 }
                 : null
         };

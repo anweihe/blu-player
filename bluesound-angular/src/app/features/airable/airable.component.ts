@@ -8,11 +8,13 @@ import { ProfileService } from '../../core/services/profile.service';
 import { NavigationStateService } from '../../core/services/navigation-state.service';
 import { AirableItem, AirableSection, AirableNavigationState, AirableSelectorMenu } from '../../core/models';
 import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../core/services/translation.service';
 
 @Component({
   selector: 'app-airable',
   standalone: true,
-  imports: [CommonModule, PlayerSelectorComponent, ProfileSwitcherComponent],
+  imports: [CommonModule, PlayerSelectorComponent, ProfileSwitcherComponent, TranslatePipe],
   template: `
     <div class="min-h-screen bg-bg-primary">
       <!-- Header -->
@@ -69,15 +71,15 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
                 <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
               </svg>
             </div>
-            <h2 class="text-xl font-bold mb-2">Bluesound Player erforderlich</h2>
+            <h2 class="text-xl font-bold mb-2">{{ 'player.playerRequired' | translate }}</h2>
             <p class="text-text-secondary mb-6 max-w-sm">
-              Airable verwendet die integrierte Radio-Funktion deines Bluesound Players. Bitte wähle einen Player aus.
+              {{ 'airable.playerRequired' | translate }}
             </p>
             <button
               class="px-5 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
               (click)="openPlayerSelector()"
             >
-              Player auswählen
+              {{ 'player.selectPlayer' | translate }}
             </button>
           </div>
         } @else {
@@ -148,7 +150,7 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
             <div class="flex items-center justify-center py-16">
               <div class="flex flex-col items-center gap-4">
                 <div class="w-10 h-10 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
-                <span class="text-text-secondary">Laden...</span>
+                <span class="text-text-secondary">{{ 'common.loading' | translate }}</span>
               </div>
             </div>
           } @else if (error()) {
@@ -166,7 +168,7 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
                 class="px-4 py-2 bg-bg-card text-text-primary rounded-lg hover:bg-bg-card-hover transition-colors"
                 (click)="loadMainMenu()"
               >
-                Erneut versuchen
+                {{ 'common.retry' | translate }}
               </button>
             </div>
           } @else if (showCategoryGrid()) {
@@ -208,7 +210,7 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
                           class="text-xs text-blue-500 hover:text-blue-400 flex items-center gap-1"
                           (click)="browseCategory(section.viewAllUri!, section.title!)"
                         >
-                          Alle anzeigen
+                          {{ 'common.showAll' | translate }}
                           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path d="M9 18l6-6-6-6"/>
                           </svg>
@@ -319,8 +321,8 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
                 <path d="M8 12a4 4 0 0 1 8 0"/>
                 <path d="M6 12a6 6 0 0 1 12 0"/>
               </svg>
-              <h3 class="text-lg font-medium mb-2">Keine Einträge</h3>
-              <p class="text-text-secondary">Diese Kategorie enthält keine Einträge.</p>
+              <h3 class="text-lg font-medium mb-2">{{ 'airable.emptyTitle' | translate }}</h3>
+              <p class="text-text-secondary">{{ 'airable.emptyDescription' | translate }}</p>
             </div>
           }
 
@@ -334,7 +336,7 @@ import { PlayerSelectorComponent, ProfileSwitcherComponent } from '../../layout'
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path d="M12 5v14M5 12l7 7 7-7"/>
                 </svg>
-                Mehr laden
+                {{ 'common.loadMore' | translate }}
               </button>
             </div>
           }
@@ -369,6 +371,7 @@ export class AirableComponent implements OnInit, OnDestroy {
   private readonly airableApi = inject(AirableApiService);
   private readonly playerState = inject(PlayerStateService);
   private readonly navState = inject(NavigationStateService);
+  private readonly t = inject(TranslationService);
 
   readonly showProfileSwitcher = signal(false);
 
@@ -476,12 +479,12 @@ export class AirableComponent implements OnInit, OnDestroy {
         if (response.success) {
           this.currentItems.set(response.items);
         } else {
-          this.error.set(response.error || 'Airable-Menu konnte nicht geladen werden');
+          this.error.set(response.error || this.t.t('airable.menuLoadError'));
         }
         this.isLoading.set(false);
       },
       error: () => {
-        this.error.set('Airable-Menu konnte nicht geladen werden');
+        this.error.set(this.t.t('airable.menuLoadError'));
         this.isLoading.set(false);
       }
     });
@@ -513,12 +516,12 @@ export class AirableComponent implements OnInit, OnDestroy {
             this.currentSections.set([]);
           }
         } else {
-          this.error.set(response.error || 'Kategorie konnte nicht geladen werden');
+          this.error.set(response.error || this.t.t('airable.categoryLoadError'));
         }
         this.isLoading.set(false);
       },
       error: () => {
-        this.error.set('Kategorie konnte nicht geladen werden');
+        this.error.set(this.t.t('airable.categoryLoadError'));
         this.isLoading.set(false);
       }
     });
@@ -550,12 +553,12 @@ export class AirableComponent implements OnInit, OnDestroy {
                 this.currentSections.set([]);
               }
             } else {
-              this.error.set(response.error || 'Fehler beim Aktualisieren');
+              this.error.set(response.error || this.t.t('airable.updateError'));
             }
             this.isLoading.set(false);
           },
           error: () => {
-            this.error.set('Fehler beim Aktualisieren');
+            this.error.set(this.t.t('airable.updateError'));
             this.isLoading.set(false);
           }
         });
@@ -652,7 +655,7 @@ export class AirableComponent implements OnInit, OnDestroy {
             this.airableApi.saveToHistory(profileId, item).subscribe();
           }
         } else {
-          this.error.set(response.error || 'Station konnte nicht abgespielt werden');
+          this.error.set(response.error || this.t.t('airable.stationPlayError'));
         }
       }
     });
