@@ -23,6 +23,9 @@ public class AlbumInfo
 
     public string? Style { get; set; }  // Album-Stil (z.B. "Jazz", "Progressive Rock")
 
+    [MaxLength(10)]
+    public string Language { get; set; } = "de";  // Language of the generated content
+
     public DateTime FetchedAt { get; set; }  // When the info was retrieved
     public DateTime ExpiresAt { get; set; }  // Cache expiration (FetchedAt + 4 weeks)
 }

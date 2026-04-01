@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
 import { AuthService } from './auth.service';
+import { TranslationService } from './translation.service';
 import {
   QobuzAlbum,
   QobuzAlbumWithTracks,
@@ -29,6 +30,7 @@ import {
 export class QobuzApiService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+  private readonly t = inject(TranslationService);
   private readonly apiBaseUrl = '/api/qobuz'; // REST API Controller
 
   // ==================== Albums ====================
@@ -305,13 +307,13 @@ export class QobuzApiService {
     return this.http.get<{ success: boolean; style?: string; summary?: string; error?: string }>(
       `${this.apiBaseUrl}/album-info`,
       {
-        params: { albumId, albumTitle, artistName },
+        params: { albumId, albumTitle, artistName, language: this.t.currentLang() },
         headers: this.auth.getAuthHeaders()
       }
     ).pipe(
       map(response => {
         if (!response.success) {
-          throw new Error(response.error || 'Album-Info nicht verfügbar');
+          throw new Error(response.error || 'error.albumInfoUnavailable');
         }
         return { style: response.style || '', summary: response.summary || '' };
       })

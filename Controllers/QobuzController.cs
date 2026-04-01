@@ -1337,13 +1337,13 @@ public class QobuzController : ControllerBase
     /// Get AI-generated album information
     /// </summary>
     [HttpGet("album-info")]
-    public async Task<ActionResult> GetAlbumInfo(string albumId, string albumTitle, string artistName)
+    public async Task<ActionResult> GetAlbumInfo(string albumId, string albumTitle, string artistName, string language = "de")
     {
-        _logger.LogInformation("Getting album info for {AlbumTitle} by {ArtistName}", albumTitle, artistName);
+        _logger.LogInformation("Getting album info for {AlbumTitle} by {ArtistName} ({Language})", albumTitle, artistName, language);
 
         try
         {
-            var albumInfo = await _albumInfoService.GetAlbumInfoAsync(albumId, artistName, albumTitle);
+            var albumInfo = await _albumInfoService.GetAlbumInfoAsync(albumId, artistName, albumTitle, language);
 
             if (albumInfo == null)
             {

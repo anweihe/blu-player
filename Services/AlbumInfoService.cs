@@ -8,7 +8,7 @@ namespace BluesoundWeb.Services;
 
 public interface IAlbumInfoService
 {
-    Task<AlbumInfoDto?> GetAlbumInfoAsync(string albumId, string artist, string title);
+    Task<AlbumInfoDto?> GetAlbumInfoAsync(string albumId, string artist, string title, string language = "de");
 }
 
 public class AlbumInfoService : IAlbumInfoService
@@ -32,26 +32,28 @@ public class AlbumInfoService : IAlbumInfoService
         _logger = logger;
     }
 
-    public async Task<AlbumInfoDto?> GetAlbumInfoAsync(string albumId, string artist, string title)
+    public async Task<AlbumInfoDto?> GetAlbumInfoAsync(string albumId, string artist, string title, string language = "de")
     {
         if (string.IsNullOrWhiteSpace(albumId) || string.IsNullOrWhiteSpace(title))
             return null;
 
+        // Normalize language
+        var lang = language?.StartsWith("de") == true ? "de" : "en";
         var now = DateTime.UtcNow;
 
-        // 1. Check database cache
+        // 1. Check database cache (per language)
         var cached = await _context.AlbumInfos
-            .FirstOrDefaultAsync(i => i.AlbumId == albumId);
+            .FirstOrDefaultAsync(i => i.AlbumId == albumId && i.Language == lang);
 
         if (cached != null && cached.ExpiresAt > now)
         {
             // Cache hit: valid
-            _logger.LogInformation("Album info cache hit for: {Artist} - {Title}", artist, title);
+            _logger.LogInformation("Album info cache hit for: {Artist} - {Title} ({Language})", artist, title, lang);
             return new AlbumInfoDto { Summary = cached.Summary, Style = cached.Style };
         }
 
         // 2. Fetch from Mistral API
-        var info = await FetchFromMistralAsync(albumId, artist, title);
+        var info = await FetchFromMistralAsync(albumId, artist, title, lang);
         if (info == null)
             return null;
 
@@ -76,6 +78,7 @@ public class AlbumInfoService : IAlbumInfoService
                 Title = title,
                 Summary = info.Summary,
                 Style = info.Style,
+                Language = lang,
                 FetchedAt = now,
                 ExpiresAt = now.AddDays(CacheDurationDays)
             });
@@ -94,7 +97,7 @@ public class AlbumInfoService : IAlbumInfoService
         return info;
     }
 
-    private async Task<AlbumInfoDto?> FetchFromMistralAsync(string albumId, string artist, string title)
+    private async Task<AlbumInfoDto?> FetchFromMistralAsync(string albumId, string artist, string title, string language)
     {
         try
         {
@@ -108,19 +111,32 @@ public class AlbumInfoService : IAlbumInfoService
             // Format: "Artist:Album:AlbumId"
             var content = $"{artist}:{title}:{albumId}";
 
-            // System prompt for Album Reception
-            var systemPrompt = """
-                Du bist ein Musikredakteur und ein Spezialist für alle Arten von Genres.
-                Gib außerdem eine Zusammenfassung über die Rezeptionen eines Albums zurück.
-                Antworte auf Deutsch.
-                # Request Format
-                Als Eingabe erhältst du ein Album mit <Künstler:Albumname:AlbumId>.
-                # Response Format
-                Deine Antwort muss dieses Format haben:
-                { 'albumId': <albumId>, 'summary': <summary>, 'style': <style> }
-                Die Summary enthält keine Unterknoten und hat maximal 10 Sätze.
-                Beschreibe außerdem im style Element in zwei bis drei Sätzen, wie der Stil des Albums ist.
-                """;
+            // System prompt for Album Reception (language-aware)
+            var systemPrompt = language == "de"
+                ? """
+                  Du bist ein Musikredakteur und ein Spezialist für alle Arten von Genres.
+                  Gib außerdem eine Zusammenfassung über die Rezeptionen eines Albums zurück.
+                  Antworte auf Deutsch.
+                  # Request Format
+                  Als Eingabe erhältst du ein Album mit <Künstler:Albumname:AlbumId>.
+                  # Response Format
+                  Deine Antwort muss dieses Format haben:
+                  { 'albumId': <albumId>, 'summary': <summary>, 'style': <style> }
+                  Die Summary enthält keine Unterknoten und hat maximal 10 Sätze.
+                  Beschreibe außerdem im style Element in zwei bis drei Sätzen, wie der Stil des Albums ist.
+                  """
+                : """
+                  You are a music editor and a specialist in all kinds of genres.
+                  Provide a summary of the reception of an album.
+                  Respond in English.
+                  # Request Format
+                  You receive an album as input with <Artist:AlbumName:AlbumId>.
+                  # Response Format
+                  Your response must have this format:
+                  { 'albumId': <albumId>, 'summary': <summary>, 'style': <style> }
+                  The summary contains no sub-nodes and has a maximum of 10 sentences.
+                  Also describe in the style element in two to three sentences what the style of the album is.
+                  """;
 
 
             var requestBody = new

@@ -142,10 +142,11 @@ public class BluesoundDbContext : DbContext
         modelBuilder.Entity<AlbumInfo>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.AlbumId).IsUnique();
+            entity.HasIndex(e => new { e.AlbumId, e.Language }).IsUnique();
             entity.Property(e => e.AlbumId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Artist).HasMaxLength(500);
             entity.Property(e => e.Title).HasMaxLength(500);
+            entity.Property(e => e.Language).HasMaxLength(10).HasDefaultValue("de");
         });
 
         // Listening History configurations
