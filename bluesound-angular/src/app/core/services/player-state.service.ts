@@ -239,6 +239,14 @@ export class PlayerStateService {
     if (!status.imageUrl && existing?.imageUrl && existing.title === status.title) {
       status = { ...status, imageUrl: existing.imageUrl };
     }
+
+    // When the track title changes (player advanced automatically),
+    // clear stale track references so isTrackPlaying() only matches via title
+    if (existing && status.title && existing.title !== status.title) {
+      this.currentPlayingTrackId.set(null);
+      this.currentTrack.set(null);
+    }
+
     this.playbackStatus.set(status);
     if (status.currentSeconds !== undefined) {
       this.progress.set(status.currentSeconds);
