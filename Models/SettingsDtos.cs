@@ -219,6 +219,7 @@ public class AiProviderStatusDto
 /// </summary>
 public class SetActiveProviderRequest
 {
+    [System.Text.Json.Serialization.JsonPropertyName("provider")]
     public string Provider { get; set; } = string.Empty;
 }
 
@@ -238,6 +239,7 @@ public class ApiKeyStatusDto
 /// </summary>
 public class SetApiKeyRequest
 {
+    [System.Text.Json.Serialization.JsonPropertyName("apiKey")]
     public string ApiKey { get; set; } = string.Empty;
 }
 
