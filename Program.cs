@@ -19,8 +19,9 @@ if (!string.IsNullOrEmpty(connectionString))
 }
 else
 {
-    // SQLite for local development
-    var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "data");
+    // SQLite for local/standalone use
+    var dataFolder = Environment.GetEnvironmentVariable("DATA_PATH")
+        ?? Path.Combine(builder.Environment.ContentRootPath, "data");
     Directory.CreateDirectory(dataFolder);
     var dbPath = Path.Combine(dataFolder, "bluesound.db");
     builder.Services.AddDbContext<BluesoundDbContext>(options =>

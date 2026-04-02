@@ -1,0 +1,28 @@
+name: Bluesound Web Controller
+version: "1.0.0"
+slug: bluesound-controller
+description: Steuere Bluesound/BluOS Player im Netzwerk mit Qobuz, TuneIn und Radio Paradise Integration.
+url: https://github.com/anweihe/blu-player
+arch:
+  - amd64
+  - aarch64
+host_network: true
+ports:
+  8081/tcp: 8081
+ports_description:
+  8081/tcp: Web Interface
+map:
+  - type: addon_config
+    read_only: false
+ingress: true
+ingress_port: 8081
+panel_icon: mdi:speaker-multiple
+panel_title: Bluesound
+startup: application
+boot: auto
+options: {}
+schema: {}
+environment:
+  ASPNETCORE_URLS: "http://+:8081"
+  ASPNETCORE_ENVIRONMENT: "Production"
+  DATA_PATH: "/config/bluesound"

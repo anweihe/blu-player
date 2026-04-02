@@ -35,10 +35,19 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libavahi-client3 \
     avahi-daemon \
+    dbus \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy published app
 COPY --from=build /app/publish .
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Create data directory for SQLite
+RUN mkdir -p /app/data
+VOLUME ["/app/data"]
 
 # Expose port (8081 because 8080 is often used by host)
 EXPOSE 8081
@@ -47,5 +56,5 @@ EXPOSE 8081
 ENV ASPNETCORE_URLS=http://+:8081
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-# Start the application
-ENTRYPOINT ["dotnet", "BluesoundWeb.dll"]
+# Start the application (entrypoint starts avahi-daemon first)
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -1,0 +1,11 @@
+services:
+  bluesound:
+    image: ghcr.io/anweihe/bluesound-web:latest
+    container_name: bluesound
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    environment:
+      - ASPNETCORE_URLS=http://+:8081
+      - ASPNETCORE_ENVIRONMENT=Production

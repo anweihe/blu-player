@@ -50,14 +50,73 @@ A modern web application for controlling Bluesound/BluOS players on your local n
 - **Listening History** - Track listening history per profile
 - **Docker Support** - Ready for deployment with Docker/Coolify
 
-## Getting Started
+## Quick Start
+
+### Docker (empfohlen)
+
+Ein Befehl -- keine Datenbank-Einrichtung noetig:
+
+```bash
+docker run -d \
+  --name bluesound \
+  --network host \
+  --restart unless-stopped \
+  -v bluesound_data:/app/data \
+  ghcr.io/anweihe/bluesound-web:latest
+```
+
+Oeffne `http://<deine-ip>:8081` im Browser.
+
+> **Hinweis:** `--network host` ist erforderlich, damit Bluesound Player per mDNS automatisch erkannt werden.
+
+**Update:**
+```bash
+docker pull ghcr.io/anweihe/bluesound-web:latest
+docker rm -f bluesound
+docker run -d --name bluesound --network host --restart unless-stopped -v bluesound_data:/app/data ghcr.io/anweihe/bluesound-web:latest
+```
+
+### Install-Script (Raspberry Pi / Linux)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/anweihe/blu-player/main/install/install.sh | bash
+```
+
+Installiert Docker Compose mit automatischem Neustart. Verwalten mit:
+```bash
+cd ~/bluesound
+docker compose down          # Stoppen
+docker compose up -d         # Starten
+docker compose pull && docker compose up -d  # Aktualisieren
+```
+
+### Home Assistant Add-on
+
+1. Gehe zu **Einstellungen** > **Add-ons** > **Add-on Store**
+2. Klicke oben rechts auf die drei Punkte > **Repositories**
+3. Fuege hinzu: `https://github.com/anweihe/ha-addon-bluesound`
+4. Suche nach **Bluesound Web Controller** und klicke **Installieren**
+5. Starten -- das Web-Interface erscheint in der Home Assistant Sidebar
+
+### Coolify
+
+1. Neuen Service aus diesem Repository erstellen
+2. PostgreSQL-Datenbank hinzufuegen und verlinken
+3. Environment Variable setzen:
+   ```
+   ConnectionStrings__DefaultConnection=${COOLIFY_POSTGRES_CONNECTION_STRING}
+   ```
+
+---
+
+## Development
 
 ### Prerequisites
 
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Node.js](https://nodejs.org/) (for Angular frontend development)
-- Bluesound players on the same network (for player control)
-- Qobuz subscription (for Qobuz streaming features)
+- [Node.js](https://nodejs.org/) (for Angular frontend)
+- Bluesound players on the same network
+- Qobuz subscription (optional, for Qobuz features)
 
 ### Local Development
 
@@ -85,24 +144,6 @@ A modern web application for controlling Bluesound/BluOS players on your local n
 SQLite is used automatically for local development (database stored in `data/bluesound.db`).
 
 > **Tip for frontend development:** Use `cd bluesound-angular && npm start` to run the Angular dev server with hot reload (proxies API calls to the .NET backend).
-
-### Docker/Coolify Deployment
-
-The application supports Docker deployment with PostgreSQL for production use.
-
-**Coolify:**
-1. Create a new service from this repository
-2. Add a PostgreSQL database and link it to the service
-3. Set the environment variable:
-   ```
-   ConnectionStrings__DefaultConnection=${COOLIFY_POSTGRES_CONNECTION_STRING}
-   ```
-
-**Manual Docker:**
-```bash
-docker build -t bluesound-web .
-docker run -e "ConnectionStrings__DefaultConnection=Host=...;Database=...;Username=...;Password=..." -p 8081:8081 bluesound-web
-```
 
 ## Project Structure
 
