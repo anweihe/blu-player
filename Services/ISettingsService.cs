@@ -30,4 +30,15 @@ public interface ISettingsService
     Task<bool> SetMistralApiKeyAsync(string apiKey);
     Task<bool> DeleteMistralApiKeyAsync();
     Task<string?> GetMistralApiKeyAsync(); // For internal use only, never expose via API
+
+    // Multi-Provider AI API Keys
+    Task<bool> HasApiKeyAsync(string provider);
+    Task<bool> SetApiKeyAsync(string provider, string apiKey);
+    Task<bool> DeleteApiKeyAsync(string provider);
+    Task<string?> GetApiKeyAsync(string provider);
+
+    // Active AI Provider
+    Task<string> GetActiveAiProviderAsync();
+    Task<bool> SetActiveAiProviderAsync(string provider);
+    Task<List<AiProviderStatusDto>> GetAllAiProviderStatusesAsync();
 }

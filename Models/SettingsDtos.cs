@@ -201,6 +201,27 @@ public class UpdateQueueIndexRequest
     public int CurrentIndex { get; set; }
 }
 
+// ==================== AI Provider DTOs ====================
+
+/// <summary>
+/// DTO for AI provider status
+/// </summary>
+public class AiProviderStatusDto
+{
+    public string Provider { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public bool IsConfigured { get; set; }
+    public bool IsActive { get; set; }
+}
+
+/// <summary>
+/// Request DTO for setting the active AI provider
+/// </summary>
+public class SetActiveProviderRequest
+{
+    public string Provider { get; set; } = string.Empty;
+}
+
 // ==================== API Key DTOs ====================
 
 /// <summary>

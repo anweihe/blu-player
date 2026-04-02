@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using BluesoundWeb.Data;
@@ -14,21 +13,18 @@ public interface IAlbumInfoService
 public class AlbumInfoService : IAlbumInfoService
 {
     private readonly BluesoundDbContext _context;
-    private readonly ISettingsService _settingsService;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IAiChatService _aiChatService;
     private readonly ILogger<AlbumInfoService> _logger;
 
     private const int CacheDurationDays = 28; // 4 weeks
 
     public AlbumInfoService(
         BluesoundDbContext context,
-        ISettingsService settingsService,
-        IHttpClientFactory httpClientFactory,
+        IAiChatService aiChatService,
         ILogger<AlbumInfoService> logger)
     {
         _context = context;
-        _settingsService = settingsService;
-        _httpClientFactory = httpClientFactory;
+        _aiChatService = aiChatService;
         _logger = logger;
     }
 
@@ -52,8 +48,8 @@ public class AlbumInfoService : IAlbumInfoService
             return new AlbumInfoDto { Summary = cached.Summary, Style = cached.Style };
         }
 
-        // 2. Fetch from Mistral API
-        var info = await FetchFromMistralAsync(albumId, artist, title, lang);
+        // 2. Fetch from AI provider
+        var info = await FetchFromAiAsync(albumId, artist, title, lang);
         if (info == null)
             return null;
 
@@ -97,110 +93,33 @@ public class AlbumInfoService : IAlbumInfoService
         return info;
     }
 
-    private async Task<AlbumInfoDto?> FetchFromMistralAsync(string albumId, string artist, string title, string language)
+    private async Task<AlbumInfoDto?> FetchFromAiAsync(string albumId, string artist, string title, string language)
     {
-        try
-        {
-            var apiKey = await _settingsService.GetMistralApiKeyAsync();
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                _logger.LogWarning("Mistral API key not configured");
-                return null;
-            }
+        // Format: "Artist:Album:AlbumId"
+        var userMessage = $"{artist}:{title}:{albumId}";
 
-            // Format: "Artist:Album:AlbumId"
-            var content = $"{artist}:{title}:{albumId}";
+        // System prompt for Album Reception
+        var languageName = language == "de" ? "German" : "English";
+        var systemPrompt = $$"""
+            You are a music editor and a specialist in all kinds of genres.
+            Provide a summary of the reception of an album.
+            # Request Format
+            You receive an album as input with <Artist:AlbumName:AlbumId>.
+            # Response Format
+            Your response must have this format:
+            { 'albumId': <albumId>, 'summary': <summary>, 'style': <style> }
+            The summary contains no sub-nodes and has a maximum of 10 sentences.
+            Also describe in the style element in two to three sentences what the style of the album is.
+            Answer in {{languageName}}.
+            """;
 
-            // System prompt for Album Reception
-            var languageName = language == "de" ? "German" : "English";
-            var systemPrompt = $$"""
-                You are a music editor and a specialist in all kinds of genres.
-                Provide a summary of the reception of an album.
-                # Request Format
-                You receive an album as input with <Artist:AlbumName:AlbumId>.
-                # Response Format
-                Your response must have this format:
-                { 'albumId': <albumId>, 'summary': <summary>, 'style': <style> }
-                The summary contains no sub-nodes and has a maximum of 10 sentences.
-                Also describe in the style element in two to three sentences what the style of the album is.
-                Answer in {{languageName}}.
-                """;
+        _logger.LogInformation("Fetching album info from AI for: {Artist} - {Title}", artist, title);
 
-
-            var requestBody = new
-            {
-                model = "mistral-small-latest", // Using a default model - could be configurable
-                messages = new[]
-                {
-                    new { role = "system", content = systemPrompt },
-                    new { role = "user", content = content }
-                }
-            };
-
-            var httpClient = _httpClientFactory.CreateClient();
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            httpClient.Timeout = TimeSpan.FromSeconds(60);
-
-            var jsonContent = JsonSerializer.Serialize(requestBody);
-            var httpContent = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-
-            _logger.LogInformation("Calling Mistral AI Chat for album: {Artist} - {Title}", artist, title);
-
-            var response = await httpClient.PostAsync("https://api.mistral.ai/v1/chat/completions", httpContent);
-            var responseText = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Mistral API error: {StatusCode} - {Response}", response.StatusCode, responseText);
-                return null;
-            }
-
-            return ParseMistralResponse(responseText);
-        }
-        catch (TaskCanceledException)
-        {
-            _logger.LogWarning("Mistral API request timed out");
+        var contentText = await _aiChatService.ChatAsync(systemPrompt, userMessage);
+        if (contentText == null)
             return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to fetch album info from Mistral API");
-            return null;
-        }
-    }
 
-    private AlbumInfoDto? ParseMistralResponse(string responseText)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(responseText);
-            var root = doc.RootElement;
-
-            // Navigate: choices[0].message.content
-            if (root.TryGetProperty("choices", out var choices) &&
-                choices.GetArrayLength() > 0)
-            {
-                var firstChoice = choices[0];
-                if (firstChoice.TryGetProperty("message", out var message) &&
-                    message.TryGetProperty("content", out var content))
-                {
-                    var contentText = content.GetString();
-                    if (contentText != null)
-                    {
-                        // Extract album info from JSON response
-                        return ExtractAlbumInfo(contentText);
-                    }
-                }
-            }
-
-            _logger.LogWarning("Unexpected Mistral response structure: {Response}", responseText);
-            return null;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to parse Mistral response: {Response}", responseText);
-            return null;
-        }
+        return ExtractAlbumInfo(contentText);
     }
 
     private AlbumInfoDto ExtractAlbumInfo(string contentText)

@@ -16,4 +16,29 @@ public class GlobalSettings
     /// Timestamp when Mistral API key was last updated
     /// </summary>
     public DateTime? MistralApiKeyUpdatedAt { get; set; }
+
+    /// <summary>
+    /// Encrypted Anthropic API key (AES-256 encrypted, Base64 encoded)
+    /// </summary>
+    public string? AnthropicApiKeyEncrypted { get; set; }
+
+    /// <summary>
+    /// Timestamp when Anthropic API key was last updated
+    /// </summary>
+    public DateTime? AnthropicApiKeyUpdatedAt { get; set; }
+
+    /// <summary>
+    /// Encrypted OpenAI API key (AES-256 encrypted, Base64 encoded)
+    /// </summary>
+    public string? OpenAiApiKeyEncrypted { get; set; }
+
+    /// <summary>
+    /// Timestamp when OpenAI API key was last updated
+    /// </summary>
+    public DateTime? OpenAiApiKeyUpdatedAt { get; set; }
+
+    /// <summary>
+    /// Active AI provider: "mistral", "anthropic", or "openai"
+    /// </summary>
+    public string ActiveAiProvider { get; set; } = "mistral";
 }

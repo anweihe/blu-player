@@ -343,41 +343,153 @@ public class SettingsService : ISettingsService
 
     #region API Keys
 
-    public async Task<bool> HasMistralApiKeyAsync()
+    private static readonly string[] ValidProviders = ["mistral", "anthropic", "openai"];
+
+    public Task<bool> HasMistralApiKeyAsync() => HasApiKeyAsync("mistral");
+    public Task<bool> SetMistralApiKeyAsync(string apiKey) => SetApiKeyAsync("mistral", apiKey);
+    public Task<bool> DeleteMistralApiKeyAsync() => DeleteApiKeyAsync("mistral");
+    public Task<string?> GetMistralApiKeyAsync() => GetApiKeyAsync("mistral");
+
+    public async Task<bool> HasApiKeyAsync(string provider)
     {
         var settings = await GetOrCreateGlobalSettingsAsync();
-        return !string.IsNullOrEmpty(settings.MistralApiKeyEncrypted);
+        var encrypted = GetEncryptedKey(settings, provider);
+        return !string.IsNullOrEmpty(encrypted);
     }
 
-    public async Task<bool> SetMistralApiKeyAsync(string apiKey)
+    public async Task<bool> SetApiKeyAsync(string provider, string apiKey)
     {
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (string.IsNullOrWhiteSpace(apiKey) || !ValidProviders.Contains(provider))
             return false;
 
         var settings = await GetOrCreateGlobalSettingsAsync();
-        settings.MistralApiKeyEncrypted = _encryptionService.Encrypt(apiKey.Trim());
-        settings.MistralApiKeyUpdatedAt = DateTime.UtcNow;
+        var encrypted = _encryptionService.Encrypt(apiKey.Trim());
+        var now = DateTime.UtcNow;
+
+        switch (provider)
+        {
+            case "mistral":
+                settings.MistralApiKeyEncrypted = encrypted;
+                settings.MistralApiKeyUpdatedAt = now;
+                break;
+            case "anthropic":
+                settings.AnthropicApiKeyEncrypted = encrypted;
+                settings.AnthropicApiKeyUpdatedAt = now;
+                break;
+            case "openai":
+                settings.OpenAiApiKeyEncrypted = encrypted;
+                settings.OpenAiApiKeyUpdatedAt = now;
+                break;
+        }
+
         await _context.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> DeleteMistralApiKeyAsync()
+    public async Task<bool> DeleteApiKeyAsync(string provider)
     {
+        if (!ValidProviders.Contains(provider))
+            return false;
+
         var settings = await GetOrCreateGlobalSettingsAsync();
-        settings.MistralApiKeyEncrypted = null;
-        settings.MistralApiKeyUpdatedAt = null;
+
+        switch (provider)
+        {
+            case "mistral":
+                settings.MistralApiKeyEncrypted = null;
+                settings.MistralApiKeyUpdatedAt = null;
+                break;
+            case "anthropic":
+                settings.AnthropicApiKeyEncrypted = null;
+                settings.AnthropicApiKeyUpdatedAt = null;
+                break;
+            case "openai":
+                settings.OpenAiApiKeyEncrypted = null;
+                settings.OpenAiApiKeyUpdatedAt = null;
+                break;
+        }
+
+        // If deleting the active provider, reset to first available or mistral
+        if (settings.ActiveAiProvider == provider)
+        {
+            settings.ActiveAiProvider = "mistral";
+        }
+
         await _context.SaveChangesAsync();
         return true;
     }
 
-    public async Task<string?> GetMistralApiKeyAsync()
+    public async Task<string?> GetApiKeyAsync(string provider)
     {
         var settings = await GetOrCreateGlobalSettingsAsync();
-        if (string.IsNullOrEmpty(settings.MistralApiKeyEncrypted))
+        var encrypted = GetEncryptedKey(settings, provider);
+        if (string.IsNullOrEmpty(encrypted))
             return null;
 
-        return _encryptionService.Decrypt(settings.MistralApiKeyEncrypted);
+        return _encryptionService.Decrypt(encrypted);
     }
+
+    public async Task<string> GetActiveAiProviderAsync()
+    {
+        var settings = await GetOrCreateGlobalSettingsAsync();
+        return settings.ActiveAiProvider;
+    }
+
+    public async Task<bool> SetActiveAiProviderAsync(string provider)
+    {
+        if (!ValidProviders.Contains(provider))
+            return false;
+
+        var settings = await GetOrCreateGlobalSettingsAsync();
+
+        // Only allow activating a provider that has a configured key
+        var encrypted = GetEncryptedKey(settings, provider);
+        if (string.IsNullOrEmpty(encrypted))
+            return false;
+
+        settings.ActiveAiProvider = provider;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<List<AiProviderStatusDto>> GetAllAiProviderStatusesAsync()
+    {
+        var settings = await GetOrCreateGlobalSettingsAsync();
+        var active = settings.ActiveAiProvider;
+
+        return
+        [
+            new AiProviderStatusDto
+            {
+                Provider = "mistral",
+                Name = "Mistral AI",
+                IsConfigured = !string.IsNullOrEmpty(settings.MistralApiKeyEncrypted),
+                IsActive = active == "mistral"
+            },
+            new AiProviderStatusDto
+            {
+                Provider = "anthropic",
+                Name = "Anthropic",
+                IsConfigured = !string.IsNullOrEmpty(settings.AnthropicApiKeyEncrypted),
+                IsActive = active == "anthropic"
+            },
+            new AiProviderStatusDto
+            {
+                Provider = "openai",
+                Name = "OpenAI",
+                IsConfigured = !string.IsNullOrEmpty(settings.OpenAiApiKeyEncrypted),
+                IsActive = active == "openai"
+            }
+        ];
+    }
+
+    private static string? GetEncryptedKey(GlobalSettings settings, string provider) => provider switch
+    {
+        "mistral" => settings.MistralApiKeyEncrypted,
+        "anthropic" => settings.AnthropicApiKeyEncrypted,
+        "openai" => settings.OpenAiApiKeyEncrypted,
+        _ => null
+    };
 
     #endregion
 }

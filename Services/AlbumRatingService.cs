@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using BluesoundWeb.Data;
@@ -14,21 +13,18 @@ public interface IAlbumRatingService
 public class AlbumRatingService : IAlbumRatingService
 {
     private readonly BluesoundDbContext _context;
-    private readonly ISettingsService _settingsService;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IAiChatService _aiChatService;
     private readonly ILogger<AlbumRatingService> _logger;
 
     private const int CacheDurationDays = 28; // 4 weeks
 
     public AlbumRatingService(
         BluesoundDbContext context,
-        ISettingsService settingsService,
-        IHttpClientFactory httpClientFactory,
+        IAiChatService aiChatService,
         ILogger<AlbumRatingService> logger)
     {
         _context = context;
-        _settingsService = settingsService;
-        _httpClientFactory = httpClientFactory;
+        _aiChatService = aiChatService;
         _logger = logger;
     }
 
@@ -64,10 +60,10 @@ public class AlbumRatingService : IAlbumRatingService
             }
         }
 
-        // 2. Fetch missing ratings from Mistral
+        // 2. Fetch missing ratings from AI provider
         if (albumsToFetch.Count > 0)
         {
-            var freshRatings = await FetchFromMistralAsync(albumsToFetch);
+            var freshRatings = await FetchFromAiAsync(albumsToFetch);
 
             // 3. Save to database
             foreach (var rating in freshRatings)
@@ -120,107 +116,41 @@ public class AlbumRatingService : IAlbumRatingService
         return result;
     }
 
-    private async Task<List<AlbumRatingDto>> FetchFromMistralAsync(List<AlbumRatingRequest> albums)
+    private async Task<List<AlbumRatingDto>> FetchFromAiAsync(List<AlbumRatingRequest> albums)
     {
         var result = new List<AlbumRatingDto>();
 
-        try
-        {
-            var apiKey = await _settingsService.GetMistralApiKeyAsync();
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                _logger.LogWarning("Mistral API key not configured, skipping rating fetch");
-                return result;
-            }
+        // Format: "Artist:Album:Id,Artist:Album:Id,..."
+        var userMessage = string.Join(",", albums.Select(a =>
+            $"{EscapeField(a.Artist)}:{EscapeField(a.Title)}:{a.AlbumId}"));
 
-            // Format: "Artist:Album:Id,Artist:Album:Id,..."
-            var content = string.Join(",", albums.Select(a =>
-                $"{EscapeField(a.Artist)}:{EscapeField(a.Title)}:{a.AlbumId}"));
+        var systemPrompt = """
+            Du bist ein Musikredakteur und ein Spezialist für alle Arten von Genres.
+            Du sollst Alben von Künstlern bewerten und auf einer Skala von 1 (niedrigste) bis 10 (höchste) bewerten. Zum einen aufgrund von Userbewertungen und zum Anderen aufgrund von Kritikerbewertungen.
+            Das Rückgabeformat sollte so aussehen:
+            [{ "albumId": <albumId>, "userScore": <userScore>, "criticsScore": <criticsScore>}]
+            WICHTIG: userScore und criticsScore sind Ganzzahlen. Liefere ausschließlich das Rückgabeformat zurück, ohne weiteren Text.
+            Als Eingabe erhältst du eine Liste mit <Künstler:Albumname:AlbumId>. Antworte auf Deutsch.
+            """;
 
-            var systemPrompt = """
-                Du bist ein Musikredakteur und ein Spezialist für alle Arten von Genres.
-                Du sollst Alben von Künstlern bewerten und auf einer Skala von 1 (niedrigste) bis 10 (höchste) bewerten. Zum einen aufgrund von Userbewertungen und zum Anderen aufgrund von Kritikerbewertungen.
-                Das Rückgabeformat sollte so aussehen:
-                [{ "albumId": <albumId>, "userScore": <userScore>, "criticsScore": <criticsScore>}]
-                WICHTIG: userScore und criticsScore sind Ganzzahlen. Liefere ausschließlich das Rückgabeformat zurück, ohne weiteren Text.
-                Als Eingabe erhältst du eine Liste mit <Künstler:Albumname:AlbumId>. Antworte auf Deutsch.
-                """;
+        _logger.LogInformation("Fetching album ratings from AI for {Count} albums", albums.Count);
 
-            var requestBody = new
-            {
-                model = "mistral-small-latest",
-                messages = new object[]
-                {
-                    new { role = "system", content = systemPrompt },
-                    new { role = "user", content = content }
-                }
-            };
+        var content = await _aiChatService.ChatAsync(systemPrompt, userMessage);
+        if (string.IsNullOrEmpty(content))
+            return result;
 
-            var httpClient = _httpClientFactory.CreateClient();
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            httpClient.Timeout = TimeSpan.FromSeconds(60);
+        _logger.LogInformation("AI response for ratings: {Response}", content);
 
-            var response = await httpClient.PostAsJsonAsync(
-                "https://api.mistral.ai/v1/chat/completions",
-                requestBody);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Mistral API error: {StatusCode} - {Body}", response.StatusCode, errorBody);
-                return result;
-            }
-
-            var responseText = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("Mistral API response: {Response}", responseText);
-
-            // Parse the response
-            result = ParseMistralResponse(responseText, albums);
-        }
-        catch (TaskCanceledException)
-        {
-            _logger.LogWarning("Mistral API request timed out");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to fetch ratings from Mistral API");
-        }
-
-        return result;
+        return ParseRatingResponse(content);
     }
 
-    private List<AlbumRatingDto> ParseMistralResponse(string responseText, List<AlbumRatingRequest> albums)
+    private List<AlbumRatingDto> ParseRatingResponse(string content)
     {
         var result = new List<AlbumRatingDto>();
 
         try
         {
-            using var doc = JsonDocument.Parse(responseText);
-            var root = doc.RootElement;
-
-            // Navigate to the content: chat/completions uses "choices" array
-            string? content = null;
-
-            if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
-            {
-                var firstChoice = choices[0];
-                if (firstChoice.TryGetProperty("message", out var message) &&
-                    message.TryGetProperty("content", out var contentElement))
-                {
-                    content = contentElement.GetString();
-                }
-            }
-
-            if (string.IsNullOrEmpty(content))
-            {
-                // Log the actual structure for debugging
-                var properties = string.Join(", ", root.EnumerateObject().Select(p => p.Name));
-                _logger.LogWarning("No content in Mistral response. Root properties: {Properties}", properties);
-                return result;
-            }
-
             // Try to extract JSON array from the content
-            // The agent returns JSON like: [{"albumId":123,"userScore":8,"criticsScore":7},...]
             var jsonStart = content.IndexOf('[');
             var jsonEnd = content.LastIndexOf(']');
 
@@ -228,13 +158,11 @@ public class AlbumRatingService : IAlbumRatingService
             {
                 var jsonArray = content.Substring(jsonStart, jsonEnd - jsonStart + 1);
 
-                // Parse with JsonDocument to handle albumId as number or string
                 using var ratingsDoc = JsonDocument.Parse(jsonArray);
                 foreach (var item in ratingsDoc.RootElement.EnumerateArray())
                 {
                     string? albumId = null;
 
-                    // Handle albumId as string or number
                     if (item.TryGetProperty("albumId", out var albumIdElement))
                     {
                         albumId = albumIdElement.ValueKind == JsonValueKind.Number
@@ -270,12 +198,12 @@ public class AlbumRatingService : IAlbumRatingService
             }
             else
             {
-                _logger.LogWarning("Could not find JSON array in Mistral response: {Content}", content);
+                _logger.LogWarning("Could not find JSON array in AI response: {Content}", content);
             }
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Failed to parse Mistral JSON response");
+            _logger.LogError(ex, "Failed to parse AI rating response");
         }
 
         return result;

@@ -28,6 +28,7 @@ public class SettingsController : ControllerBase
             "profiles" => await GetAllProfiles(),
             "profile" => await GetProfile(Request.Query["id"].ToString()),
             "mistralapikey" => await GetMistralApiKeyStatus(),
+            "aiproviders" => await GetAiProviders(),
             _ => await GetAllProfiles() // Default to profiles list
         };
     }
@@ -55,6 +56,12 @@ public class SettingsController : ControllerBase
         {
             IsConfigured = hasKey
         }));
+    }
+
+    private async Task<IActionResult> GetAiProviders()
+    {
+        var providers = await _settingsService.GetAllAiProviderStatusesAsync();
+        return Ok(ApiResponse<List<AiProviderStatusDto>>.Ok(providers));
     }
 
     // POST /Api/Settings?handler=profile
@@ -100,12 +107,15 @@ public class SettingsController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Put([FromQuery] string? handler, [FromQuery] string? id, [FromBody] object body)
     {
-        if (string.IsNullOrEmpty(id) && handler?.ToLower() != "mistralapikey")
+        var h = handler?.ToLower();
+        var noIdRequired = h is "mistralapikey" or "aiapikey" or "activeaiprovider";
+
+        if (string.IsNullOrEmpty(id) && !noIdRequired)
         {
             return BadRequest("Profile ID required");
         }
 
-        return handler?.ToLower() switch
+        return h switch
         {
             "profile" => await UpdateProfile(id!, body),
             "qobuz" => await UpdateQobuzCredentials(id!, body),
@@ -113,6 +123,8 @@ public class SettingsController : ControllerBase
             "player" => await UpdatePlayer(id!, body),
             "language" => await UpdateLanguage(id!, body),
             "mistralapikey" => await SetMistralApiKey(body),
+            "aiapikey" => await SetAiApiKey(body),
+            "activeaiprovider" => await SetActiveAiProvider(body),
             _ => BadRequest("Unknown handler")
         };
     }
@@ -204,6 +216,41 @@ public class SettingsController : ControllerBase
         return Ok(ApiResponse.Ok());
     }
 
+    private async Task<IActionResult> SetAiApiKey(object body)
+    {
+        var provider = Request.Query["provider"].ToString();
+        var request = System.Text.Json.JsonSerializer.Deserialize<SetApiKeyRequest>(
+            System.Text.Json.JsonSerializer.Serialize(body));
+        if (request == null || string.IsNullOrWhiteSpace(request.ApiKey) || string.IsNullOrEmpty(provider))
+        {
+            return Ok(ApiResponse.Fail("error.apiKeyEmpty"));
+        }
+
+        var success = await _settingsService.SetApiKeyAsync(provider, request.ApiKey);
+        if (!success)
+        {
+            return Ok(ApiResponse.Fail("error.apiKeySaveFailed"));
+        }
+        return Ok(ApiResponse.Ok());
+    }
+
+    private async Task<IActionResult> SetActiveAiProvider(object body)
+    {
+        var request = System.Text.Json.JsonSerializer.Deserialize<SetActiveProviderRequest>(
+            System.Text.Json.JsonSerializer.Serialize(body));
+        if (request == null || string.IsNullOrEmpty(request.Provider))
+        {
+            return Ok(ApiResponse.Fail("error.invalidProvider"));
+        }
+
+        var success = await _settingsService.SetActiveAiProviderAsync(request.Provider);
+        if (!success)
+        {
+            return Ok(ApiResponse.Fail("error.providerNotConfigured"));
+        }
+        return Ok(ApiResponse.Ok());
+    }
+
     // DELETE /Api/Settings?handler=xxx&id=xxx
     [HttpDelete]
     public async Task<IActionResult> Delete([FromQuery] string? handler, [FromQuery] string? id)
@@ -213,6 +260,7 @@ public class SettingsController : ControllerBase
             "profile" => await DeleteProfile(id!),
             "qobuz" => await DeleteQobuzCredentials(id!),
             "mistralapikey" => await DeleteMistralApiKey(),
+            "aiapikey" => await DeleteAiApiKey(),
             _ => BadRequest("Unknown handler")
         };
     }
@@ -240,6 +288,18 @@ public class SettingsController : ControllerBase
     private async Task<IActionResult> DeleteMistralApiKey()
     {
         var success = await _settingsService.DeleteMistralApiKeyAsync();
+        return Ok(success ? ApiResponse.Ok() : ApiResponse.Fail("error.deleteFailed"));
+    }
+
+    private async Task<IActionResult> DeleteAiApiKey()
+    {
+        var provider = Request.Query["provider"].ToString();
+        if (string.IsNullOrEmpty(provider))
+        {
+            return Ok(ApiResponse.Fail("error.invalidProvider"));
+        }
+
+        var success = await _settingsService.DeleteApiKeyAsync(provider);
         return Ok(success ? ApiResponse.Ok() : ApiResponse.Fail("error.deleteFailed"));
     }
 }

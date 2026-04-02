@@ -190,6 +190,12 @@
   "settings.languageDescription": "User interface language",
   "settings.languageDe": "Deutsch",
   "settings.languageEn": "English",
+  "settings.activeProvider": "Active AI provider",
+  "settings.providerActivated": "{{provider}} activated",
+  "settings.providerNotConfigured": "Please configure an API key first",
+  "settings.mistralHint": "API key from console.mistral.ai",
+  "settings.anthropicHint": "API key from console.anthropic.com",
+  "settings.openaiHint": "API key from platform.openai.com",
 
   "profile.profiles": "Profiles",
   "profile.loading": "Loading profiles...",
