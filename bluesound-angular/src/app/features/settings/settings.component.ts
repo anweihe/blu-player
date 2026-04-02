@@ -291,7 +291,7 @@ interface ProviderUi extends AiProviderStatus {
       <!-- Toast -->
       @if (toastMessage()) {
         <div
-          class="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 text-sm z-50 animate-fade-in"
+          class="fixed bottom-32 left-1/2 -translate-x-1/2 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 text-sm z-50 animate-fade-in"
           [class.bg-accent-qobuz]="toastType() === 'success'"
           [class.bg-danger]="toastType() === 'error'"
           [class.text-white]="true"
