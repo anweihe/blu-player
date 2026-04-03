@@ -75,7 +75,7 @@ public interface IQobuzApiService
     /// <summary>
     /// Search for albums, tracks, and playlists
     /// </summary>
-    Task<QobuzSearchResult> SearchAsync(string query, int limit = 20, int offset = 0);
+    Task<QobuzSearchResult> SearchAsync(string query, string? authToken = null, int limit = 20, int offset = 0);
 
     /// <summary>
     /// Get personalized recommendations for the user
@@ -1241,7 +1241,7 @@ public class QobuzApiService : IQobuzApiService
     /// <summary>
     /// Search for albums, tracks, and playlists
     /// </summary>
-    public async Task<QobuzSearchResult> SearchAsync(string query, int limit = 20, int offset = 0)
+    public async Task<QobuzSearchResult> SearchAsync(string query, string? authToken = null, int limit = 20, int offset = 0)
     {
         var result = new QobuzSearchResult();
 
@@ -1260,6 +1260,11 @@ public class QobuzApiService : IQobuzApiService
                       $"&limit={limit}" +
                       $"&offset={offset}" +
                       $"&app_id={credentials.AppId}";
+
+            if (!string.IsNullOrEmpty(authToken))
+            {
+                url += $"&user_auth_token={authToken}";
+            }
 
             _logger.LogDebug("Searching for: {Query}", query);
 

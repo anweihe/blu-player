@@ -685,7 +685,8 @@ public class QobuzController : ControllerBase
 
         _logger.LogInformation("Searching for: {Query} (offset={Offset}, limit={Limit})", query, offset, limit);
 
-        var result = await _qobuzService.SearchAsync(query, limit, offset);
+        var (authToken, _) = GetAuthFromHeaders();
+        var result = await _qobuzService.SearchAsync(query, authToken, limit, offset);
         var albumItems = result.Albums.ToList();
         var artistItems = result.Artists.ToList();
         var playlistItems = result.Playlists.ToList();
